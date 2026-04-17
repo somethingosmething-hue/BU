@@ -1,20 +1,19 @@
 require('dotenv').config();
 const fs = require('fs');
 const { execSync } = require('child_process');
-const path = require('path');
 
 const repoUrl = 'https://github.com/somethingosmething-hue/BU.git';
-const branch = 'main';
 
-function run(cmd, cwd = process.cwd()) {
+function run(cmd) {
   try {
-    execSync(cmd, { cwd, stdio: 'inherit' });
+    execSync(cmd, { stdio: 'inherit' });
   } catch (e) {}
 }
 
 if (!fs.existsSync('./src')) {
-  console.log('📦 First run detected - cloning repo...');
+  console.log('📦 Cloning repo...');
   run(`git clone --depth 1 ${repoUrl} .`);
+  console.log('📦 Installing dependencies...');
   run('npm install');
 }
 
