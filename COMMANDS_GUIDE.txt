@@ -1,132 +1,188 @@
-# 📖 Mimu+ Bot — Full Command Reference
-
-A complete guide to every command with real-world examples.
+# Mimu2 — Command Reference
 
 ---
 
 ## Table of Contents
-1. [Setup & First Run](#setup--first-run)
-2. [Autoresponder](#autoresponder)
-3. [Button Responder](#button)
-4. [Economy](#economy)
-5. [Embed](#embed)
-6. [Giveaway](#giveaway)
-7. [Level / XP](#level)
-8. [Mod (Moderation)](#mod)
-9. [Poll](#poll)
-10. [Reaction Role](#reactionrole)
-11. [Reminder](#reminder)
-12. [Placeholders Reference](#placeholders-reference)
+1. [Setup](#setup)
+2. [Divemb](#divemb)
+3. [Embed](#embed)
+4. [Autoresponder (ar)](#autoresponder-ar)
+5. [Button](#button)
+6. [Custom Commands (cc)](#custom-commands-cc)
+7. [User Variables (cvar)](#user-variables-cvar)
+8. [Reaction Events](#reaction-events)
+9. [Reaction Role](#reactionrole)
+10. [Level](#level)
+11. [Giveaway](#giveaway)
+12. [Poll](#poll)
+13. [Reminder](#reminder)
+14. [Mod](#mod)
+15. [Variables & Placeholders](#variables--placeholders)
 
 ---
 
-## Setup & First Run
+## Setup
 
-1. Copy `.env.example` → `.env` and set your `BOT_TOKEN` and `CLIENT_ID`.
-2. Run `npm install`.
-3. Run `node src/index.js` — slash commands auto-register on startup.
+1. Copy `.env.example` → `.env` and set your `BOT_TOKEN`
+2. Run `npm install`
+3. Run `npm start`
 
-**Required bot permissions:** Send Messages, Manage Roles, Manage Channels, Moderate Members, Ban Members, Kick Members, Add Reactions, Read Message History, Manage Messages, Use External Emojis.
-
-**Required gateway intents:** Guilds, GuildMessages, MessageContent, GuildMembers, GuildMessageReactions.
+**Required permissions:** Send Messages, Manage Roles, Manage Channels, Moderate Members, Ban Members, Kick Members, Add Reactions, Read Message History, Manage Messages, Use External Emojis.
 
 ---
 
-## Autoresponder
+## Divemb
+
+Message Components V2 — enhanced embeds with more options.
+
+**Subcommands:** `create`, `send`, `delete`, `list`, `preview`, `edit`, `view`
+
+### `/divemb create`
+```
+/divemb create name:welcome
+```
+Opens a modal with: title, description, color, footer, image, thumbnail, author, url, timestamp, fields.
+
+### `/divemb send`
+```
+/divemb send name:welcome
+/divemb send name:welcome channel:#general
+```
+
+### `/divemb edit`
+```
+/divemb edit name:welcome field:title value:New Title
+/divemb edit name:welcome field:add_field value:Field Name|Field Value|true
+```
+
+### Other subcommands
+```
+/divemb list
+/divemb preview name:welcome
+/divemb view name:welcome
+/divemb delete name:welcome
+```
+
+---
+
+## Embed
+
+Standard Discord embeds.
+
+**Subcommands:** `create`, `send`, `delete`, `list`, `preview`, `edit`, `quickedit`
+
+### `/embed create`
+```
+/embed create name:rules
+```
+Modal: title, description, color, footer, image, url.
+
+### `/embed edit` (interactive UI)
+```
+/embed edit name:rules
+```
+Opens a button-based UI to edit each field.
+
+### `/embed quickedit`
+```
+/embed quickedit name:rules field:description value:Follow the rules!
+/embed quickedit name:rules field:color value:#ff6b6b
+```
+
+### Other subcommands
+```
+/embed send name:rules channel:#rules
+/embed list
+/embed preview name:rules
+/embed delete name:rules
+```
+
+---
+
+## Autoresponder (ar)
 
 Trigger automatic replies when someone sends a specific message.
 
 **Subcommands:** `add`, `remove`, `list`, `info`
 
-### `/autoresponder add`
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `trigger` | ✅ | Text that triggers the response |
-| `reply` | ✅ | What the bot replies (supports placeholders) |
-| `match` | ❌ | `exact` \| `contains` \| `startsWith` \| `endsWith` \| `regex` (default: `exact`) |
-| `send_type` | ❌ | `reply` (reply to message) \| `send` (send in channel) |
-| `cooldown` | ❌ | Per-user cooldown in seconds |
-| `channel` | ❌ | Restrict to a specific channel only |
+### `/ar add`
+| Option | Description |
+|--------|-------------|
+| `trigger` | Text that triggers the response |
+| `reply` | The reply (supports placeholders) |
+| `match` | `exact` \| `contains` \| `startswith` \| `endswith` \| `regex` |
+| `send_type` | `reply` (reply to message) \| `send` (send in channel) |
+| `cooldown` | Per-user cooldown in seconds |
+| `channel` | Restrict to a specific channel |
 
 **Examples:**
-
 ```
-/autoresponder add trigger:hello reply:Hey there, {user_mention}! 👋
+/ar add trigger:hello reply:Hey {user_mention}!
 
-/autoresponder add trigger:!rules reply:{embed:rules-embed} match:exact
+/ar add trigger:!rules reply:{divemb:rules-embed} match:exact
 
-/autoresponder add trigger:good morning reply:Good morning, {user_name}! ☀️ Hope you have a great day! match:contains cooldown:300
-
-/autoresponder add trigger:I need help reply:Please open a ticket! {addbutton:open-ticket} match:contains send_type:send
-
-/autoresponder add trigger:^(hi|hey|hello)$ reply:Hello {user_mention}! match:regex
-
-/autoresponder add trigger:support reply:Check out <#1234567890> for help! match:contains channel:#support
+/ar add trigger:help reply:Check <#1234567890>! match:contains cooldown:60
 ```
 
-### `/autoresponder remove`
+### `/ar remove`
 ```
-/autoresponder remove trigger:hello
+/ar remove trigger:hello
 ```
 
-### `/autoresponder list`
-```
-/autoresponder list
-```
-Shows all triggers and their match types.
+### `/ar list`
+Shows all triggers.
 
-### `/autoresponder info`
+### `/ar info`
 ```
-/autoresponder info trigger:hello
+/ar info trigger:hello
 ```
-Shows full details: match type, send type, cooldown, channel restriction, and the reply content.
 
 ---
 
 ## Button
 
-Create interactive buttons that respond when clicked.
+Create interactive buttons and select menus.
 
-**Subcommands:** `add`, `remove`, `list`, `panel`
+**Subcommands:** `add`, `addselect`, `remove`, `list`, `panel`
 
-### `/button add`
-
-| Option | Required | Description |
-|--------|----------|-------------|
-| `name` | ✅ | Internal ID (e.g. `open-ticket`) |
-| `label` | ✅ | Text shown on button |
-| `reply` | ✅ | What the bot sends when clicked (supports placeholders) |
-| `color` | ❌ | `blue` \| `green` \| `grey` \| `red` |
-| `emoji` | ❌ | Emoji to show on button |
-| `cooldown` | ❌ | Per-user cooldown in seconds |
-| `ephemeral` | ❌ | Whether reply is visible only to clicker (default: `true`) |
+### `/button add` (buttons)
+| Option | Description |
+|--------|-------------|
+| `name` | Internal ID |
+| `label` | Button text |
+| `reply` | Reply when clicked |
+| `color` | `blue` \| `green` \| `grey` \| `red` |
+| `emoji` | Emoji on button |
+| `cooldown` | Cooldown in seconds |
+| `ephemeral` | Reply visible only to clicker? |
 
 **Examples:**
-
 ```
-/button add name:open-ticket label:Open Ticket reply:A staff member will be with you shortly! {addrole:In-Support} color:green emoji:🎫
+/button add name:open-ticket label:Open Ticket reply:Staff will be with you! color:green
 
-/button add name:get-news label:Get News Role reply:{addrole:News} ✅ You now have the News role! color:blue
+/button add name:verify label:Verify reply:{addrole:Member} Welcome! color:green ephemeral:true
+```
 
-/button add name:verify label:Verify reply:{addrole:Member} Welcome to the server, {user_mention}! 🎉 color:green emoji:✅ ephemeral:true
+### `/button addselect` (select menus)
+| Option | Description |
+|--------|-------------|
+| `name` | Internal ID |
+| `placeholder` | Placeholder text |
+| `options` | `label|value|desc` (comma separated) |
+| `reply` | Reply (use `{value}` for selected) |
+| `cooldown` | Cooldown in seconds |
 
-/button add name:rules-agree label:I Accept the Rules reply:{embed:welcome-embed} {addrole:Verified} color:blue cooldown:0
+**Examples:**
+```
+/button addselect name:color-select placeholder:Choose a color options:Red|red|Blood red|Blue|blue|Cool blue reply:You chose {value}!
 ```
 
 ### `/button panel`
-
-Sends a message with one or more buttons attached.
-
 ```
-/button panel buttons:open-ticket,get-news message:Click a button below!
-
-/button panel buttons:verify channel:#verification message:React below to verify your account.
-
-/button panel buttons:get-news,get-updates,get-events channel:#roles message:📌 **Self-assignable roles:**
+/button panel components:open-ticket,verify message:Click below!
 ```
 
-### `/button remove` / `/button list`
+### Other subcommands
 ```
 /button remove name:open-ticket
 /button list
@@ -134,423 +190,243 @@ Sends a message with one or more buttons attached.
 
 ---
 
-## Economy
+## Custom Commands (cc)
 
-A full per-server coin economy with wallet, bank, and leaderboard.
+Create custom slash commands.
 
-### `/economy balance`
-```
-/economy balance
-/economy balance user:@SomeUser
-```
+**Subcommands:** `add`, `remove`, `list`, `info`
 
-### `/economy daily`
-Claims 200 coins once every 24 hours.
+### `/cc add`
 ```
-/economy daily
+/cc add name:help response:Check <#1234567890> for help!
+
+/cc add name:greet response:Hello {user_mention}! Welcome to {server_name}!
 ```
 
-### `/economy work`
-Earns 50–200 coins. 1-hour cooldown.
+### `/cc remove`
 ```
-/economy work
-```
-
-### `/economy beg`
-Earns 1–50 coins. 5-minute cooldown.
-```
-/economy beg
+/cc remove name:help
 ```
 
-### `/economy pay`
+### Other subcommands
 ```
-/economy pay user:@Friend amount:500
-```
-
-### `/economy deposit` / `/economy withdraw`
-Move coins between your wallet and bank.
-```
-/economy deposit amount:1000
-/economy deposit amount:all
-/economy withdraw amount:500
-/economy withdraw amount:all
-```
-
-### `/economy richlist`
-Top 10 wealthiest members by total (wallet + bank).
-```
-/economy richlist
-```
-
-### `/economy give` / `/economy take` *(Admin — requires Manage Server)*
-```
-/economy give user:@User amount:1000
-/economy take user:@User amount:500
+/cc list
+/cc info name:help
 ```
 
 ---
 
-## Embed
+## User Variables (cvar)
 
-Create and manage reusable embed messages.
+Custom user variables — build your own economy!
 
-### `/embed create`
-Opens a modal to fill in the embed fields (title, description, color, footer, image URL).
-```
-/embed create name:welcome
-/embed create name:rules
-/embed create name:server-info
-```
+**Subcommands:** `set`, `get`, `add`, `remove`, `list`, `clear`
 
-### `/embed send`
-Sends a saved embed to a channel.
+### `/cvar set`
 ```
-/embed send name:welcome
-/embed send name:rules channel:#rules
+/cvar set name:money value:100 user:@User
 ```
 
-### `/embed preview`
-Previews an embed privately (ephemeral).
+### `/cvar get`
 ```
-/embed preview name:welcome
-```
-
-### `/embed edit`
-Edit a single field of a saved embed.
-```
-/embed edit name:welcome field:title value:Welcome to Our Server!
-/embed edit name:welcome field:color value:#ff6b6b
-/embed edit name:rules field:description value:Please follow all community guidelines.
-/embed edit name:server-info field:footer value:Last updated April 2026
-/embed edit name:welcome field:image value:https://example.com/banner.png
-/embed edit name:welcome field:thumbnail value:https://example.com/icon.png
+/cvar get name:money user:@User
 ```
 
-### `/embed list` / `/embed delete`
+### `/cvar add` (add to number)
 ```
-/embed list
-/embed delete name:old-embed
+/cvar add name:money amount:50 user:@User
+```
+
+### `/cvar remove`
+```
+/cvar remove name:money user:@User
+```
+
+### `/cvar list`
+```
+/cvar list user:@User
+```
+
+### `/cvar clear`
+```
+/cvar clear user:@User
+```
+
+### Using variables in replies
+Use `%%var:name%%` in any reply:
+```
+/cc add name:daily response:You earned 100 coins! {cvar:add:money:100}
+```
+Or in math: `%%100 + %%money%%%%`
+
+---
+
+## Reaction Events
+
+Trigger actions when someone adds a reaction to a message.
+
+**Subcommands:** `add`, `remove`, `list`, `edit`
+
+### `/reactevent add`
+| Option | Description |
+|--------|-------------|
+| `message_id` | Message ID to watch |
+| `emoji` | Emoji to trigger on |
+| `response` | Reply/action |
+| `action` | `reply` \| `send` \| `add_role` \| `remove_role` |
+| `role` | Role for add_role/remove_role |
+| `channel` | Channel the message is in |
+
+**Examples:**
+```
+/reactevent add message_id:123456789 emoji:🎮 response:You got the Gamer role! action:add_role role:@Gamer
+```
+
+### Other subcommands
+```
+/reactevent remove message_id:123456789 emoji:🎮
+/reactevent list
+/reactevent edit message_id:123456789 emoji:🎮 response:New response
 ```
 
 ---
 
-## Giveaway
+## ReactionRole
 
-Host timed giveaways with reaction-based entry. Requires **Manage Server** permission.
+Simple role-on-react (legacy).
 
-### `/giveaway start`
-```
-/giveaway start prize:Nitro Classic duration:24h
+**Subcommands:** `add`, `remove`, `list`, `clear`
 
-/giveaway start prize:$10 Steam Gift Card duration:48h channel:#giveaways winners:2
-
-/giveaway start prize:Custom Discord Banner duration:30m winners:1 channel:#events
 ```
-
-### `/giveaway end`
-Force-ends a giveaway early (winner is picked on next check cycle, ~15 seconds).
-```
-/giveaway end message_id:1234567890123456789
-```
-
-### `/giveaway reroll`
-Picks a new winner from the original entries after a giveaway has ended.
-```
-/giveaway reroll message_id:1234567890123456789
-```
-
-### `/giveaway list`
-Shows all active giveaways in the server.
-```
-/giveaway list
+/reactionrole add message_id:123456789 emoji:🔴 role:@Red
+/reactionrole remove message_id:123456789 emoji:🔴
+/reactionrole list
+/reactionrole clear message_id:123456789
 ```
 
 ---
 
 ## Level
 
-A per-server XP leveling system. Members earn 15–25 XP per message (1-minute cooldown to prevent spam).
+XP and leveling system.
 
-### `/level rank`
+**Subcommands:** `rank`, `leaderboard`, `config`, `setlevel`, `setxp`, `reset`
+
 ```
 /level rank
-/level rank user:@SomeUser
-```
-Shows level, total XP, server rank, and a progress bar to the next level.
-
-### `/level leaderboard`
-```
+/level rank user:@User
 /level leaderboard
-```
-Top 20 members ranked by XP.
-
-### `/level config` *(requires Manage Server)*
-```
 /level config enabled:true
-
 /level config levelup_channel:#level-ups
-
-/level config levelup_message:🎉 {user_mention} just hit **Level {level}**! Keep chatting!
-
-/level config disable_levelup:true
-
-/level config enabled:true levelup_channel:#general levelup_message:GG {user_mention}, you're now Level {level}!
-```
-Run `/level config` with no options to view current settings.
-
-### `/level setlevel` *(Admin — requires Administrator)*
-```
+/level config levelup_message:{user_mention} hit Level {level}!
 /level setlevel user:@User level:10
-```
-
-### `/level setxp` *(Admin)*
-```
 /level setxp user:@User xp:5000
-```
-
-### `/level reset` *(Admin)*
-```
 /level reset user:@User
 ```
 
 ---
 
-## Mod
+## Giveaway
 
-Full moderation suite. Each subcommand requires the relevant permission.
+**Subcommands:** `start`, `end`, `reroll`, `list`
 
-### `/mod ban` *(Ban Members)*
 ```
-/mod ban user:@User reason:Spamming
-
-/mod ban user:@User reason:Hate speech delete_days:7
+/giveaway start prize:Nitro duration:24h winners:1
+/giveaway end message_id:123456789
+/giveaway reroll message_id:123456789
+/giveaway list
 ```
-
-### `/mod unban` *(Ban Members)*
-```
-/mod unban user_id:123456789012345678 reason:Appeal accepted
-```
-
-### `/mod kick` *(Kick Members)*
-```
-/mod kick user:@User reason:Breaking rules
-```
-
-### `/mod timeout` *(Moderate Members)*
-Max duration: 28 days.
-```
-/mod timeout user:@User duration:10m reason:Spam
-
-/mod timeout user:@User duration:1h
-
-/mod timeout user:@User duration:7d reason:Repeated violations
-```
-
-### `/mod untimeout` *(Moderate Members)*
-```
-/mod untimeout user:@User reason:Appeal accepted
-```
-
-### `/mod warn` *(Moderate Members)*
-Sends the user a DM and logs the warning.
-```
-/mod warn user:@User reason:Please keep conversations on-topic.
-```
-
-### `/mod warnings`
-```
-/mod warnings user:@User
-```
-Shows last 10 mod log entries for a user.
-
-### `/mod delwarn` *(Moderate Members)*
-```
-/mod delwarn id:3
-```
-Deletes log entry by its ID number.
-
-### `/mod purge` *(Manage Messages)*
-Deletes up to 100 messages (Discord limit: messages under 14 days old).
-```
-/mod purge amount:20
-
-/mod purge amount:50 user:@Spammer
-```
-
-### `/mod slowmode` *(Manage Channels)*
-```
-/mod slowmode duration:10s
-
-/mod slowmode duration:1m channel:#general
-
-/mod slowmode duration:0
-```
-Use `0` to disable slowmode.
-
-### `/mod lock` / `/mod unlock` *(Manage Channels)*
-```
-/mod lock
-
-/mod lock channel:#general reason:Raid in progress
-
-/mod unlock
-
-/mod unlock channel:#general reason:Situation resolved
-```
-
-### `/mod nickname` *(Manage Nicknames)*
-```
-/mod nickname user:@User nickname:CoolNewName
-
-/mod nickname user:@User
-```
-Leave `nickname` blank to reset.
-
-### `/mod modlogs`
-```
-/mod modlogs user:@User
-```
-Shows last 15 mod log entries with moderator, date, type, and reason.
 
 ---
 
 ## Poll
 
-Create simple reaction polls.
-
-### `/poll`
-
 ```
-/poll question:Should we add a #memes channel?
-
-/poll question:What's your favourite gaming platform? options:PC|PlayStation|Xbox|Nintendo Switch
-
-/poll question:Rate this server! options:⭐ 1|⭐⭐ 2|⭐⭐⭐ 3|⭐⭐⭐⭐ 4|⭐⭐⭐⭐⭐ 5
-```
-
-- No options = yes/no poll (👍/👎)
-- Up to 10 options separated by `|`
-
----
-
-## ReactionRole
-
-Assign roles to users when they react to a message. Requires **Manage Server** permission.
-
-### `/reactionrole add`
-
-First, find the **message ID** of the message you want to add reaction roles to (right-click → Copy ID, with Developer Mode on).
-
-```
-/reactionrole add message_id:1234567890123456789 emoji:🔴 role:@Red Team
-
-/reactionrole add message_id:1234567890123456789 emoji:🟢 role:@Green Team channel:#roles
-
-/reactionrole add message_id:1234567890123456789 emoji:🎮 role:@Gamer
-
-/reactionrole add message_id:1234567890123456789 emoji:📢 role:@Announcements channel:#info
-```
-
-The bot will automatically react to the message with the emoji.
-
-### `/reactionrole remove`
-```
-/reactionrole remove message_id:1234567890123456789 emoji:🔴
-```
-
-### `/reactionrole list`
-```
-/reactionrole list
-```
-Lists all message IDs, emojis, and their linked roles.
-
-### `/reactionrole clear`
-Removes all reaction roles from a specific message at once.
-```
-/reactionrole clear message_id:1234567890123456789
+/poll question:New channel?
+/poll question:Favorite game? options:PC|Console|Mobile
 ```
 
 ---
 
 ## Reminder
 
-Set personal reminders delivered via DM.
-
-### `/reminder set`
-
-Time format: `s` (seconds), `m` (minutes), `h` (hours), `d` (days). Maximum: 30 days.
+**Subcommands:** `set`, `list`, `cancel`
 
 ```
-/reminder set time:10m message:Check the oven!
-
-/reminder set time:2h message:Team meeting in Discord
-
-/reminder set time:1d message:Renew server subscription
-
-/reminder set time:30m message:Take a break and drink water 💧
-```
-
-The bot will reply with a confirmation and the exact time, plus a reminder ID you can use to cancel it.
-
-### `/reminder list`
-```
+/reminder set time:10m message:Check the oven
 /reminder list
+/reminder cancel id:123456-123456789
 ```
-Shows all your pending reminders with IDs and due times.
 
-### `/reminder cancel`
-```
-/reminder cancel id:123456789-1713300000000
-```
-Copy the ID from `/reminder list` or from the confirmation message when you set it.
+Time format: `30s`, `5m`, `1h`, `7d`
 
 ---
 
-## Placeholders Reference
+## Mod
 
-Use these in autoresponder replies, button replies, embed descriptions, and level-up messages.
+**Subcommands:** `ban`, `unban`, `kick`, `timeout`, `untimeout`, `warn`, `warnings`, `delwarn`, `purge`, `slowmode`, `lock`, `unlock`, `nickname`, `modlogs`
 
-| Placeholder | Replaced With |
-|-------------|---------------|
-| `{user_mention}` | `@Username` (mention) |
-| `{user_name}` | Username (no discriminator) |
+```
+/mod ban user:@User reason:Spamming
+/mod kick user:@User reason:Rules violation
+/mod timeout user:@User duration:10m reason:Spam
+/mod warn user:@User reason:Keep it civil
+/mod warnings user:@User
+/mod purge amount:50
+/mod slowmode duration:5m
+/mod lock channel:#general reason:Raid
+/mod unlock channel:#general
+/mod nickname user:@User nickname:NewName
+/mod modlogs user:@User
+```
+
+---
+
+## Variables & Placeholders
+
+### Text Placeholders
+| Placeholder | Replaces |
+|-------------|----------|
+| `{user_mention}` | @Username |
+| `{user_name}` | Username |
 | `{user_tag}` | Username#0000 |
-| `{user_id}` | User's Discord ID |
-| `{user_avatar}` | URL of user's avatar |
+| `{user_id}` | User ID |
+| `{user_avatar}` | Avatar URL |
 | `{server_name}` | Server name |
-| `{server_icon}` | URL of server icon |
-| `{member_count}` | Server member count |
-| `{date}` | Today's date (locale format) |
-| `{newline}` | Line break (newline character) |
-| `{level}` | Current level *(level-up messages only)* |
+| `{server_icon}` | Server icon URL |
+| `{member_count}` | Member count |
+| `{date}` | Today's date |
+| `{time}` | Current time |
+| `{timestamp}` | Unix timestamp |
+| `{newline}` | Line break |
 
 ### Action Placeholders
-
-These perform actions when the reply is triggered:
-
 | Placeholder | Effect |
 |-------------|--------|
-| `{addrole:RoleName}` | Adds a role to the user |
-| `{removerole:RoleName}` | Removes a role from the user |
-| `{requirerole:RoleName}` | Silently blocks if user lacks this role |
-| `{react:emoji}` | Makes the bot react to the triggering message |
-| `{embed:saved-name}` | Injects a saved embed from `/embed create` |
-| `{embed:#hex}` | Wraps reply in a colored embed |
-| `{addbutton:button-name}` | Attaches a button (created with `/button add`) |
-| `{addlinkbutton:Label\|https://url}` | Attaches a URL link button |
+| `{addrole:Role}` | Adds a role |
+| `{removerole:Role}` | Removes a role |
+| `{requirerole:Role}` | Blocks if user lacks role |
+| `{react:emoji}` | Reacts to message |
+| `{embed:name}` | Uses saved embed |
+| `{divemb:name}` | Uses saved divemb |
+| `{embed:#hex}` | Colored embed |
+| `{addbutton:name}` | Attaches button |
+| `{addselect:name}` | Attaches select menu |
+| `{addlinkbutton:Label\|url}` | Link button |
+| `{cooldown:seconds}` | Sets cooldown |
 
-### Example: Complex Autoresponder Reply
+### Custom Variables
+| Syntax | Description |
+|--------|-------------|
+| `%%var:name%%` | Get user's variable |
+| `{cvar:add:name:amount}` | Add to variable (in replies) |
 
+### Math Expressions
 ```
-{requirerole:Verified}{embed:#5865F2}Welcome, {user_mention}! 🎉{newline}You joined **{server_name}** — we now have **{member_count}** members!{newline}Click a button below for roles:{addbutton:get-news}{addbutton:get-events}
-```
-
-### Example: Button Giving a Role
-
-```
-/button add name:get-gamer label:🎮 Gamer reply:{addrole:Gamer} ✅ You now have the **Gamer** role, {user_name}! color:blue ephemeral:true
+%%100 + %%money%%%%
+%%myvar - 50%%
 ```
 
 ---
 
-*Built as an improved Mimu-inspired Discord bot.*
+*Built with 💜 — Mimu2 Bot*
