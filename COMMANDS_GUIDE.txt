@@ -1,0 +1,556 @@
+# 📖 Mimu+ Bot — Full Command Reference
+
+A complete guide to every command with real-world examples.
+
+---
+
+## Table of Contents
+1. [Setup & First Run](#setup--first-run)
+2. [Autoresponder](#autoresponder)
+3. [Button Responder](#button)
+4. [Economy](#economy)
+5. [Embed](#embed)
+6. [Giveaway](#giveaway)
+7. [Level / XP](#level)
+8. [Mod (Moderation)](#mod)
+9. [Poll](#poll)
+10. [Reaction Role](#reactionrole)
+11. [Reminder](#reminder)
+12. [Placeholders Reference](#placeholders-reference)
+
+---
+
+## Setup & First Run
+
+1. Copy `.env.example` → `.env` and set your `BOT_TOKEN` and `CLIENT_ID`.
+2. Run `npm install`.
+3. Run `node src/index.js` — slash commands auto-register on startup.
+
+**Required bot permissions:** Send Messages, Manage Roles, Manage Channels, Moderate Members, Ban Members, Kick Members, Add Reactions, Read Message History, Manage Messages, Use External Emojis.
+
+**Required gateway intents:** Guilds, GuildMessages, MessageContent, GuildMembers, GuildMessageReactions.
+
+---
+
+## Autoresponder
+
+Trigger automatic replies when someone sends a specific message.
+
+**Subcommands:** `add`, `remove`, `list`, `info`
+
+### `/autoresponder add`
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `trigger` | ✅ | Text that triggers the response |
+| `reply` | ✅ | What the bot replies (supports placeholders) |
+| `match` | ❌ | `exact` \| `contains` \| `startsWith` \| `endsWith` \| `regex` (default: `exact`) |
+| `send_type` | ❌ | `reply` (reply to message) \| `send` (send in channel) |
+| `cooldown` | ❌ | Per-user cooldown in seconds |
+| `channel` | ❌ | Restrict to a specific channel only |
+
+**Examples:**
+
+```
+/autoresponder add trigger:hello reply:Hey there, {user_mention}! 👋
+
+/autoresponder add trigger:!rules reply:{embed:rules-embed} match:exact
+
+/autoresponder add trigger:good morning reply:Good morning, {user_name}! ☀️ Hope you have a great day! match:contains cooldown:300
+
+/autoresponder add trigger:I need help reply:Please open a ticket! {addbutton:open-ticket} match:contains send_type:send
+
+/autoresponder add trigger:^(hi|hey|hello)$ reply:Hello {user_mention}! match:regex
+
+/autoresponder add trigger:support reply:Check out <#1234567890> for help! match:contains channel:#support
+```
+
+### `/autoresponder remove`
+```
+/autoresponder remove trigger:hello
+```
+
+### `/autoresponder list`
+```
+/autoresponder list
+```
+Shows all triggers and their match types.
+
+### `/autoresponder info`
+```
+/autoresponder info trigger:hello
+```
+Shows full details: match type, send type, cooldown, channel restriction, and the reply content.
+
+---
+
+## Button
+
+Create interactive buttons that respond when clicked.
+
+**Subcommands:** `add`, `remove`, `list`, `panel`
+
+### `/button add`
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `name` | ✅ | Internal ID (e.g. `open-ticket`) |
+| `label` | ✅ | Text shown on button |
+| `reply` | ✅ | What the bot sends when clicked (supports placeholders) |
+| `color` | ❌ | `blue` \| `green` \| `grey` \| `red` |
+| `emoji` | ❌ | Emoji to show on button |
+| `cooldown` | ❌ | Per-user cooldown in seconds |
+| `ephemeral` | ❌ | Whether reply is visible only to clicker (default: `true`) |
+
+**Examples:**
+
+```
+/button add name:open-ticket label:Open Ticket reply:A staff member will be with you shortly! {addrole:In-Support} color:green emoji:🎫
+
+/button add name:get-news label:Get News Role reply:{addrole:News} ✅ You now have the News role! color:blue
+
+/button add name:verify label:Verify reply:{addrole:Member} Welcome to the server, {user_mention}! 🎉 color:green emoji:✅ ephemeral:true
+
+/button add name:rules-agree label:I Accept the Rules reply:{embed:welcome-embed} {addrole:Verified} color:blue cooldown:0
+```
+
+### `/button panel`
+
+Sends a message with one or more buttons attached.
+
+```
+/button panel buttons:open-ticket,get-news message:Click a button below!
+
+/button panel buttons:verify channel:#verification message:React below to verify your account.
+
+/button panel buttons:get-news,get-updates,get-events channel:#roles message:📌 **Self-assignable roles:**
+```
+
+### `/button remove` / `/button list`
+```
+/button remove name:open-ticket
+/button list
+```
+
+---
+
+## Economy
+
+A full per-server coin economy with wallet, bank, and leaderboard.
+
+### `/economy balance`
+```
+/economy balance
+/economy balance user:@SomeUser
+```
+
+### `/economy daily`
+Claims 200 coins once every 24 hours.
+```
+/economy daily
+```
+
+### `/economy work`
+Earns 50–200 coins. 1-hour cooldown.
+```
+/economy work
+```
+
+### `/economy beg`
+Earns 1–50 coins. 5-minute cooldown.
+```
+/economy beg
+```
+
+### `/economy pay`
+```
+/economy pay user:@Friend amount:500
+```
+
+### `/economy deposit` / `/economy withdraw`
+Move coins between your wallet and bank.
+```
+/economy deposit amount:1000
+/economy deposit amount:all
+/economy withdraw amount:500
+/economy withdraw amount:all
+```
+
+### `/economy richlist`
+Top 10 wealthiest members by total (wallet + bank).
+```
+/economy richlist
+```
+
+### `/economy give` / `/economy take` *(Admin — requires Manage Server)*
+```
+/economy give user:@User amount:1000
+/economy take user:@User amount:500
+```
+
+---
+
+## Embed
+
+Create and manage reusable embed messages.
+
+### `/embed create`
+Opens a modal to fill in the embed fields (title, description, color, footer, image URL).
+```
+/embed create name:welcome
+/embed create name:rules
+/embed create name:server-info
+```
+
+### `/embed send`
+Sends a saved embed to a channel.
+```
+/embed send name:welcome
+/embed send name:rules channel:#rules
+```
+
+### `/embed preview`
+Previews an embed privately (ephemeral).
+```
+/embed preview name:welcome
+```
+
+### `/embed edit`
+Edit a single field of a saved embed.
+```
+/embed edit name:welcome field:title value:Welcome to Our Server!
+/embed edit name:welcome field:color value:#ff6b6b
+/embed edit name:rules field:description value:Please follow all community guidelines.
+/embed edit name:server-info field:footer value:Last updated April 2026
+/embed edit name:welcome field:image value:https://example.com/banner.png
+/embed edit name:welcome field:thumbnail value:https://example.com/icon.png
+```
+
+### `/embed list` / `/embed delete`
+```
+/embed list
+/embed delete name:old-embed
+```
+
+---
+
+## Giveaway
+
+Host timed giveaways with reaction-based entry. Requires **Manage Server** permission.
+
+### `/giveaway start`
+```
+/giveaway start prize:Nitro Classic duration:24h
+
+/giveaway start prize:$10 Steam Gift Card duration:48h channel:#giveaways winners:2
+
+/giveaway start prize:Custom Discord Banner duration:30m winners:1 channel:#events
+```
+
+### `/giveaway end`
+Force-ends a giveaway early (winner is picked on next check cycle, ~15 seconds).
+```
+/giveaway end message_id:1234567890123456789
+```
+
+### `/giveaway reroll`
+Picks a new winner from the original entries after a giveaway has ended.
+```
+/giveaway reroll message_id:1234567890123456789
+```
+
+### `/giveaway list`
+Shows all active giveaways in the server.
+```
+/giveaway list
+```
+
+---
+
+## Level
+
+A per-server XP leveling system. Members earn 15–25 XP per message (1-minute cooldown to prevent spam).
+
+### `/level rank`
+```
+/level rank
+/level rank user:@SomeUser
+```
+Shows level, total XP, server rank, and a progress bar to the next level.
+
+### `/level leaderboard`
+```
+/level leaderboard
+```
+Top 20 members ranked by XP.
+
+### `/level config` *(requires Manage Server)*
+```
+/level config enabled:true
+
+/level config levelup_channel:#level-ups
+
+/level config levelup_message:🎉 {user_mention} just hit **Level {level}**! Keep chatting!
+
+/level config disable_levelup:true
+
+/level config enabled:true levelup_channel:#general levelup_message:GG {user_mention}, you're now Level {level}!
+```
+Run `/level config` with no options to view current settings.
+
+### `/level setlevel` *(Admin — requires Administrator)*
+```
+/level setlevel user:@User level:10
+```
+
+### `/level setxp` *(Admin)*
+```
+/level setxp user:@User xp:5000
+```
+
+### `/level reset` *(Admin)*
+```
+/level reset user:@User
+```
+
+---
+
+## Mod
+
+Full moderation suite. Each subcommand requires the relevant permission.
+
+### `/mod ban` *(Ban Members)*
+```
+/mod ban user:@User reason:Spamming
+
+/mod ban user:@User reason:Hate speech delete_days:7
+```
+
+### `/mod unban` *(Ban Members)*
+```
+/mod unban user_id:123456789012345678 reason:Appeal accepted
+```
+
+### `/mod kick` *(Kick Members)*
+```
+/mod kick user:@User reason:Breaking rules
+```
+
+### `/mod timeout` *(Moderate Members)*
+Max duration: 28 days.
+```
+/mod timeout user:@User duration:10m reason:Spam
+
+/mod timeout user:@User duration:1h
+
+/mod timeout user:@User duration:7d reason:Repeated violations
+```
+
+### `/mod untimeout` *(Moderate Members)*
+```
+/mod untimeout user:@User reason:Appeal accepted
+```
+
+### `/mod warn` *(Moderate Members)*
+Sends the user a DM and logs the warning.
+```
+/mod warn user:@User reason:Please keep conversations on-topic.
+```
+
+### `/mod warnings`
+```
+/mod warnings user:@User
+```
+Shows last 10 mod log entries for a user.
+
+### `/mod delwarn` *(Moderate Members)*
+```
+/mod delwarn id:3
+```
+Deletes log entry by its ID number.
+
+### `/mod purge` *(Manage Messages)*
+Deletes up to 100 messages (Discord limit: messages under 14 days old).
+```
+/mod purge amount:20
+
+/mod purge amount:50 user:@Spammer
+```
+
+### `/mod slowmode` *(Manage Channels)*
+```
+/mod slowmode duration:10s
+
+/mod slowmode duration:1m channel:#general
+
+/mod slowmode duration:0
+```
+Use `0` to disable slowmode.
+
+### `/mod lock` / `/mod unlock` *(Manage Channels)*
+```
+/mod lock
+
+/mod lock channel:#general reason:Raid in progress
+
+/mod unlock
+
+/mod unlock channel:#general reason:Situation resolved
+```
+
+### `/mod nickname` *(Manage Nicknames)*
+```
+/mod nickname user:@User nickname:CoolNewName
+
+/mod nickname user:@User
+```
+Leave `nickname` blank to reset.
+
+### `/mod modlogs`
+```
+/mod modlogs user:@User
+```
+Shows last 15 mod log entries with moderator, date, type, and reason.
+
+---
+
+## Poll
+
+Create simple reaction polls.
+
+### `/poll`
+
+```
+/poll question:Should we add a #memes channel?
+
+/poll question:What's your favourite gaming platform? options:PC|PlayStation|Xbox|Nintendo Switch
+
+/poll question:Rate this server! options:⭐ 1|⭐⭐ 2|⭐⭐⭐ 3|⭐⭐⭐⭐ 4|⭐⭐⭐⭐⭐ 5
+```
+
+- No options = yes/no poll (👍/👎)
+- Up to 10 options separated by `|`
+
+---
+
+## ReactionRole
+
+Assign roles to users when they react to a message. Requires **Manage Server** permission.
+
+### `/reactionrole add`
+
+First, find the **message ID** of the message you want to add reaction roles to (right-click → Copy ID, with Developer Mode on).
+
+```
+/reactionrole add message_id:1234567890123456789 emoji:🔴 role:@Red Team
+
+/reactionrole add message_id:1234567890123456789 emoji:🟢 role:@Green Team channel:#roles
+
+/reactionrole add message_id:1234567890123456789 emoji:🎮 role:@Gamer
+
+/reactionrole add message_id:1234567890123456789 emoji:📢 role:@Announcements channel:#info
+```
+
+The bot will automatically react to the message with the emoji.
+
+### `/reactionrole remove`
+```
+/reactionrole remove message_id:1234567890123456789 emoji:🔴
+```
+
+### `/reactionrole list`
+```
+/reactionrole list
+```
+Lists all message IDs, emojis, and their linked roles.
+
+### `/reactionrole clear`
+Removes all reaction roles from a specific message at once.
+```
+/reactionrole clear message_id:1234567890123456789
+```
+
+---
+
+## Reminder
+
+Set personal reminders delivered via DM.
+
+### `/reminder set`
+
+Time format: `s` (seconds), `m` (minutes), `h` (hours), `d` (days). Maximum: 30 days.
+
+```
+/reminder set time:10m message:Check the oven!
+
+/reminder set time:2h message:Team meeting in Discord
+
+/reminder set time:1d message:Renew server subscription
+
+/reminder set time:30m message:Take a break and drink water 💧
+```
+
+The bot will reply with a confirmation and the exact time, plus a reminder ID you can use to cancel it.
+
+### `/reminder list`
+```
+/reminder list
+```
+Shows all your pending reminders with IDs and due times.
+
+### `/reminder cancel`
+```
+/reminder cancel id:123456789-1713300000000
+```
+Copy the ID from `/reminder list` or from the confirmation message when you set it.
+
+---
+
+## Placeholders Reference
+
+Use these in autoresponder replies, button replies, embed descriptions, and level-up messages.
+
+| Placeholder | Replaced With |
+|-------------|---------------|
+| `{user_mention}` | `@Username` (mention) |
+| `{user_name}` | Username (no discriminator) |
+| `{user_tag}` | Username#0000 |
+| `{user_id}` | User's Discord ID |
+| `{user_avatar}` | URL of user's avatar |
+| `{server_name}` | Server name |
+| `{server_icon}` | URL of server icon |
+| `{member_count}` | Server member count |
+| `{date}` | Today's date (locale format) |
+| `{newline}` | Line break (newline character) |
+| `{level}` | Current level *(level-up messages only)* |
+
+### Action Placeholders
+
+These perform actions when the reply is triggered:
+
+| Placeholder | Effect |
+|-------------|--------|
+| `{addrole:RoleName}` | Adds a role to the user |
+| `{removerole:RoleName}` | Removes a role from the user |
+| `{requirerole:RoleName}` | Silently blocks if user lacks this role |
+| `{react:emoji}` | Makes the bot react to the triggering message |
+| `{embed:saved-name}` | Injects a saved embed from `/embed create` |
+| `{embed:#hex}` | Wraps reply in a colored embed |
+| `{addbutton:button-name}` | Attaches a button (created with `/button add`) |
+| `{addlinkbutton:Label\|https://url}` | Attaches a URL link button |
+
+### Example: Complex Autoresponder Reply
+
+```
+{requirerole:Verified}{embed:#5865F2}Welcome, {user_mention}! 🎉{newline}You joined **{server_name}** — we now have **{member_count}** members!{newline}Click a button below for roles:{addbutton:get-news}{addbutton:get-events}
+```
+
+### Example: Button Giving a Role
+
+```
+/button add name:get-gamer label:🎮 Gamer reply:{addrole:Gamer} ✅ You now have the **Gamer** role, {user_name}! color:blue ephemeral:true
+```
+
+---
+
+*Built as an improved Mimu-inspired Discord bot.*
