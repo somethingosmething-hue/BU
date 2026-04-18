@@ -67,6 +67,28 @@ function deleteCustomCommand(guildId, name) {
 
 // ─── Custom User Variables ───────────────────────────────────────────────────
 
+function getGlobalVar(varName) {
+  const db = loadDB('globalvars');
+  return db[varName] || null;
+}
+
+function setGlobalVar(varName, value) {
+  const db = loadDB('globalvars');
+  db[varName] = value;
+  saveDB('globalvars', db);
+}
+
+function getGlobalVars() {
+  const db = loadDB('globalvars');
+  return db;
+}
+
+function deleteGlobalVar(varName) {
+  const db = loadDB('globalvars');
+  delete db[varName];
+  saveDB('globalvars', db);
+}
+
 function getUserVar(guildId, userId, varName) {
   const db = loadDB('uservars');
   return db[guildId]?.[userId]?.[varName] || null;
@@ -218,6 +240,7 @@ module.exports = {
   loadDB, saveDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
   getCustomCommands, getCustomCommand, saveCustomCommand, deleteCustomCommand,
+  getGlobalVar, setGlobalVar, getGlobalVars, deleteGlobalVar,
   getUserVar, setUserVar, getAllUserVars, deleteUserVar,
   getEmbeds, getEmbed, saveEmbed, deleteEmbed,
   getAutoresponders, saveAutoresponder, deleteAutoresponder,

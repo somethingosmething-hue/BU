@@ -124,28 +124,49 @@ async function parseReply(replyStr, context) {
     return options[Math.floor(Math.random() * options.length)];
   });
 
-  // ── Extract {cvar:set:name:value} ────────────────────────────────────────
-  text = text.replace(/\{cvar:set:(\w+):(\S+)\}/gi, (_, name, value) => {
-    if (member) {
+  // ── Extract {cvar:set:global::name:value} or {cvar:set:user::name:value} ─────────
+  text = text.replace(/\{cvar:set:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, value) => {
+    if (scope === 'global') {
+      db.setGlobalVar(name, value);
+    } else if (member) {
       db.setUserVar(guildId, member.id, name, value);
     }
     return '';
   });
 
-  // ── Extract {cvar:add:name:amount} ──────────────────────────────────────
-  text = text.replace(/\{cvar:add:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
-    if (member) {
+  // ── Extract {cvar:add:global::name:amount} or {cvar:add:user::name:amount} ─────
+  text = text.replace(/\{cvar:add:(global|user)::(\w+):(-?\d+)\}/gi, (_, scope, name, amount) => {
+    if (scope === 'global') {
+      const current = parseInt(db.getGlobalVar(name)) || 0;
+      db.setGlobalVar(name, String(current + parseInt(amount)));
+    } else if (member) {
       const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
       db.setUserVar(guildId, member.id, name, String(current + parseInt(amount)));
     }
     return '';
   });
 
-  // ── Extract {cvar:remove:name:amount} ─────────────────────────────────
-  text = text.replace(/\{cvar:remove:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
+  // ── Extract {cvar:get:global::name} or {cvar:get:user::name} ─────────────────
+  text = text.replace(/\{cvar:get:(global|user)::(\w+)\}/gi, (_, scope, name) => {
+    if (scope === 'global') {
+      return db.getGlobalVar(name) || '';
+    } else if (member) {
+      return db.getUserVar(guildId, member.id, name) || '';
+    }
+    return '';
+  });
+
+  // Legacy support {cvar:set:name:value} -> user
+  text = text.replace(/\{cvar:set:(\w+):(\S+)\}/gi, (_, name, value) => {
+    if (member) db.setUserVar(guildId, member.id, name, value);
+    return '';
+  });
+
+  // Legacy support {cvar:add:name:amount} -> user
+  text = text.replace(/\{cvar:add:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
     if (member) {
       const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
-      db.setUserVar(guildId, member.id, name, String(current - parseInt(amount)));
+      db.setUserVar(guildId, member.id, name, String(current + parseInt(amount)));
     }
     return '';
   });
