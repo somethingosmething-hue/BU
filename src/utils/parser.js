@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, MentionableSelectMenuBuilder, RoleSelectMenuBuilder, UserSelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle, SeparatorBuilder, SeparatorSpacingSize } = require('discord.js');
 const db = require('../database/db');
 
 const BUTTON_COLORS = {
@@ -117,6 +117,13 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
+  // ── Extract {separator} ─────────────────────────────────────────────────
+  const separators = [];
+  text = text.replace(/\{separator(?::(\w+))?\}/gi, (_, size) => {
+    separators.push(size || 'small');
+    return '';
+  });
+
   // ── Process custom variables (%%variable%%) ────────────────────────────────
   text = text.replace(/%%([^%]+)%%/g, (_, expr) => {
     return evaluateExpression(expr.trim(), context);
@@ -204,6 +211,12 @@ async function parseReply(replyStr, context) {
       }
       rows.push(new ActionRowBuilder().addComponents(menu));
     }
+  }
+
+  // ── Build separators ──────────────────────────────────────────────────────
+  for (const sepSize of separators) {
+    const spacing = sepSize === 'large' ? SeparatorSpacingSize.Large : sepSize === 'medium' ? SeparatorSpacingSize.Medium : SeparatorSpacingSize.Small;
+    rows.push(new ActionRowBuilder().addComponents(new SeparatorBuilder().setDivider(true).setSpacing(spacing)));
   }
 
   return {
