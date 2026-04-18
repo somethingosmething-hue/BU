@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle, ChannelSelectMenuBuilder, MentionableSelectMenuBuilder, RoleSelectMenuBuilder, UserSelectMenuBuilder } = require('discord.js');
 const db = require('../database/db');
 
 const BUTTON_COLORS = {
@@ -116,9 +116,6 @@ async function parseReply(replyStr, context) {
     reactEmojis.push(emoji.trim());
     return '';
   });
-
-  // ── Extract {separator} ─────────────────────────────────────────────────
-  text = text.replace(/\{separator\}/gi, '\n══════════════════\n');
 
   // ── Process custom variables (%%variable%%) ────────────────────────────────
   text = text.replace(/%%([^%]+)%%/g, (_, expr) => {
