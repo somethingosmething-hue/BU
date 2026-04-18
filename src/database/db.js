@@ -207,6 +207,13 @@ function setCooldown(guildId, userId, trigger, timestamp) {
   saveDB('cooldowns', db);
 }
 
+// Levels
+function xpForLevel(level) { return Math.floor(100 * Math.pow(1.15, level)); }
+function getLevelUser(guildId, userId) { const db = loadDB('levels'); return db[guildId]?.[userId] || { xp: 0, level: 0, lastXP: 0 }; }
+function getLevelSettings(guildId) { const db = loadDB('levelsettings'); return db[guildId] || {}; }
+function setLevelSettings(guildId, update) { const db = loadDB('levelsettings'); db[guildId] = { ...(db[guildId] || {}), ...update }; saveDB('levelsettings', db); }
+function getLevelLeaderboard(guildId) { const db = loadDB('levels'); const guild = db[guildId] || {}; return Object.entries(guild).map(([userId, d]) => ({ userId, xp: d.xp || 0, level: d.level || 0 })).sort((a, b) => b.xp - a.xp).slice(0, 20); }
+
 module.exports = {
   loadDB, saveDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -222,4 +229,5 @@ module.exports = {
   getReminders, saveReminders,
   addModLog, getUserModLogs,
   getCooldown, setCooldown,
+  xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
 };
