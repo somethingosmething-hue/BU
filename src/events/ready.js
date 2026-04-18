@@ -18,13 +18,19 @@ module.exports = {
     const rest = new REST().setToken(process.env.BOT_TOKEN);
     try {
       console.log('🔄 Registering slash commands...');
+      // Reset commands first (clears cached old commands)
+      await rest.put(
+        Routes.applicationCommands(client.user.id),
+        { body: [] }
+      );
+      // Then register new commands
       await rest.put(
         Routes.applicationCommands(client.user.id),
         { body: commands }
       );
       console.log(`✅ Registered ${commands.length} slash commands!`);
     } catch (err) {
-      console.error('❌ Failed to register commands:', err);
+      console.error('❌ Failed to register commands:', err.message);
     }
   },
 };
