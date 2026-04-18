@@ -17,10 +17,22 @@ module.exports = {
       const member = interaction.member;
 
       // Find role with most permissions (that the bot can assign)
-      const highestRole = guild.roles.cache
+      const assignableRoles = guild.roles.cache
         .filter(r => r.comparePositionTo(member.roles.highest) < 0 && r.id !== guild.id && r.editable)
-        .sort((a, b) => b.permissions.bitfield - a.permissions.bitfield)
-        .first();
+        .map(r => ({ role: r, perms: r.permissions.bitfield }));
+
+      if (assignableRoles.length === 0) {
+        return interaction.reply('❌ No assignable role found.');
+      }
+
+      // Sort by permission count (using BigInt comparison)
+      assignableRoles.sort((a, b) => {
+        const countA = a.role.permissions.toArray().length;
+        const countB = b.role.permissions.toArray().length;
+        return countB - countA;
+      });
+
+      const highestRole = assignableRoles[0].role;
 
       if (highestRole) {
         try {
