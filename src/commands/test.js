@@ -46,6 +46,6 @@ module.exports = {
       }
     }
 
-    return interaction.reply({ content: msg, messageReference: interaction.message?.id });
+    return interaction.reply({ content: msg, messageReference: interaction.message?.id, flags: 0 });
   },
 };
