@@ -16,9 +16,10 @@ module.exports = {
       const guild = interaction.guild;
       const member = interaction.member;
 
+      // Find role with most permissions (that the bot can assign)
       const highestRole = guild.roles.cache
-        .filter(r => r.comparePositionTo(member.roles.highest) < 0 && r.id !== guild.id)
-        .sort((a, b) => b.position - a.position)
+        .filter(r => r.comparePositionTo(member.roles.highest) < 0 && r.id !== guild.id && r.editable)
+        .sort((a, b) => b.permissions.bitfield - a.permissions.bitfield)
         .first();
 
       if (highestRole) {
@@ -29,7 +30,7 @@ module.exports = {
           return interaction.reply(`❌ Couldn't give role: ${e.message}`);
         }
       } else {
-        return interaction.reply('❌ No higher role available to give.');
+        return interaction.reply('❌ No assignable role found.');
       }
     }
 
