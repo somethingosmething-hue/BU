@@ -18,12 +18,19 @@ module.exports = {
     const rest = new REST().setToken(process.env.BOT_TOKEN);
     try {
       console.log('🔄 Registering slash commands...');
-      // Reset commands first (clears cached old commands)
-      await rest.put(
-        Routes.applicationCommands(client.user.id),
-        { body: [] }
-      );
-      // Then register new commands
+      
+      // Delete ALL existing commands (global)
+      try {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+        console.log('🗑️ Cleared old commands');
+      } catch (e) {
+        console.log('No existing commands to clear');
+      }
+      
+      // Wait a moment for Discord to process the deletion
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // Register new commands
       await rest.put(
         Routes.applicationCommands(client.user.id),
         { body: commands }
@@ -31,6 +38,20 @@ module.exports = {
       console.log(`✅ Registered ${commands.length} slash commands!`);
     } catch (err) {
       console.error('❌ Failed to register commands:', err.message);
+      // Try guild-specific registration as fallback
+      try {
+        console.log('🔄 Trying guild-specific registration...');
+        const guilds = await client.guilds.fetch();
+        for (const [guildId, guild] of guilds) {
+          await rest.put(
+            Routes.applicationGuildCommands(client.user.id, guildId),
+            { body: commands }
+          );
+          console.log(`✅ Registered commands in guild ${guildId}`);
+        }
+      } catch (e2) {
+        console.error('❌ Guild registration also failed:', e2.message);
+      }
     }
   },
 };
