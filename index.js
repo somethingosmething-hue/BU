@@ -1,20 +1,19 @@
-require('dotenv').config();
 const fs = require('fs');
 const { execSync } = require('child_process');
 
-const repoUrl = 'https://github.com/somethingosmething-hue/BU.git';
-
-function run(cmd) {
-  try {
-    execSync(cmd, { stdio: 'inherit' });
-  } catch (e) {}
-}
-
+// First time setup
 if (!fs.existsSync('./src')) {
   console.log('📦 Cloning repo...');
-  run(`git clone --depth 1 ${repoUrl} .`);
+  execSync('git clone --depth 1 https://github.com/somethingosmething-hue/BU .', { stdio: 'inherit' });
   console.log('📦 Installing dependencies...');
-  run('npm install');
+  execSync('npm install', { stdio: 'inherit' });
 }
 
+// Ensure .env exists
+if (!fs.existsSync('./.env')) {
+  fs.writeFileSync('./.env', 'BOT_TOKEN=YOUR_BOT_TOKEN_HERE\n');
+}
+
+// Load dotenv and start bot
+require('dotenv').config();
 const client = require('./src/index');
