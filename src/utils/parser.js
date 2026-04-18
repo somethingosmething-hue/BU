@@ -117,6 +117,13 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
+  // ── Extract {random:choice1|choice2|...} ─────────────────────────────────
+  text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => {
+    const options = choices.split('|').map(s => s.trim()).filter(s => s);
+    if (options.length === 0) return '';
+    return options[Math.floor(Math.random() * options.length)];
+  });
+
   // ── Extract {separator} ─────────────────────────────────────────────────
   const separators = [];
   text = text.replace(/\{separator(?::(\w+))?\}/gi, (_, size) => {
