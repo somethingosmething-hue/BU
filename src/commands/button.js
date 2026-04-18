@@ -46,11 +46,11 @@ module.exports = {
 
   async autocomplete(interaction) {
     const guildId = interaction.guildId;
+    if (!guildId) return;
     const focused = interaction.options.getFocused(true);
     const btns = db.getButtonResponders(guildId);
-    const choices = Object.keys(btns).slice(0, 25);
-    const filtered = choices.filter(c => c.toLowerCase().includes(focused.value.toLowerCase()));
-    await interaction.respond(filtered.map(c => ({ name: c, value: c })));
+    const choices = Object.keys(btns).filter(c => c.toLowerCase().includes(focused.value.toLowerCase())).slice(0, 25);
+    await interaction.respond(choices.map(c => ({ name: c, value: c })));
   },
 
   async execute(interaction, client) {
