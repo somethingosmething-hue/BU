@@ -117,6 +117,9 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
+  // ── Extract {separator} ─────────────────────────────────────────────────
+  text = text.replace(/\{separator\}/gi, '\n══════════════════\n');
+
   // ── Process custom variables (%%variable%%) ────────────────────────────────
   text = text.replace(/%%([^%]+)%%/g, (_, expr) => {
     return evaluateExpression(expr.trim(), context);
