@@ -61,25 +61,13 @@ module.exports = {
           new TextInputBuilder().setCustomId('description').setLabel('Description').setStyle(TextInputStyle.Paragraph).setRequired(false).setMaxLength(4000)
         ),
         new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('color').setLabel('Color (hex, e.g. #5865F2)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(7).setPlaceholder('#5865F2')
+          new TextInputBuilder().setCustomId('color').setLabel('Color (#hex)').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(7).setPlaceholder('#5865F2')
         ),
         new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('footer').setLabel('Footer text').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(2048)
+          new TextInputBuilder().setCustomId('footer').setLabel('Footer').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(2048)
         ),
         new ActionRowBuilder().addComponents(
           new TextInputBuilder().setCustomId('image').setLabel('Image URL').setStyle(TextInputStyle.Short).setRequired(false)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('thumbnail').setLabel('Thumbnail URL').setStyle(TextInputStyle.Short).setRequired(false)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('author').setLabel('Author name').setStyle(TextInputStyle.Short).setRequired(false).setMaxLength(256)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('url').setLabel('URL (for title)').setStyle(TextInputStyle.Short).setRequired(false)
-        ),
-        new ActionRowBuilder().addComponents(
-          new TextInputBuilder().setCustomId('timestamp').setLabel('Add timestamp? (yes/no)').setStyle(TextInputStyle.Short).setRequired(false).setPlaceholder('yes')
         ),
       );
       await interaction.showModal(modal);
@@ -92,10 +80,10 @@ module.exports = {
           color: submitted.fields.getTextInputValue('color') || '#5865F2',
           footer: submitted.fields.getTextInputValue('footer') || null,
           image: submitted.fields.getTextInputValue('image') || null,
-          thumbnail: submitted.fields.getTextInputValue('thumbnail') || null,
-          author: submitted.fields.getTextInputValue('author') || null,
-          url: submitted.fields.getTextInputValue('url') || null,
-          timestamp: submitted.fields.getTextInputValue('timestamp')?.toLowerCase() === 'yes',
+          thumbnail: null,
+          author: null,
+          url: null,
+          timestamp: false,
           fields: [],
         };
         db.saveDivemb(guildId, name, data);
