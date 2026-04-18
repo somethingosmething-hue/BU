@@ -124,6 +124,14 @@ async function parseReply(replyStr, context) {
     return options[Math.floor(Math.random() * options.length)];
   });
 
+  // ── Extract {range:min:max} ───────────────────────────────────────────────
+  text = text.replace(/\{range:(-?\d+):(-?\d+)\}/gi, (_, min, max) => {
+    const minNum = parseInt(min);
+    const maxNum = parseInt(max);
+    const result = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
+    return String(result);
+  });
+
   // ── Extract {cvar:set:global::name:value} or {cvar:set:user::name:value} ─────────
   text = text.replace(/\{cvar:set:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, value) => {
     if (scope === 'global') {
@@ -135,13 +143,24 @@ async function parseReply(replyStr, context) {
   });
 
   // ── Extract {cvar:add:global::name:amount} or {cvar:add:user::name:amount} ─────
-  text = text.replace(/\{cvar:add:(global|user)::(\w+):(-?\d+)\}/gi, (_, scope, name, amount) => {
+  // Supports static numbers or {range:min:max}
+  text = text.replace(/\{cvar:add:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, amount) => {
+    let addAmount = amount;
+    if (amount.startsWith('{range:')) {
+      const match = amount.match(/\{range:(-?\d+):(-?\d+)\}/);
+      if (match) {
+        const min = parseInt(match[1]);
+        const max = parseInt(match[2]);
+        addAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+    }
+    const num = parseInt(addAmount) || 0;
     if (scope === 'global') {
       const current = parseInt(db.getGlobalVar(name)) || 0;
-      db.setGlobalVar(name, String(current + parseInt(amount)));
+      db.setGlobalVar(name, String(current + num));
     } else if (member) {
       const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
-      db.setUserVar(guildId, member.id, name, String(current + parseInt(amount)));
+      db.setUserVar(guildId, member.id, name, String(current + num));
     }
     return '';
   });

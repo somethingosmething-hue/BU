@@ -89,6 +89,30 @@ function deleteGlobalVar(varName) {
   saveDB('globalvars', db);
 }
 
+// ─── Server Settings ─────────────────────────────────────────────────────────
+
+function getServerSettings(guildId) {
+  const db = loadDB('serversettings');
+  return db[guildId] || {};
+}
+
+function setServerSetting(guildId, key, value) {
+  const db = loadDB('serversettings');
+  (db[guildId] ??= {})[key] = value;
+  saveDB('serversettings', db);
+}
+
+function getPrefix(guildId) {
+  const db = loadDB('serversettings');
+  return db[guildId]?.prefix || null;
+}
+
+function setPrefix(guildId, prefix) {
+  const db = loadDB('serversettings');
+  (db[guildId] ??= {}).prefix = prefix;
+  saveDB('serversettings', db);
+}
+
 function getUserVar(guildId, userId, varName) {
   const db = loadDB('uservars');
   return db[guildId]?.[userId]?.[varName] || null;
@@ -253,4 +277,5 @@ module.exports = {
   addModLog, getUserModLogs,
   getCooldown, setCooldown,
   xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
+  getServerSettings, setServerSetting, getPrefix, setPrefix,
 };

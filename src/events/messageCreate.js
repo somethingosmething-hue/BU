@@ -8,36 +8,46 @@ module.exports = {
 
     const guildId = message.guild.id;
     const content = message.content.trim();
+    const prefix = db.getPrefix(guildId) || '/';
+
+    // Check if message starts with prefix
+    if (!content.toLowerCase().startsWith(prefix.toLowerCase())) return;
+
+    // Remove prefix and get command name
+    const cmdContent = content.slice(prefix.length).trim();
+    const cmdName = cmdContent.split(' ')[0].toLowerCase();
+    const args = cmdContent.slice(cmdName.length).trim();
 
     // ── Custom Commands ─────────────────────────────────────────────────────
     const customCommands = db.getCustomCommands(guildId);
-    for (const [cmdName, data] of Object.entries(customCommands)) {
-      const trigger = `/${cmdName}`;
-      if (content.toLowerCase() === trigger.toLowerCase()) {
-        const context = {
-          member: message.member,
-          guild: message.guild,
-          guildId,
-          message,
-          user: message.author,
-        };
+    const cmdData = customCommands[cmdName];
 
-        const parsed = await parseReply(data.response, context);
+    if (cmdData) {
+      const context = {
+        member: message.member,
+        guild: message.guild,
+        guildId,
+        message,
+        user: message.author,
+        args,
+      };
 
-        if (parsed.requireRole) {
-          const role = resolveRole(message.guild, parsed.requireRole);
-          if (role && !message.member.roles.cache.has(role.id)) {
-            await message.reply({ content: `❌ You need the **${role.name}** role!` }).catch(() => {});
-            return;
-          }
+      const parsed = await parseReply(cmdData.response, context);
+
+      if (parsed.requireRole) {
+        const role = resolveRole(message.guild, parsed.requireRole);
+        if (role && !message.member.roles.cache.has(role.id)) {
+          await message.reply({ content: `❌ You need the **${role.name}** role!` }).catch(() => {});
+          return;
         }
+      }
 
-        for (const action of parsed.actions) {
-          const role = resolveRole(message.guild, action.value);
-          if (!role) continue;
-          try {
-            if (action.type === 'addrole') await message.member.roles.add(role);
-            if (action.type === 'removerole') await message.member.roles.remove(role);
+      for (const action of parsed.actions) {
+        const role = resolveRole(message.guild, action.value);
+        if (!role) continue;
+        try {
+          if (action.type === 'addrole') await message.member.roles.add(role);
+          if (action.type === 'removerole') await message.member.roles.remove(role);
           } catch (e) {
             console.error('Role action failed:', e.message);
           }
