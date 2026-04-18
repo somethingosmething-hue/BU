@@ -117,11 +117,37 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
-  // ── Extract {random:choice1|choice2|...} ─────────────────────────────────
+// ── Extract {random:choice1|choice2|...} ─────────────────────────────────
   text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => {
     const options = choices.split('|').map(s => s.trim()).filter(s => s);
     if (options.length === 0) return '';
     return options[Math.floor(Math.random() * options.length)];
+  });
+
+  // ── Extract {cvar:set:name:value} ────────────────────────────────────────
+  text = text.replace(/\{cvar:set:(\w+):(\S+)\}/gi, (_, name, value) => {
+    if (member) {
+      db.setUserVar(guildId, member.id, name, value);
+    }
+    return '';
+  });
+
+  // ── Extract {cvar:add:name:amount} ──────────────────────────────────────
+  text = text.replace(/\{cvar:add:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
+    if (member) {
+      const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
+      db.setUserVar(guildId, member.id, name, String(current + parseInt(amount)));
+    }
+    return '';
+  });
+
+  // ── Extract {cvar:remove:name:amount} ─────────────────────────────────
+  text = text.replace(/\{cvar:remove:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
+    if (member) {
+      const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
+      db.setUserVar(guildId, member.id, name, String(current - parseInt(amount)));
+    }
+    return '';
   });
 
   // ── Extract {separator} ─────────────────────────────────────────────────
