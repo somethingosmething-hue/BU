@@ -29,8 +29,8 @@ module.exports = {
       const timeStr = interaction.options.getString('time');
       const text    = interaction.options.getString('message');
       const ms      = parseDuration(timeStr);
-      if (!ms) return interaction.reply({ content: '❌ Invalid time format. Use e.g. `10m`, `2h`, `1d`.', ephemeral: true });
-      if (ms > 2592000000) return interaction.reply({ content: '❌ Maximum reminder time is 30 days.', ephemeral: true });
+      if (!ms) return interaction.reply({ content: '❌ Invalid time format. Use e.g. `10m`, `2h`, `1d`.' });
+      if (ms > 2592000000) return interaction.reply({ content: '❌ Maximum reminder time is 30 days.' });
 
       const data = db.getReminders();
       const id   = `${userId}-${Date.now()}`;
@@ -39,18 +39,18 @@ module.exports = {
 
       return interaction.reply({
         embeds: [botEmbed('#c9b8f5').setDescription(`⏰ Reminder set! I'll remind you about **${text}** <t:${Math.floor((Date.now() + ms) / 1000)}:R>.\n*ID: \`${id}\`*`)],
-        ephemeral: true,
+        
       });
     }
 
     if (sub === 'list') {
       const data = db.getReminders();
       const mine = Object.entries(data).filter(([, r]) => r.userId === userId);
-      if (!mine.length) return interaction.reply({ content: '📭 You have no pending reminders.', ephemeral: true });
+      if (!mine.length) return interaction.reply({ content: '📭 You have no pending reminders.' });
       const lines = mine.map(([id, r]) => `• \`${id}\` — **${r.text}** — <t:${Math.floor(r.at / 1000)}:R>`);
       return interaction.reply({
         embeds: [botEmbed('#c9b8f5').setTitle('⏰ Your Reminders').setDescription(lines.join('\n'))],
-        ephemeral: true,
+        
       });
     }
 
@@ -58,11 +58,11 @@ module.exports = {
       const id   = interaction.options.getString('id');
       const data = db.getReminders();
       if (!data[id] || data[id].userId !== userId) {
-        return interaction.reply({ content: '❌ Reminder not found or not yours.', ephemeral: true });
+        return interaction.reply({ content: '❌ Reminder not found or not yours.' });
       }
       delete data[id];
       db.saveReminders(data);
-      return interaction.reply({ content: '✅ Reminder cancelled.', ephemeral: true });
+      return interaction.reply({ content: '✅ Reminder cancelled.' });
     }
   },
 };
