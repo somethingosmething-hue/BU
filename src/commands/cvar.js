@@ -3,10 +3,11 @@ const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('cvar')
     .setDescription('Custom variable management')
-    .setDefaultMemberPermissions(0x20)
+
     .addSubcommand(s => s.setName('set').setDescription('Set a variable')
       .addStringOption(o => o.setName('type').setDescription('global or user').setRequired(true).addChoices({ name: 'global', value: 'global' }, { name: 'user', value: 'user' }))
       .addStringOption(o => o.setName('name').setDescription('Variable name').setRequired(true))
