@@ -42,10 +42,10 @@ module.exports = {
       const channel = interaction.options.getChannel('channel') || interaction.channel;
 
       const msg = await channel.messages.fetch(messageId).catch(() => null);
-      if (!msg) return interaction.reply({ content: `❌ Could not find that message in ${channel}.`, ephemeral: true });
+      if (!msg) return interaction.reply({ content: `❌ Could not find that message in ${channel}.` });
 
       try { await msg.react(emojiStr); } catch {
-        return interaction.reply({ content: '❌ Could not react with that emoji.', ephemeral: true });
+        return interaction.reply({ content: '❌ Could not react with that emoji.' });
       }
 
       const data = { response, action, role: roleStr, channelId: channel.id };
@@ -66,7 +66,7 @@ module.exports = {
       const emojiStr = interaction.options.getString('emoji').trim();
 
       const existing = db.getReactionTrigger(guildId, messageId, emojiStr);
-      if (!existing) return interaction.reply({ content: '❌ No trigger found for that message + emoji.', ephemeral: true });
+      if (!existing) return interaction.reply({ content: '❌ No trigger found for that message + emoji.' });
 
       db.deleteReactionTrigger(guildId, messageId, emojiStr);
       return interaction.reply({ content: `✅ Removed trigger for ${emojiStr} on message \`${messageId}\`.` });
@@ -76,7 +76,7 @@ module.exports = {
       const all = db.getReactionTriggers(guildId);
       const entries = Object.entries(all);
 
-      if (!entries.length) return interaction.reply({ content: '📭 No reaction triggers set up.', ephemeral: true });
+      if (!entries.length) return interaction.reply({ content: '📭 No reaction triggers set up.' });
 
       const lines = entries.map(([key, data]) => {
         const [msgId, emoji] = key.split(':');
@@ -85,7 +85,7 @@ module.exports = {
 
       return interaction.reply({
         embeds: [botEmbed().setTitle(`⚡ Reaction Triggers (${entries.length})`).setDescription(lines.slice(0, 25).join('\n'))],
-        ephemeral: true,
+        
       });
     }
 
@@ -95,11 +95,11 @@ module.exports = {
       const newResponse = interaction.options.getString('response');
 
       const existing = db.getReactionTrigger(guildId, messageId, emojiStr);
-      if (!existing) return interaction.reply({ content: '❌ No trigger found.', ephemeral: true });
+      if (!existing) return interaction.reply({ content: '❌ No trigger found.' });
 
       existing.response = newResponse;
       db.saveReactionTrigger(guildId, messageId, emojiStr, existing);
-      return interaction.reply({ content: `✅ Updated response for ${emojiStr} on message \`${messageId}\`.`, ephemeral: true });
+      return interaction.reply({ content: `✅ Updated response for ${emojiStr} on message \`${messageId}\`.` });
     }
   },
 };
