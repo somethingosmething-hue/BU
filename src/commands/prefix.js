@@ -3,10 +3,11 @@ const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('prefix')
     .setDescription('Set the command prefix for this server')
-    .setDefaultMemberPermissions(0x20)
+
     .addStringOption(o => o.setName('prefix').setDescription('New prefix (leave empty to see current)')),
 
   async execute(interaction, client) {
