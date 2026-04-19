@@ -18,10 +18,11 @@ const STYLE_MAP = {
 };
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('button')
     .setDescription('Create button and select menu responders')
-    .setDefaultMemberPermissions(0x20)
+
     .addSubcommand(s => s.setName('add').setDescription('Create a button responder')
       .addStringOption(o => o.setName('name').setDescription('Button name (ID)').setRequired(true))
       .addStringOption(o => o.setName('label').setDescription('Button label').setRequired(true))
