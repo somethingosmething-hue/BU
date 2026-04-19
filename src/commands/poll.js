@@ -18,7 +18,7 @@ module.exports = {
     let options = null;
     if (optStr) {
       options = optStr.split('|').map(o => o.trim()).filter(Boolean).slice(0, 10);
-      if (options.length < 2) return interaction.reply({ content: '❌ Provide at least 2 options separated by `|`.', ephemeral: true });
+      if (options.length < 2) return interaction.reply({ content: '❌ Provide at least 2 options separated by `|`.' });
     }
 
     const embed = new EmbedBuilder()
