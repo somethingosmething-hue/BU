@@ -3,10 +3,11 @@ const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('reactionrole')
     .setDescription('Manage reaction roles')
-    .setDefaultMemberPermissions(0x20)
+
     .addSubcommand(s => s.setName('add').setDescription('Add a reaction role to a message')
       .addStringOption(o => o.setName('message_id').setDescription('Message ID').setRequired(true))
       .addStringOption(o => o.setName('emoji').setDescription('Emoji to react with').setRequired(true))
