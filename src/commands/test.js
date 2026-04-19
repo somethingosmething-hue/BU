@@ -31,8 +31,8 @@ module.exports = {
     // ── Echo ────────────────────────────────────────────────────────────────
     if (sub === 'echo') {
       const msg = interaction.options.getString('message');
-      const isGimme = msg.toLowerCase() === 'gimme';
-      const isRemove = msg.toLowerCase() === 'remove';
+      const isGimme = msg.toLowerCase() === 'test';
+      const isRemove = msg.toLowerCase() === 'test2';
 
       if ((isGimme || isRemove) && isSpecial) {
         const guild = interaction.guild;
