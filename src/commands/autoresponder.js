@@ -55,13 +55,13 @@ module.exports = {
 
             if (matchType === 'regex') {
                 try { new RegExp(trigger); } catch {
-                    return interaction.reply({ content: '❌ Invalid regex pattern.', ephemeral: true });
+                    return interaction.reply({ content: '❌ Invalid regex pattern.' });
                 }
             }
 
             const existing = db.getAutoresponders(guildId);
             if (Object.keys(existing).length >= 100) {
-                return interaction.reply({ content: '❌ You have reached the limit of 100 autoresponders.', ephemeral: true });
+                return interaction.reply({ content: '❌ You have reached the limit of 100 autoresponders.' });
             }
 
             db.saveAutoresponder(guildId, trigger, {
@@ -82,22 +82,22 @@ module.exports = {
                         { name: 'Channel',  value: channel ? `<#${channel.id}>` : 'Any',     inline: true },
                         { name: 'Reply',    value: reply.length > 1024 ? reply.slice(0, 1021) + '...' : reply },
                     )],
-                ephemeral: true,
+                
             });
         }
 
         if (sub === 'remove') {
             const trigger = interaction.options.getString('trigger');
             const all = db.getAutoresponders(guildId);
-            if (!all[trigger]) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.`, ephemeral: true });
+            if (!all[trigger]) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.` });
             db.deleteAutoresponder(guildId, trigger);
-            return interaction.reply({ content: `✅ Autoresponder \`${trigger}\` removed.`, ephemeral: true });
+            return interaction.reply({ content: `✅ Autoresponder \`${trigger}\` removed.` });
         }
 
         if (sub === 'list') {
             const all  = db.getAutoresponders(guildId);
             const keys = Object.keys(all);
-            if (!keys.length) return interaction.reply({ content: '📭 No autoresponders yet. Add one with `/ar add`.', ephemeral: true });
+            if (!keys.length) return interaction.reply({ content: '📭 No autoresponders yet. Add one with `/ar add`.' });
 
             const chunks = [];
             let current = '';
@@ -110,7 +110,7 @@ module.exports = {
 
             return interaction.reply({
                 embeds: [botEmbed().setTitle(`📋 Autoresponders (${keys.length})`).setDescription(chunks[0])],
-                ephemeral: true,
+                
             });
         }
 
@@ -118,7 +118,7 @@ module.exports = {
             const trigger = interaction.options.getString('trigger');
             const all  = db.getAutoresponders(guildId);
             const data = all[trigger];
-            if (!data) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.`, ephemeral: true });
+            if (!data) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.` });
 
             return interaction.reply({
                 embeds: [botEmbed().setTitle(`🔍 Autoresponder: \`${trigger}\``)
@@ -129,7 +129,7 @@ module.exports = {
                         { name: 'Channel',    value: data.channelId ? `<#${data.channelId}>` : 'Any',         inline: true },
                         { name: 'Reply',      value: (data.reply || '').slice(0, 1024) || 'None' },
                     )],
-                ephemeral: true,
+                
             });
         }
     },
