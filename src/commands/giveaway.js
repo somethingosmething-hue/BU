@@ -18,10 +18,11 @@ function fmtDuration(ms) {
 }
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('giveaway')
     .setDescription('Manage giveaways')
-    .setDefaultMemberPermissions(0x20)
+
     .addSubcommand(s => s.setName('start').setDescription('Start a giveaway')
       .addStringOption(o => o.setName('prize').setDescription('What are you giving away?').setRequired(true))
       .addStringOption(o => o.setName('duration').setDescription('Duration e.g. 1h, 2d, 30m').setRequired(true))
