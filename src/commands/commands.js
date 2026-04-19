@@ -8,7 +8,7 @@ const COMMAND_CATALOG = [
             { name: '/embed create',  desc: 'Create a new embed' },
             { name: '/embed send',    desc: 'Send a saved embed to a channel' },
             { name: '/embed edit',    desc: 'Interactively edit an embed' },
-            { name: '/embed preview', desc: 'Preview an embed (ephemeral)' },
+            { name: '/embed preview', desc: 'Preview an embed' },
             { name: '/embed list',    desc: 'List all saved embeds' },
             { name: '/embed delete',  desc: 'Delete a saved embed' },
         ],
@@ -167,7 +167,7 @@ module.exports = {
             : COMMAND_CATALOG;
 
         if (!categories.length) {
-            return interaction.reply({ content: '❌ No commands found for that category.', ephemeral: true });
+            return interaction.reply({ content: '❌ No commands found for that category.' });
         }
 
         const totalCommands = COMMAND_CATALOG.reduce((n, c) => n + c.commands.length, 0);
@@ -193,6 +193,6 @@ module.exports = {
             return embed;
         });
 
-        return interaction.reply({ embeds: embeds.slice(0, 10), ephemeral: true });
+        return interaction.reply({ embeds: embeds.slice(0, 10) });
     },
 };
