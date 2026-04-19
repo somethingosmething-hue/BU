@@ -3,10 +3,11 @@ const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
 module.exports = {
+    permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('cc')
     .setDescription('Custom command management')
-    .setDefaultMemberPermissions(0x20)
+
     .addSubcommand(s => s.setName('add').setDescription('Add a custom command')
       .addStringOption(o => o.setName('name').setDescription('Command name (without prefix)').setRequired(true))
       .addStringOption(o => o.setName('response').setDescription('Response (supports placeholders)').setRequired(true)))
