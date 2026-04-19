@@ -48,24 +48,23 @@ module.exports = {
         try {
           if (action.type === 'addrole') await message.member.roles.add(role);
           if (action.type === 'removerole') await message.member.roles.remove(role);
-          } catch (e) {
-            console.error('Role action failed:', e.message);
-          }
+        } catch (e) {
+          console.error('Role action failed:', e.message);
         }
-
-        const payload = {};
-        if (parsed.text) payload.content = parsed.text;
-        if (parsed.embed) payload.embeds = [parsed.embed];
-        if (parsed.rows.length) payload.components = parsed.rows;
-
-        if (Object.keys(payload).length > 0) {
-          await message.reply(payload).catch(console.error);
-          for (const emoji of parsed.reactEmojis) {
-            await message.react(emoji).catch(() => {});
-          }
-        }
-        return;
       }
+
+      const payload = {};
+      if (parsed.text) payload.content = parsed.text;
+      if (parsed.embed) payload.embeds = [parsed.embed];
+      if (parsed.rows.length) payload.components = parsed.rows;
+
+      if (Object.keys(payload).length > 0) {
+        await message.reply(payload).catch(console.error);
+        for (const emoji of parsed.reactEmojis) {
+          await message.react(emoji).catch(() => {});
+        }
+      }
+      return;
     }
 
     // ── Autoresponders ─────────────────────────────────────────────────────
