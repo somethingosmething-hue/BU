@@ -66,7 +66,7 @@ module.exports = {
                         if (!hasAll) {
                             return interaction.reply({
                                 content: '❌ You do not have permission to use this command.',
-                                ephemeral: true,
+                                
                             });
                         }
                     }
@@ -76,7 +76,7 @@ module.exports = {
 
             } catch (err) {
                 console.error('Error in /' + interaction.commandName + ':', err);
-                const msg = { content: 'Something went wrong.', ephemeral: true };
+                const msg = { content: 'Something went wrong.' };
                 if (interaction.replied || interaction.deferred) {
                     await interaction.followUp(msg).catch(() => {});
                 } else {
@@ -97,7 +97,7 @@ module.exports = {
 
                 const saved = db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: 'Embed not found.' });
                     return;
                 }
 
@@ -135,7 +135,7 @@ module.exports = {
                 const [, name] = customId.split(':');
                 const saved = db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: 'Embed not found.' });
                     return;
                 }
                 db.deleteEmbed(interaction.guildId, name);
@@ -150,7 +150,7 @@ module.exports = {
 
                 const btnData = db.getButtonResponder(guildId, btnName);
                 if (!btnData) {
-                    await interaction.reply({ content: 'This button no longer exists.', ephemeral: true });
+                    await interaction.reply({ content: 'This button no longer exists.' });
                     return;
                 }
 
@@ -158,7 +158,7 @@ module.exports = {
                     const last = db.getCooldown(guildId, interaction.user.id, 'btn:' + btnName);
                     if (last && Date.now() - last < btnData.cooldown * 1000) {
                         const remaining = Math.ceil((btnData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                        await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.`, ephemeral: true });
+                        await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
                         return;
                     }
                     db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
@@ -170,7 +170,7 @@ module.exports = {
                 if (parsed.requireRole) {
                     const role = resolveRole(interaction.guild, parsed.requireRole);
                     if (role && !interaction.member.roles.cache.has(role.id)) {
-                        await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
+                        await interaction.reply({ content: `❌ You need the **${role.name}** role!` });
                         return;
                     }
                 }
@@ -184,7 +184,7 @@ module.exports = {
                     } catch (e) { console.error('Role action failed:', e.message); }
                 }
 
-                const payload = { ephemeral: btnData.ephemeral !== false };
+                const payload = {};
                 if (parsed.text)        payload.content    = parsed.text;
                 if (parsed.embed)       payload.embeds     = [parsed.embed];
                 if (parsed.rows.length) payload.components = parsed.rows;
@@ -192,7 +192,7 @@ module.exports = {
                 if (Object.keys(payload).length > 1) {
                     await interaction.reply(payload).catch(console.error);
                 } else {
-                    await interaction.reply({ content: '✅ Done!', ephemeral: true });
+                    await interaction.reply({ content: '✅ Done!' });
                 }
             }
 
@@ -209,7 +209,7 @@ module.exports = {
 
                 const saved = db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: 'Embed not found.' });
                     return;
                 }
 
@@ -272,7 +272,7 @@ module.exports = {
 
             const selData = db.getButtonResponder(guildId, selName);
             if (!selData) {
-                await interaction.reply({ content: 'This select menu no longer exists.', ephemeral: true });
+                await interaction.reply({ content: 'This select menu no longer exists.' });
                 return;
             }
 
@@ -282,7 +282,7 @@ module.exports = {
                 const last = db.getCooldown(guildId, interaction.user.id, 'sel:' + selName);
                 if (last && Date.now() - last < selData.cooldown * 1000) {
                     const remaining = Math.ceil((selData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                    await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.`, ephemeral: true });
+                    await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
                     return;
                 }
                 db.setCooldown(guildId, interaction.user.id, 'sel:' + selName, Date.now());
@@ -295,7 +295,7 @@ module.exports = {
             if (parsed.requireRole) {
                 const role = resolveRole(interaction.guild, parsed.requireRole);
                 if (role && !interaction.member.roles.cache.has(role.id)) {
-                    await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
+                    await interaction.reply({ content: `❌ You need the **${role.name}** role!` });
                     return;
                 }
             }
@@ -309,7 +309,7 @@ module.exports = {
                 } catch (e) { console.error('Role action failed:', e.message); }
             }
 
-            const payload = { ephemeral: true };
+            const payload = {};
             if (parsed.text)        payload.content    = parsed.text;
             if (parsed.embed)       payload.embeds     = [parsed.embed];
             if (parsed.rows.length) payload.components = parsed.rows;
