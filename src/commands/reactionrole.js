@@ -32,11 +32,11 @@ module.exports = {
 
       // Validate the message exists
       const msg = await channel.messages.fetch(messageId).catch(() => null);
-      if (!msg) return interaction.reply({ content: `❌ Could not find that message in ${channel}. Make sure the message ID and channel are correct.`, ephemeral: true });
+      if (!msg) return interaction.reply({ content: `❌ Could not find that message in ${channel}. Make sure the message ID and channel are correct.` });
 
       // React to the message
       try { await msg.react(emojiStr); } catch {
-        return interaction.reply({ content: '❌ I could not react with that emoji. Make sure it\'s valid and I have access to it.', ephemeral: true });
+        return interaction.reply({ content: '❌ I could not react with that emoji. Make sure it\'s valid and I have access to it.' });
       }
 
       db.saveReactionRole(guildId, messageId, emojiStr, role.id);
@@ -56,7 +56,7 @@ module.exports = {
       const emojiStr  = interaction.options.getString('emoji').trim();
 
       const existing = db.getReactionRole(guildId, messageId, emojiStr);
-      if (!existing) return interaction.reply({ content: '❌ No reaction role found for that message + emoji combination.', ephemeral: true });
+      if (!existing) return interaction.reply({ content: '❌ No reaction role found for that message + emoji combination.' });
 
       db.deleteReactionRole(guildId, messageId, emojiStr);
       return interaction.reply({ content: `✅ Removed reaction role for ${emojiStr} on message \`${messageId}\`.` });
@@ -66,7 +66,7 @@ module.exports = {
       const all = db.getReactionRoles(guildId);
       const entries = Object.entries(all);
 
-      if (!entries.length) return interaction.reply({ content: '📭 No reaction roles set up yet.', ephemeral: true });
+      if (!entries.length) return interaction.reply({ content: '📭 No reaction roles set up yet.' });
 
       const lines = entries.map(([key, roleId]) => {
         const [msgId, emoji] = key.split(':');
@@ -76,7 +76,7 @@ module.exports = {
       const embed = botEmbed().setTitle(`🎭 Reaction Roles (${entries.length})`).setDescription(lines.slice(0, 25).join('\n'));
       if (lines.length > 25) embed.setFooter({ text: `Showing 25 of ${lines.length}` });
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed] });
     }
 
     if (sub === 'clear') {
@@ -84,7 +84,7 @@ module.exports = {
       const all = db.getReactionRoles(guildId);
       const toDelete = Object.keys(all).filter(k => k.startsWith(`${messageId}:`));
 
-      if (!toDelete.length) return interaction.reply({ content: '❌ No reaction roles found for that message.', ephemeral: true });
+      if (!toDelete.length) return interaction.reply({ content: '❌ No reaction roles found for that message.' });
 
       const raw = db.loadDB('reactionroles');
       for (const key of toDelete) {
