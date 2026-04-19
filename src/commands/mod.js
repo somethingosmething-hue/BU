@@ -81,7 +81,7 @@ module.exports = {
         // casing needed here at all.
         const requirePerm = (perm) => {
             if (!mod.permissions.has(perm)) {
-                interaction.reply({ content: `❌ You need the **${perm}** permission.`, ephemeral: true });
+                interaction.reply({ content: `❌ You need the **${perm}** permission.` });
                 return false;
             }
             return true;
@@ -94,14 +94,14 @@ module.exports = {
             const reason = interaction.options.getString('reason') || 'No reason provided';
             const delDays = interaction.options.getInteger('delete_days') ?? 0;
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-            if (member && !member.bannable) return interaction.reply({ content: '❌ I cannot ban this member.', ephemeral: true });
+            if (member && !member.bannable) return interaction.reply({ content: '❌ I cannot ban this member.' });
             try {
                 await target.send({ embeds: [botEmbed('#ff6b6b').setTitle(`You were banned from **${interaction.guild.name}**`).setDescription(`**Reason:** ${reason}`)] }).catch(() => {});
                 await interaction.guild.members.ban(target, { reason, deleteMessageDays: delDays });
                 logAction('ban', target.id, reason);
                 return interaction.reply({ embeds: [botEmbed('#ff6b6b').setTitle('🔨 Member Banned').addFields({ name: 'User', value: `${target} (${target.id})`, inline: true }, { name: 'Reason', value: reason })] });
             } catch (e) {
-                return interaction.reply({ content: `❌ Failed to ban: ${e.message}`, ephemeral: true });
+                return interaction.reply({ content: `❌ Failed to ban: ${e.message}` });
             }
         }
 
@@ -115,7 +115,7 @@ module.exports = {
                 logAction('unban', userId, reason);
                 return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Unbanned user ID \`${userId}\`.`)] });
             } catch {
-                return interaction.reply({ content: '❌ Could not unban that user. Are they actually banned?', ephemeral: true });
+                return interaction.reply({ content: '❌ Could not unban that user. Are they actually banned?' });
             }
         }
 
@@ -125,15 +125,15 @@ module.exports = {
             const target = interaction.options.getUser('user');
             const reason = interaction.options.getString('reason') || 'No reason provided';
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-            if (!member) return interaction.reply({ content: '❌ That user is not in this server.', ephemeral: true });
-            if (!member.kickable) return interaction.reply({ content: '❌ I cannot kick this member.', ephemeral: true });
+            if (!member) return interaction.reply({ content: '❌ That user is not in this server.' });
+            if (!member.kickable) return interaction.reply({ content: '❌ I cannot kick this member.' });
             try {
                 await target.send({ embeds: [botEmbed('#ffa07a').setTitle(`You were kicked from **${interaction.guild.name}**`).setDescription(`**Reason:** ${reason}`)] }).catch(() => {});
                 await member.kick(reason);
                 logAction('kick', target.id, reason);
                 return interaction.reply({ embeds: [botEmbed('#ffa07a').setTitle('👢 Member Kicked').addFields({ name: 'User', value: `${target}`, inline: true }, { name: 'Reason', value: reason })] });
             } catch (e) {
-                return interaction.reply({ content: `❌ Failed to kick: ${e.message}`, ephemeral: true });
+                return interaction.reply({ content: `❌ Failed to kick: ${e.message}` });
             }
         }
 
@@ -144,10 +144,10 @@ module.exports = {
             const durStr = interaction.options.getString('duration');
             const reason = interaction.options.getString('reason') || 'No reason provided';
             const durMs = parseDuration(durStr);
-            if (!durMs || durMs > 2419200000) return interaction.reply({ content: '❌ Invalid duration. Use e.g. `10m`, `2h`, `1d`. Max 28 days.', ephemeral: true });
+            if (!durMs || durMs > 2419200000) return interaction.reply({ content: '❌ Invalid duration. Use e.g. `10m`, `2h`, `1d`. Max 28 days.' });
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-            if (!member) return interaction.reply({ content: '❌ User not in server.', ephemeral: true });
-            if (!member.moderatable) return interaction.reply({ content: '❌ I cannot moderate this member.', ephemeral: true });
+            if (!member) return interaction.reply({ content: '❌ User not in server.' });
+            if (!member.moderatable) return interaction.reply({ content: '❌ I cannot moderate this member.' });
             await member.timeout(durMs, reason);
             logAction('timeout', target.id, `${durStr} — ${reason}`);
             return interaction.reply({ embeds: [botEmbed('#ffcc00').setTitle('⏱️ Member Timed Out').addFields({ name: 'User', value: `${target}`, inline: true }, { name: 'Duration', value: fmtDuration(durMs), inline: true }, { name: 'Reason', value: reason })] });
@@ -159,7 +159,7 @@ module.exports = {
             const target = interaction.options.getUser('user');
             const reason = interaction.options.getString('reason') || 'No reason provided';
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-            if (!member) return interaction.reply({ content: '❌ User not in server.', ephemeral: true });
+            if (!member) return interaction.reply({ content: '❌ User not in server.' });
             await member.timeout(null, reason);
             return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Removed timeout from ${target}.`)] });
         }
@@ -179,14 +179,14 @@ module.exports = {
         if (sub === 'warnings') {
             const target = interaction.options.getUser('user');
             const logs = db.getUserModLogs(guildId, target.id);
-            if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has no moderation history.`, ephemeral: true });
+            if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has no moderation history.` });
             const lines = logs.slice(-10).reverse().map(l => {
                 const date = new Date(l.timestamp).toLocaleDateString('en-US');
                 return `\`#${l.id}\` **${l.type}** — ${l.reason} *(${date})*`;
             });
             return interaction.reply({
                 embeds: [botEmbed('#ffd700').setTitle(`📋 Mod Logs: ${target.username}`).setDescription(lines.join('\n')).setFooter({ text: `${logs.length} total entries • Showing last 10` })],
-                ephemeral: true,
+                
             });
         }
 
@@ -195,12 +195,12 @@ module.exports = {
             if (!requirePerm('ModerateMembers')) return;
             const id = interaction.options.getInteger('id');
             const raw = db.loadDB('modlogs');
-            if (!raw[guildId]) return interaction.reply({ content: '❌ No modlogs for this guild.', ephemeral: true });
+            if (!raw[guildId]) return interaction.reply({ content: '❌ No modlogs for this guild.' });
             const idx = raw[guildId].findIndex(l => l.id === id);
-            if (idx === -1) return interaction.reply({ content: `❌ No log entry with ID \`${id}\`.`, ephemeral: true });
+            if (idx === -1) return interaction.reply({ content: `❌ No log entry with ID \`${id}\`.` });
             raw[guildId].splice(idx, 1);
             db.saveDB('modlogs', raw);
-            return interaction.reply({ content: `✅ Deleted log entry \`#${id}\`.`, ephemeral: true });
+            return interaction.reply({ content: `✅ Deleted log entry \`#${id}\`.` });
         }
 
         // ── Purge ─────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ module.exports = {
             if (!requirePerm('ManageMessages')) return;
             const amount = interaction.options.getInteger('amount');
             const target = interaction.options.getUser('user');
-            await interaction.deferReply({ ephemeral: true });
+            await interaction.deferReply();
             let messages = await interaction.channel.messages.fetch({ limit: 100 });
             if (target) messages = messages.filter(m => m.author.id === target.id);
             const toDelete = [...messages.values()].slice(0, amount).filter(m => Date.now() - m.createdTimestamp < 1_209_600_000);
@@ -223,9 +223,9 @@ module.exports = {
             const durStr = interaction.options.getString('duration');
             const channel = interaction.options.getChannel('channel') || interaction.channel;
             const secs = durStr === '0' ? 0 : Math.floor((parseDuration(durStr) || 0) / 1000);
-            if (secs > 21600) return interaction.reply({ content: '❌ Max slowmode is 6 hours.', ephemeral: true });
+            if (secs > 21600) return interaction.reply({ content: '❌ Max slowmode is 6 hours.' });
             await channel.setRateLimitPerUser(secs);
-            return interaction.reply({ content: secs === 0 ? `✅ Slowmode disabled in ${channel}.` : `✅ Set slowmode to **${fmtDuration(secs * 1000)}** in ${channel}.`, ephemeral: true });
+            return interaction.reply({ content: secs === 0 ? `✅ Slowmode disabled in ${channel}.` : `✅ Set slowmode to **${fmtDuration(secs * 1000)}** in ${channel}.` });
         }
 
         // ── Lock ─────────────────────────────────────────────────────────────
@@ -252,16 +252,16 @@ module.exports = {
             const target = interaction.options.getUser('user');
             const nickname = interaction.options.getString('nickname') || null;
             const member = await interaction.guild.members.fetch(target.id).catch(() => null);
-            if (!member) return interaction.reply({ content: '❌ User not found in server.', ephemeral: true });
+            if (!member) return interaction.reply({ content: '❌ User not found in server.' });
             await member.setNickname(nickname);
-            return interaction.reply({ content: nickname ? `✅ Set ${target.username}'s nickname to **${nickname}**.` : `✅ Reset ${target.username}'s nickname.`, ephemeral: true });
+            return interaction.reply({ content: nickname ? `✅ Set ${target.username}'s nickname to **${nickname}**.` : `✅ Reset ${target.username}'s nickname.` });
         }
 
         // ── Modlogs ───────────────────────────────────────────────────────────
         if (sub === 'modlogs') {
             const target = interaction.options.getUser('user');
             const logs = db.getUserModLogs(guildId, target.id);
-            if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has a clean record.`, ephemeral: true });
+            if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has a clean record.` });
             const lines = logs.slice(-15).reverse().map(l => {
                 const date = new Date(l.timestamp).toLocaleDateString('en-US');
                 const mod = `<@${l.moderatorId}>`;
@@ -269,7 +269,7 @@ module.exports = {
             });
             return interaction.reply({
                 embeds: [botEmbed().setTitle(`📋 Mod Logs: ${target.username}`).setDescription(lines.join('\n')).setFooter({ text: `${logs.length} total entries` })],
-                ephemeral: true,
+                
             });
         }
     },
