@@ -260,6 +260,20 @@ function getLevelSettings(guildId) { const db = loadDB('levelsettings'); return 
 function setLevelSettings(guildId, update) { const db = loadDB('levelsettings'); db[guildId] = { ...(db[guildId] || {}), ...update }; saveDB('levelsettings', db); }
 function getLevelLeaderboard(guildId) { const db = loadDB('levels'); const guild = db[guildId] || {}; return Object.entries(guild).map(([userId, d]) => ({ userId, xp: d.xp || 0, level: d.level || 0 })).sort((a, b) => b.xp - a.xp).slice(0, 20); }
 
+
+// ─── Trusted Users ────────────────────────────────────────────────────────────
+
+function isTrusted(guildId, userId) {
+  const db = loadDB('trusted');
+  return !!(db[guildId]?.[userId]);
+}
+
+function setTrusted(guildId, userId, value) {
+  const db = loadDB('trusted');
+  (db[guildId] ??= {})[userId] = value;
+  saveDB('trusted', db);
+}
+
 module.exports = {
   loadDB, saveDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -278,4 +292,5 @@ module.exports = {
   getCooldown, setCooldown,
   xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
   getServerSettings, setServerSetting, getPrefix, setPrefix,
+  isTrusted, setTrusted,
 };
