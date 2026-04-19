@@ -6,7 +6,7 @@ const repoUrl = 'https://github.com/somethingosmething-hue/BU.git';
 if (!fs.existsSync('./src')) {
   console.log('📦 Cloning repo...');
   execSync('git clone --depth 1 ' + repoUrl + ' .', { stdio: 'inherit' });
-  console.log('📦 Installing dependencies...');
+  console.log('📦 Installing dependencies...';
   execSync('npm install', { stdio: 'inherit' });
 }
 
