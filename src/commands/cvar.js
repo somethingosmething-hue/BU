@@ -44,7 +44,7 @@ module.exports = {
       }
       if (sub === 'get') {
         const value = db.getGlobalVar(varName);
-        if (value === null) return interaction.reply({ content: `❌ No global variable **${varName}**`, ephemeral: true });
+        if (value === null) return interaction.reply({ content: `❌ No global variable **${varName}**` });
         return interaction.reply({ embeds: [botEmbed().setTitle(`📊 global::${varName}`).setDescription(`**${value}**`)] });
       }
       if (sub === 'add') {
@@ -60,7 +60,7 @@ module.exports = {
       if (sub === 'list') {
         const vars = db.getGlobalVars();
         const entries = Object.entries(vars);
-        if (!entries.length) return interaction.reply({ content: '📭 No global variables.', ephemeral: true });
+        if (!entries.length) return interaction.reply({ content: '📭 No global variables.' });
         const lines = entries.map(([k, v]) => `• **${k}**: \`${v}\``);
         return interaction.reply({ embeds: [botEmbed().setTitle('📋 Global Variables').setDescription(lines.join('\n'))] });
       }
@@ -74,7 +74,7 @@ module.exports = {
       }
       if (sub === 'get') {
         const value = db.getUserVar(guildId, targetUser.id, varName);
-        if (value === null) return interaction.reply({ content: `❌ No variable **${varName}** for ${targetUser}`, ephemeral: true });
+        if (value === null) return interaction.reply({ content: `❌ No variable **${varName}** for ${targetUser}` });
         return interaction.reply({ embeds: [botEmbed().setTitle(`📊 user::${varName}`).setDescription(`**${value}**`)] });
       }
       if (sub === 'add') {
@@ -90,7 +90,7 @@ module.exports = {
       if (sub === 'list') {
         const vars = db.getAllUserVars(guildId, targetUser.id);
         const entries = Object.entries(vars);
-        if (!entries.length) return interaction.reply({ content: `📭 No variables for ${targetUser}`, ephemeral: true });
+        if (!entries.length) return interaction.reply({ content: `📭 No variables for ${targetUser}` });
         const lines = entries.map(([k, v]) => `• **${k}**: \`${v}\``);
         return interaction.reply({ embeds: [botEmbed().setTitle(`📋 user variables for ${targetUser.username}`).setDescription(lines.join('\n'))] });
       }
