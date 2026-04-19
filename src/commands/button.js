@@ -29,8 +29,7 @@ module.exports = {
       .addStringOption(o => o.setName('reply').setDescription('Reply (supports placeholders)').setRequired(true))
       .addStringOption(o => o.setName('color').setDescription('Button color').addChoices(...COLOR_CHOICES))
       .addStringOption(o => o.setName('emoji').setDescription('Button emoji'))
-      .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown (seconds)').setMinValue(0))
-      .addBooleanOption(o => o.setName('ephemeral').setDescription('Ephemeral reply? (default: true)')))
+      .addIntegerOption(o => o.setName('cooldown').setDescription('Cooldown (seconds)').setMinValue(0)))
     .addSubcommand(s => s.setName('addselect').setDescription('Create a select menu responder')
       .addStringOption(o => o.setName('name').setDescription('Select menu name (ID)').setRequired(true))
       .addStringOption(o => o.setName('placeholder').setDescription('Placeholder text').setRequired(true))
@@ -65,9 +64,7 @@ module.exports = {
       const color = interaction.options.getString('color') || 'blue';
       const emoji = interaction.options.getString('emoji') || null;
       const cooldown = interaction.options.getInteger('cooldown') ?? 0;
-      const ephemeral = interaction.options.getBoolean('ephemeral') ?? true;
-
-      db.saveButtonResponder(guildId, name, { type: 'button', label, reply, color, emoji, cooldown: cooldown || null, ephemeral });
+      db.saveButtonResponder(guildId, name, { type: 'button', label, reply, color, emoji, cooldown: cooldown || null });
 
       const preview = new ButtonBuilder()
         .setCustomId(`br:${name}`)
@@ -122,7 +119,7 @@ module.exports = {
     if (sub === 'remove') {
       const name = interaction.options.getString('name').toLowerCase();
       if (!db.getButtonResponder(guildId, name)) {
-        return interaction.reply({ content: `❌ No responder named **${name}**.`, ephemeral: true });
+        return interaction.reply({ content: `❌ No responder named **${name}**.` });
       }
       db.deleteButtonResponder(guildId, name);
       return interaction.reply({ content: `✅ Responder **${name}** deleted.` });
@@ -131,7 +128,7 @@ module.exports = {
     if (sub === 'list') {
       const all = db.getButtonResponders(guildId);
       const keys = Object.keys(all);
-      if (!keys.length) return interaction.reply({ content: '📭 No responders yet.', ephemeral: true });
+      if (!keys.length) return interaction.reply({ content: '📭 No responders yet.' });
 
       const lines = keys.map(k => {
         const b = all[k];
@@ -141,7 +138,7 @@ module.exports = {
 
       return interaction.reply({
         embeds: [botEmbed().setTitle(`🔘 Responders (${keys.length})`).setDescription(lines.join('\n'))],
-        ephemeral: true,
+        
       });
     }
 
@@ -192,13 +189,13 @@ module.exports = {
         }
       }
 
-      if (!rows.length) return interaction.reply({ content: '❌ No valid components.', ephemeral: true });
+      if (!rows.length) return interaction.reply({ content: '❌ No valid components.' });
 
       const payload = { components: rows };
       if (message) payload.content = message;
 
       await channel.send(payload);
-      return interaction.reply({ content: `✅ Panel sent to ${channel}.`, ephemeral: true });
+      return interaction.reply({ content: `✅ Panel sent to ${channel}.` });
     }
   },
 };
