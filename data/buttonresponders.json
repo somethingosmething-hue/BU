@@ -1,0 +1,12 @@
+{
+  "1490408248560324648": {
+    "open-ticket": {
+      "label": "test",
+      "reply": "hello",
+      "color": "blue",
+      "emoji": null,
+      "cooldown": null,
+      "ephemeral": true
+    }
+  }
+}

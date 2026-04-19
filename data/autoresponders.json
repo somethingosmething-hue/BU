@@ -1,0 +1,18 @@
+{
+  "1490408248560324648": {
+    "hello": {
+      "reply": "hi",
+      "matchType": "exact",
+      "sendType": "reply",
+      "cooldown": null,
+      "channelId": null
+    },
+    "I need help": {
+      "reply": "Please open a ticket! {addbutton:open-ticket}",
+      "matchType": "contains",
+      "sendType": "send",
+      "cooldown": null,
+      "channelId": "1490814236027523103"
+    }
+  }
+}
