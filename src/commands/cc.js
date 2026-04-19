@@ -36,7 +36,7 @@ module.exports = {
 
       const cmds = db.getCustomCommands(guildId);
       if (Object.keys(cmds).length >= 100) {
-        return interaction.reply({ content: '❌ You have reached the limit of 100 custom commands.', ephemeral: true });
+        return interaction.reply({ content: '❌ You have reached the limit of 100 custom commands.' });
       }
 
       db.saveCustomCommand(guildId, name, { response, createdAt: Date.now() });
@@ -53,7 +53,7 @@ module.exports = {
     if (sub === 'remove') {
       const name = interaction.options.getString('name').toLowerCase();
       const cmds = db.getCustomCommands(guildId);
-      if (!cmds[name]) return interaction.reply({ content: `❌ No custom command named **${name}**.`, ephemeral: true });
+      if (!cmds[name]) return interaction.reply({ content: `❌ No custom command named **${name}**.` });
 
       db.deleteCustomCommand(guildId, name);
       return interaction.reply({ content: `✅ Custom command **${name}** removed.` });
@@ -62,19 +62,19 @@ module.exports = {
     if (sub === 'list') {
       const cmds = db.getCustomCommands(guildId);
       const keys = Object.keys(cmds);
-      if (!keys.length) return interaction.reply({ content: '📭 No custom commands yet. Add one with `/cc add`.', ephemeral: true });
+      if (!keys.length) return interaction.reply({ content: '📭 No custom commands yet. Add one with `/cc add`.' });
 
       const lines = keys.map(k => `/${k}`);
       const embed = botEmbed().setTitle(`🔧 Custom Commands (${keys.length})`).setDescription(lines.join('\n'));
 
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed] });
     }
 
     if (sub === 'info') {
       const name = interaction.options.getString('name').toLowerCase();
       const cmds = db.getCustomCommands(guildId);
       const data = cmds[name];
-      if (!data) return interaction.reply({ content: `❌ No custom command named **${name}**.`, ephemeral: true });
+      if (!data) return interaction.reply({ content: `❌ No custom command named **${name}**.` });
 
       return interaction.reply({
         embeds: [botEmbed().setTitle(`🔍 Custom Command: /${name}`)
@@ -82,7 +82,7 @@ module.exports = {
             { name: 'Response', value: data.response.length > 1000 ? data.response.slice(0, 997) + '...' : data.response },
             { name: 'Created', value: new Date(data.createdAt).toLocaleString(), inline: true },
           )],
-        ephemeral: true,
+        
       });
     }
   },
