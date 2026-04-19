@@ -45,7 +45,7 @@ module.exports = {
       const winners  = interaction.options.getInteger('winners') || 1;
       const durMs    = parseDuration(durStr);
 
-      if (!durMs) return interaction.reply({ content: '❌ Invalid duration. Use e.g. `30m`, `2h`, `1d`.', ephemeral: true });
+      if (!durMs) return interaction.reply({ content: '❌ Invalid duration. Use e.g. `30m`, `2h`, `1d`.' });
       const endsAt = Date.now() + durMs;
 
       const embed = new EmbedBuilder()
@@ -62,7 +62,7 @@ module.exports = {
         .setStyle(ButtonStyle.Primary)
         .setDisabled(true);
 
-      await interaction.deferReply({ ephemeral: true });
+      await interaction.deferReply();
 
       const msg = await channel.send({ embeds: [embed] });
       await msg.react('🎉');
@@ -83,21 +83,21 @@ module.exports = {
     if (sub === 'end') {
       const messageId = interaction.options.getString('message_id');
       const gw        = db.getGiveaway(guildId, messageId);
-      if (!gw)       return interaction.reply({ content: '❌ Giveaway not found.', ephemeral: true });
-      if (gw.ended)  return interaction.reply({ content: '❌ That giveaway already ended.', ephemeral: true });
+      if (!gw)       return interaction.reply({ content: '❌ Giveaway not found.' });
+      if (gw.ended)  return interaction.reply({ content: '❌ That giveaway already ended.' });
 
       // Force end it by setting endsAt to now
       gw.endsAt = Date.now() - 1;
       db.saveGiveaway(guildId, messageId, gw);
-      return interaction.reply({ content: '✅ Giveaway will be ended on the next check cycle (up to 15 seconds).', ephemeral: true });
+      return interaction.reply({ content: '✅ Giveaway will be ended on the next check cycle (up to 15 seconds).' });
     }
 
     if (sub === 'reroll') {
       const messageId = interaction.options.getString('message_id');
       const gw        = db.getGiveaway(guildId, messageId);
-      if (!gw || !gw.ended) return interaction.reply({ content: '❌ Giveaway not found or not yet ended.', ephemeral: true });
+      if (!gw || !gw.ended) return interaction.reply({ content: '❌ Giveaway not found or not yet ended.' });
       if (!interaction.member.permissions.has('ManageGuild') && interaction.user.id !== gw.hostId) {
-        return interaction.reply({ content: '❌ Only the host or a manager can reroll.', ephemeral: true });
+        return interaction.reply({ content: '❌ Only the host or a manager can reroll.' });
       }
 
       await interaction.deferReply();
@@ -121,7 +121,7 @@ module.exports = {
     if (sub === 'list') {
       const all = db.getGiveaways(guildId);
       const active = Object.entries(all).filter(([, gw]) => !gw.ended);
-      if (!active.length) return interaction.reply({ content: '📭 No active giveaways.', ephemeral: true });
+      if (!active.length) return interaction.reply({ content: '📭 No active giveaways.' });
 
       const lines = active.map(([msgId, gw]) => {
         return `• **${gw.prize}** — ends <t:${Math.floor(gw.endsAt / 1000)}:R> — ${gw.winners} winner(s) — in <#${gw.channelId}>`;
@@ -129,7 +129,7 @@ module.exports = {
 
       return interaction.reply({
         embeds: [botEmbed('#f9c4d2').setTitle(`🎉 Active Giveaways (${active.length})`).setDescription(lines.join('\n'))],
-        ephemeral: true,
+        
       });
     }
   },
