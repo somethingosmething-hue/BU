@@ -1,7 +1,7 @@
 {
-  "builds": [{ "src": "website/api/index.js", "use": "@vercel/node" }],
+  "builds": [{ "src": "/website/api/index.js", "use": "@vercel/node" }],
   "routes": [
-    { "src": "/api/(.*)", "dest": "website/api/index.js" },
-    { "src": "/(.*)", "dest": "website/api/index.js" }
+    { "src": "/api/(.*)", "dest": "/website/api/index.js" },
+    { "src": "/(.*)", "dest": "/website/api/index.js" }
   ]
 }
