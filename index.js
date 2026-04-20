@@ -19,8 +19,13 @@ if (fs.existsSync('.env')) {
 if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   console.log('📦 Cloning repo...');
   run('git clone --depth 1 https://github.com/somethingosmething-hue/BU.git _tmp_clone');
+
+  // Copy normal files
   run('cp -r _tmp_clone/* .');
-  run('cp -r _tmp_clone/.* . 2>/dev/null || true');
+
+  // Copy hidden files/folders EXCEPT .git
+  run('find _tmp_clone -maxdepth 1 -name ".*" ! -name ".git" ! -name "." -exec cp -r {} . \\;');
+
   run('rm -rf _tmp_clone');
   console.log('📦 Installing dependencies...');
   run('npm install');
