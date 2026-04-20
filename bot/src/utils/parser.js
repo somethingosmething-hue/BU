@@ -301,29 +301,13 @@ async function parseReply(replyStr, context) {
     }
   }
 
-  // ── Build separators ──────────────────────────────────────────────────────
-  // Separators are raw objects — they MUST be top-level components, never
-  // inside an ActionRow. Discord type 14 = Separator, spacing 1=small, 2=large.
+  // ── Separators removed (requires discord.js v15) ─────────────────────
+  // For now, use newlines instead
   if (hasSeparators) {
-    for (let i = 0; i < separatorPositions.length; i++) {
-      const { size } = separatorPositions[i];
-      const spacing = size === 'large' ? 2 : 1;
-
-      // Insert text segment before this separator (if any)
-      const segmentBefore = textSegments[i];
-      if (segmentBefore) {
-        rows.push({ type: 10, content: segmentBefore }); // Text Display
-      }
-
-      // Push the separator as a top-level raw component
-      rows.push({ type: 14, divider: true, spacing }); // Separator
-    }
-
-    // Insert any remaining text after the last separator
-    const lastSegment = textSegments[separatorPositions.length];
-    if (lastSegment) {
-      rows.push({ type: 10, content: lastSegment }); // Text Display
-    }
+    textSegments.forEach((seg, i) => {
+      if (i > 0) text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
+      text += seg;
+    });
   }
 
   return {
