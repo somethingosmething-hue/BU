@@ -301,19 +301,35 @@ async function parseReply(replyStr, context) {
     }
   }
 
-  // ── Separators removed (requires discord.js v15) ─────────────────────
-  // For now, use newlines instead
+  // ── Build separators (discord.js v14.19+ supports Components V2) ────────────
+  const componentRows = [];
   if (hasSeparators) {
-    textSegments.forEach((seg, i) => {
-      if (i > 0) text += '\n━━━━━━━━━━━━━━━━━━━━━\n';
-      text += seg;
-    });
+    for (let i = 0; i < separatorPositions.length; i++) {
+      const { size } = separatorPositions[i];
+      
+      // Text segment before separator
+      const segmentBefore = textSegments[i];
+      if (segmentBefore) {
+        componentRows.push({ type: 10, content: segmentBefore });
+      }
+      
+      // Separator (divider)
+      const spacing = size === 'large' ? 2 : 1;
+      componentRows.push({ type: 14, divider: true, spacing });
+    }
+    
+    // Last text segment after separator
+    const lastSegment = textSegments[separatorPositions.length];
+    if (lastSegment) {
+      componentRows.push({ type: 10, content: lastSegment });
+    }
   }
 
   return {
-    text: hasSeparators ? null : (text || null), // text goes into components when separators present
+    text: hasSeparators ? ' ' : text.trim(), // Placeholder when using separators (they take over content)
     embed,
     rows,
+    componentRows,
     reactEmojis,
     actions,
     requireRole,
