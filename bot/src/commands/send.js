@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, ChannelType } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const { parseReply } = require('../utils/parser');
 
 module.exports = {
@@ -22,34 +22,18 @@ module.exports = {
     };
 
     const parsed = await parseReply(message, context);
-
     const payload = {};
 
-    // ── Check if any separators (type 14) are present in rows ──────────────
-    const hasSeparator = parsed.rows?.some(c => c.type === 14);
-
-    if (hasSeparator) {
-      // Components V2 mode — content must live inside a Text Display component
+    if (parsed.hasSeparators) {
+      // ── Components V2 mode ────────────────────────────────────────────────
+      // Required flag for type 14 (Separator) and type 10 (Text Display).
+      // In this mode `content` is ignored by Discord — text lives in type 10
+      // components, which the parser already built and put into parsed.rows.
       payload.flags = 1 << 15; // IS_COMPONENTS_V2 = 32768
-
-      const topLevel = [];
-
-      // Convert text/embed content into a Text Display component (type 10)
-      if (asEmbed && parsed.text) {
-        // Embeds aren't supported in Components V2 — fall back to text display
-        topLevel.push({ type: 10, content: parsed.text });
-      } else if (parsed.text) {
-        topLevel.push({ type: 10, content: parsed.text });
-      }
-
-      // Append all rows (separators + action rows) in order
-      topLevel.push(...parsed.rows);
-
-      payload.components = topLevel;
+      payload.components = parsed.rows;
 
     } else {
-      // ── Normal (non-Components V2) mode ──────────────────────────────────
-
+      // ── Normal mode ───────────────────────────────────────────────────────
       if (asEmbed && parsed.text) {
         const { EmbedBuilder } = require('discord.js');
         payload.embeds = [new EmbedBuilder().setColor('#5865F2').setDescription(parsed.text)];
