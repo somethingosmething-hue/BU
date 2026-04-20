@@ -10,7 +10,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 const PORT = process.env.PORT || 3000;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
-const botPath = path.join(__dirname, '..', 'bot');
+const possibleBotPaths = [
+  path.join(__dirname, '..', 'bot'),
+  path.join(__dirname, 'bot'),
+  path.join(__dirname, '..', '..', 'bot'),
+  './bot'
+];
+let botPath = possibleBotPaths.find(p => fs.existsSync(p)) || path.join(__dirname, 'bot');
 const dataPath = path.join(botPath, 'data');
 
 function requireAuth(req, res, next) {
@@ -35,16 +41,21 @@ app.post('/api/auth', (req, res) => {
   }
 });
 
+let botClient = null;
+try {
+  const idx = require(path.join(botPath, 'src', 'index'));
+  botClient = idx?.client || idx;
+} catch (e) { console.log('Bot not loaded:', e.message); }
+
 app.get('/api/guilds', requireAuth, async (req, res) => {
   try {
-    const client = require(path.join(botPath, 'src', 'index'));
-    if (!client.isReady()) {
-      return res.json({ error: 'Bot not ready' });
+    if (botClient && botClient.isReady()) {
+      const guilds = botClient.guilds.cache.map(g => ({ id: g.id, name: g.name }));
+      return res.json(guilds);
     }
-    const guilds = client.guilds.cache.map(g => ({ id: g.id, name: g.name }));
-    res.json(guilds);
+    res.json([{ id: 'demo', name: 'Demo Server (bot offline)' }]);
   } catch (e) {
-    res.json({ error: e.message });
+    res.json([{ id: 'demo', name: 'Demo Server' }]);
   }
 });
 
