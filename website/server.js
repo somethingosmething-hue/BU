@@ -10,14 +10,20 @@ app.use(express.static(path.join(__dirname, 'public')));
 const PORT = process.env.PORT || 3000;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
-const possibleBotPaths = [
-  path.join(__dirname, '..', 'bot'),
-  path.join(__dirname, 'bot'),
-  path.join(__dirname, '..', '..', 'bot'),
-  './bot'
-];
-let botPath = possibleBotPaths.find(p => fs.existsSync(p)) || path.join(__dirname, 'bot');
-const dataPath = path.join(botPath, 'data');
+const DATA_DIR = path.join(__dirname, 'data');
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+
+function loadData(name) {
+  const file = path.join(DATA_DIR, `${name}.json`);
+  if (!fs.existsSync(file)) fs.writeFileSync(file, '{}');
+  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
+  catch { return {}; }
+}
+
+function saveData(name, data) {
+  const file = path.join(DATA_DIR, `${name}.json`);
+  fs.writeFileSync(file, JSON.stringify(data, null, 2));
+}
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -26,10 +32,6 @@ function requireAuth(req, res, next) {
     return res.status(401).send('Authentication required');
   }
   next();
-}
-
-function getDb() {
-  return require(path.join(botPath, 'src', 'database', 'db'));
 }
 
 app.post('/api/auth', (req, res) => {
@@ -41,187 +43,120 @@ app.post('/api/auth', (req, res) => {
   }
 });
 
-let botClient = null;
-try {
-  const idx = require(path.join(botPath, 'src', 'index'));
-  botClient = idx?.client || idx;
-} catch (e) { console.log('Bot not loaded:', e.message); }
-
-app.get('/api/guilds', requireAuth, async (req, res) => {
-  try {
-    if (botClient && botClient.isReady()) {
-      const guilds = botClient.guilds.cache.map(g => ({ id: g.id, name: g.name }));
-      return res.json(guilds);
-    }
-    res.json([{ id: 'demo', name: 'Demo Server (bot offline)' }]);
-  } catch (e) {
-    res.json([{ id: 'demo', name: 'Demo Server' }]);
-  }
+app.get('/api/guilds', requireAuth, (req, res) => {
+  const servers = loadData('servers');
+  const list = Object.entries(servers).map(([id, data]) => ({ id, name: data.name || id }));
+  if (list.length === 0) list.push({ id: 'demo', name: 'Demo Server' });
+  res.json(list);
 });
 
 app.get('/api/embeds/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    res.json(db.getEmbeds(req.params.guildId) || {});
-  } catch (e) {
-    res.json({});
-  }
+  const db = loadData('embeds');
+  res.json(db[req.params.guildId] || {});
 });
 
 app.post('/api/embeds/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { name, data } = req.body;
-    db.saveEmbed(req.params.guildId, name, data);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('embeds');
+  const { name, data } = req.body;
+  (db[req.params.guildId] ??= {})[name] = data;
+  saveData('embeds', db);
+  res.json({ success: true });
 });
 
 app.delete('/api/embeds/:guildId/:name', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    db.deleteEmbed(req.params.guildId, req.params.name);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('embeds');
+  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
+  saveData('embeds', db);
+  res.json({ success: true });
 });
 
 app.get('/api/commands/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    res.json(db.getCustomCommands(req.params.guildId) || []);
-  } catch (e) {
-    res.json([]);
-  }
+  const db = loadData('commands');
+  const list = Object.entries(db[req.params.guildId] || {}).map(([name, data]) => ({ name, ...data }));
+  res.json(list);
 });
 
 app.post('/api/commands/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { name, response } = req.body;
-    db.saveCustomCommand(req.params.guildId, name, { response, createdAt: Date.now() });
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('commands');
+  const { name, response } = req.body;
+  (db[req.params.guildId] ??= {})[name] = { response, createdAt: Date.now() };
+  saveData('commands', db);
+  res.json({ success: true });
 });
 
 app.delete('/api/commands/:guildId/:name', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    db.deleteCustomCommand(req.params.guildId, req.params.name);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('commands');
+  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
+  saveData('commands', db);
+  res.json({ success: true });
 });
 
 app.get('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    res.json(db.getAutoresponders(req.params.guildId) || []);
-  } catch (e) {
-    res.json([]);
-  }
+  const db = loadData('autoresponders');
+  const list = Object.entries(db[req.params.guildId] || {}).map(([trigger, data]) => ({ trigger, data }));
+  res.json(list);
 });
 
 app.post('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { trigger, data } = req.body;
-    db.saveAutoresponder(req.params.guildId, trigger, data);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('autoresponders');
+  const { trigger, data } = req.body;
+  (db[req.params.guildId] ??= {})[trigger] = data;
+  saveData('autoresponders', db);
+  res.json({ success: true });
 });
 
 app.delete('/api/autoresponders/:guildId/:trigger', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    db.deleteAutoresponder(req.params.guildId, req.params.trigger);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('autoresponders');
+  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.trigger];
+  saveData('autoresponders', db);
+  res.json({ success: true });
+});
+
+app.get('/api/variables/global', requireAuth, (req, res) => {
+  res.json(loadData('globalvars'));
 });
 
 app.get('/api/variables/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    res.json({
-      global: db.getGlobalVars ? db.getGlobalVars() : {},
-      user: db.getUserVars ? db.getUserVars(req.params.guildId) : {}
-    });
-  } catch (e) {
-    res.json({ global: {}, user: {} });
-  }
+  const gv = loadData('globalvars');
+  const uv = loadData('uservars');
+  res.json({ global: gv, user: uv[req.params.guildId] || {} });
 });
 
-app.post('/api/variables/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { type, name, value, userId } = req.body;
-    if (type === 'global') {
-      db.setGlobalVar ? db.setGlobalVar(name, value) : null;
-    } else {
-      db.setUserVar ? db.setUserVar(req.params.guildId, userId, name, value) : null;
-    }
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+app.post('/api/variables/global', requireAuth, (req, res) => {
+  const { name, value } = req.body;
+  const db = loadData('globalvars');
+  db[name] = value;
+  saveData('globalvars', db);
+  res.json({ success: true });
 });
 
-app.delete('/api/variables/:guildId/:type/:name', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { type, name } = req.params;
-    if (type === 'global') {
-      db.deleteGlobalVar ? db.deleteGlobalVar(name) : null;
-    } else {
-      db.deleteUserVar ? db.deleteUserVar(req.params.guildId, name) : null;
-    }
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+app.delete('/api/variables/global/:name', requireAuth, (req, res) => {
+  const db = loadData('globalvars');
+  delete db[req.params.name];
+  saveData('globalvars', db);
+  res.json({ success: true });
 });
 
 app.get('/api/settings/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    res.json({
-      prefix: db.getPrefix ? db.getPrefix(req.params.guildId) : '/',
-      settings: db.getServerSettings ? db.getServerSettings(req.params.guildId) : {}
-    });
-  } catch (e) {
-    res.json({ prefix: '/', settings: {} });
-  }
+  const db = loadData('serversettings');
+  res.json({ prefix: db[req.params.guildId]?.prefix || '/', settings: db[req.params.guildId] || {} });
 });
 
 app.post('/api/settings/:guildId', requireAuth, (req, res) => {
-  try {
-    const db = getDb();
-    const { prefix, ...settings } = req.body;
-    if (prefix && db.setPrefix) db.setPrefix(req.params.guildId, prefix);
-    for (const [key, value] of Object.entries(settings)) {
-      if (db.setServerSetting) db.setServerSetting(req.params.guildId, key, value);
-    }
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  const db = loadData('serversettings');
+  const { prefix, ...settings } = req.body;
+  (db[req.params.guildId] ??= {})[prefix ? 'prefix' : 'name'] = prefix || settings.name || {};
+  if (prefix) db[req.params.guildId].prefix = prefix;
+  Object.assign(db[req.params.guildId], settings);
+  saveData('serversettings', db);
+  res.json({ success: true });
 });
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🌐 Dashboard running at http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌐 Dashboard running on port ${PORT}`);
   console.log(`🔐 Password: ${DASHBOARD_PASSWORD}`);
 });
