@@ -24,18 +24,47 @@ module.exports = {
     const parsed = await parseReply(message, context);
 
     const payload = {};
-    if (asEmbed && parsed.text) {
-      const { EmbedBuilder } = require('discord.js');
-      payload.embeds = [new EmbedBuilder().setColor('#5865F2').setDescription(parsed.text)];
-      if (parsed.text) payload.content = null;
-    } else if (parsed.text) {
-      payload.content = parsed.text;
-    }
-    if (parsed.embed && !asEmbed) {
-      payload.embeds = [parsed.embed];
-    }
-    if (parsed.rows?.length) {
-      payload.components = parsed.rows;
+
+    // ── Check if any separators (type 14) are present in rows ──────────────
+    const hasSeparator = parsed.rows?.some(c => c.type === 14);
+
+    if (hasSeparator) {
+      // Components V2 mode — content must live inside a Text Display component
+      payload.flags = 1 << 15; // IS_COMPONENTS_V2 = 32768
+
+      const topLevel = [];
+
+      // Convert text/embed content into a Text Display component (type 10)
+      if (asEmbed && parsed.text) {
+        // Embeds aren't supported in Components V2 — fall back to text display
+        topLevel.push({ type: 10, content: parsed.text });
+      } else if (parsed.text) {
+        topLevel.push({ type: 10, content: parsed.text });
+      }
+
+      // Append all rows (separators + action rows) in order
+      topLevel.push(...parsed.rows);
+
+      payload.components = topLevel;
+
+    } else {
+      // ── Normal (non-Components V2) mode ──────────────────────────────────
+
+      if (asEmbed && parsed.text) {
+        const { EmbedBuilder } = require('discord.js');
+        payload.embeds = [new EmbedBuilder().setColor('#5865F2').setDescription(parsed.text)];
+        payload.content = null;
+      } else if (parsed.text) {
+        payload.content = parsed.text;
+      }
+
+      if (parsed.embed && !asEmbed) {
+        payload.embeds = [parsed.embed];
+      }
+
+      if (parsed.rows?.length) {
+        payload.components = parsed.rows;
+      }
     }
 
     await channel.send(payload);
