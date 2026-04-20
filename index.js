@@ -6,6 +6,9 @@ function run(cmd) {
   catch (e) { console.error('Error:', e.message); }
 }
 
+// Clean up leftover folders
+run('rm -rf _tmp_clone');
+
 // Save existing .env before updating
 let existingEnv = '';
 if (fs.existsSync('.env')) {
@@ -15,7 +18,6 @@ if (fs.existsSync('.env')) {
 
 if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   console.log('📦 Cloning repo...');
-  run('rm -rf _tmp_clone');
   run('git clone --depth 1 https://github.com/somethingosmething-hue/BU.git _tmp_clone');
   run('cp -r _tmp_clone/* .');
   run('cp -r _tmp_clone/.* . 2>/dev/null || true');
