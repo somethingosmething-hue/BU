@@ -6,7 +6,13 @@ const fs = require('fs');
 const app = express();
 app.use(express.json({ limit: '50mb' }));
 
+const PUBLIC_DIR = path.join(__dirname, 'public');
 const DATA_DIR = process.env.VERCEL ? '/tmp/data' : path.join(__dirname, 'data');
+
+console.log('PUBLIC_DIR:', PUBLIC_DIR);
+console.log('DATA_DIR:', DATA_DIR);
+console.log('Files:', fs.readdirSync(__dirname));
+
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 function loadData(name) {
@@ -105,8 +111,19 @@ app.post('/api/settings/:guildId', checkAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+app.use(express.static(PUBLIC_DIR));
+
+app.get('/', (req, res) => {
+  const indexPath = path.join(PUBLIC_DIR, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(404).send('index.html not found. PUBLIC_DIR: ' + PUBLIC_DIR);
+  }
+});
+
+app.get('/test', (req, res) => {
+  res.send('Hello! PUBLIC_DIR exists: ' + fs.existsSync(PUBLIC_DIR));
 });
 
 module.exports = app;
