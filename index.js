@@ -6,6 +6,13 @@ function run(cmd) {
   catch (e) { console.error('Error:', e.message); }
 }
 
+// Save existing .env before updating
+let existingEnv = '';
+if (fs.existsSync('.env')) {
+  existingEnv = fs.readFileSync('.env', 'utf8');
+  console.log('💾 Saved existing .env');
+}
+
 if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   console.log('📦 Cloning repo...');
   run('rm -rf _tmp_clone');
@@ -17,8 +24,15 @@ if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   run('npm install');
 } else {
   console.log('📦 Updating from GitHub...');
-  run('git fetch origin main');
-  run('git reset --hard origin/main');
+  try { run('git fetch origin main'); } catch {}
+  try { run('git stash'); } catch {}
+  try { run('git reset --hard origin/main'); } catch {}
+}
+
+// Restore .env
+if (existingEnv) {
+  fs.writeFileSync('.env', existingEnv);
+  console.log('💾 Restored .env');
 }
 
 console.log('✅ Ready!');
