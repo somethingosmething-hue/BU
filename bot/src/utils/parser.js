@@ -1,4 +1,4 @@
-const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle, SeparatorBuilder, SeparatorSpacingSize } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const db = require('../database/db');
 
 const BUTTON_COLORS = {
@@ -117,7 +117,7 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
-// ── Extract {random:choice1|choice2|...} ─────────────────────────────────
+  // ── Extract {random:choice1|choice2|...} ─────────────────────────────────
   text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => {
     const options = choices.split('|').map(s => s.trim()).filter(s => s);
     if (options.length === 0) return '';
@@ -143,7 +143,6 @@ async function parseReply(replyStr, context) {
   });
 
   // ── Extract {cvar:add:global::name:amount} or {cvar:add:user::name:amount} ─────
-  // Supports static numbers or {range:min:max}
   text = text.replace(/\{cvar:add:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, amount) => {
     let addAmount = amount;
     if (amount.startsWith('{range:')) {
@@ -190,11 +189,13 @@ async function parseReply(replyStr, context) {
     return '';
   });
 
-  // ── Extract {separator} ─────────────────────────────────────────────────
-  const separators = [];
-  text = text.replace(/\{separator(?::(\w+))?\}/gi, (_, size) => {
-    separators.push(size || 'small');
-    return '';
+  // ── Extract {separator} ──────────────────────────────────────────────────
+  // Separators are collected with their position in text so we can interleave
+  // text segments and separators correctly in the final Components V2 layout.
+  const separatorPositions = []; // { index: charIndex, size: 'small'|'large' }
+  text = text.replace(/\{separator(?::(\w+))?\}/gi, (match, size, offset) => {
+    separatorPositions.push({ index: offset, size: size || 'small' });
+    return '\x00'; // temp placeholder — split on this below
   });
 
   // ── Process custom variables (%%variable%%) ────────────────────────────────
@@ -216,27 +217,41 @@ async function parseReply(replyStr, context) {
   text = text.replace(/\{time\}/gi, new Date().toLocaleTimeString());
   text = text.replace(/\{timestamp\}/gi, Math.floor(Date.now() / 1000).toString());
 
-  text = text.trim();
-
   // ── Build divemb or embed ──────────────────────────────────────────────────
   let embed = null;
+  const hasSeparators = separatorPositions.length > 0;
+
+  // Split text on separator placeholders (\x00)
+  const textSegments = text.split('\x00').map(s => s.trim()).filter(s => s);
+
+  if (!hasSeparators) {
+    // No separators — trim normally
+    text = text.trim();
+  }
+
   if (divembName) {
     const savedDivemb = db.getDivemb(guildId, divembName);
     if (savedDivemb) {
       embed = buildDivembFromData(savedDivemb);
-      if (text) embed.setDescription((savedDivemb.description || '') + '\n' + text);
+      const combined = [savedDivemb.description, textSegments.join('\n')].filter(Boolean).join('\n');
+      if (combined) embed.setDescription(combined);
+      textSegments.length = 0;
       text = '';
     }
   } else if (embedName) {
     const savedEmbed = db.getEmbed(guildId, embedName);
     if (savedEmbed) {
       embed = buildEmbedFromData(savedEmbed);
-      if (text) embed.setDescription((savedEmbed.description || '') + '\n' + text);
+      const combined = [savedEmbed.description, textSegments.join('\n')].filter(Boolean).join('\n');
+      if (combined) embed.setDescription(combined);
+      textSegments.length = 0;
       text = '';
     }
   } else if (embedColor !== null) {
     embed = new EmbedBuilder().setColor(embedColor);
-    if (text) embed.setDescription(text);
+    const combined = textSegments.join('\n');
+    if (combined) embed.setDescription(combined);
+    textSegments.length = 0;
     text = '';
   }
 
@@ -287,26 +302,45 @@ async function parseReply(replyStr, context) {
   }
 
   // ── Build separators ──────────────────────────────────────────────────────
-  for (const sepSize of separators) {
-    const spacing = sepSize === 'large' ? SeparatorSpacingSize.Large : sepSize === 'medium' ? SeparatorSpacingSize.Medium : SeparatorSpacingSize.Small;
-    rows.push(new ActionRowBuilder().addComponents(new SeparatorBuilder().setDivider(true).setSpacing(spacing)));
+  // Separators are raw objects — they MUST be top-level components, never
+  // inside an ActionRow. Discord type 14 = Separator, spacing 1=small, 2=large.
+  if (hasSeparators) {
+    for (let i = 0; i < separatorPositions.length; i++) {
+      const { size } = separatorPositions[i];
+      const spacing = size === 'large' ? 2 : 1;
+
+      // Insert text segment before this separator (if any)
+      const segmentBefore = textSegments[i];
+      if (segmentBefore) {
+        rows.push({ type: 10, content: segmentBefore }); // Text Display
+      }
+
+      // Push the separator as a top-level raw component
+      rows.push({ type: 14, divider: true, spacing }); // Separator
+    }
+
+    // Insert any remaining text after the last separator
+    const lastSegment = textSegments[separatorPositions.length];
+    if (lastSegment) {
+      rows.push({ type: 10, content: lastSegment }); // Text Display
+    }
   }
 
   return {
-    text: text || null,
+    text: hasSeparators ? null : (text || null), // text goes into components when separators present
     embed,
     rows,
     reactEmojis,
     actions,
     requireRole,
     cooldownSeconds,
+    hasSeparators,
   };
 }
 
 function evaluateExpression(expr, context) {
   const { member, guild, guildId, user } = context;
 
-  // Handle variable:get syntax (get user variable)
   if (expr.startsWith('var:')) {
     const varName = expr.slice(4);
     if (member) {
@@ -316,12 +350,9 @@ function evaluateExpression(expr, context) {
     return '';
   }
 
-  // Handle math expressions like: 100 + {money}
-  // For now, support basic string concatenation with user variables
   if (expr.includes('+') || expr.includes('-') || expr.includes('*') || expr.includes('/')) {
     try {
       let processed = expr;
-      // Replace any user var references in the expression
       processed = processed.replace(/\{user_var:([^}]+)\}/gi, (_, name) => {
         if (member) {
           const val = db.getUserVar(guildId, member.id, name.trim());
@@ -329,7 +360,6 @@ function evaluateExpression(expr, context) {
         }
         return '0';
       });
-      // Also support %%user_var:name%% syntax
       processed = processed.replace(/user_var:([^%]+)/gi, (_, name) => {
         if (member) {
           const val = db.getUserVar(guildId, member.id, name.trim());
@@ -338,9 +368,7 @@ function evaluateExpression(expr, context) {
         return '0';
       });
 
-      // Only allow safe math (numbers and operators)
       if (/^[\d\s+\-*/().]+$/.test(processed)) {
-        // eslint-disable-next-line no-eval
         const result = Function('"use strict"; return (' + processed + ')')();
         return String(Math.floor(result));
       }
@@ -359,7 +387,6 @@ function resolveRole(guild, roleStr) {
     || guild.roles.cache.find(r => r.name.toLowerCase() === cleaned.toLowerCase());
 }
 
-// ──────────────────────────────────────────────────────────────
 module.exports = {
   parseReply,
   buildEmbedFromData,
