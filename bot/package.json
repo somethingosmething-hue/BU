@@ -2,12 +2,10 @@
   "name": "mimu-clone",
   "version": "1.0.0",
   "description": "A Mimu-inspired Discord bot with unlimited embeds, autoresponders, button roles, and economy.",
-  "main": "bot/src/index.js",
+  "main": "src/index.js",
   "scripts": {
-    "start": "node index.js",
-    "bot": "node bot/src/index.js",
-    "web": "node website/server.js",
-    "dev": "nodemon bot/src/index.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
   },
   "dependencies": {
     "discord.js": "^14.14.1",
