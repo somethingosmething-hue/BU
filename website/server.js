@@ -2,35 +2,16 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
-
-const repoUrl = 'https://github.com/somethingosmething-hue/BU.git';
-const botPath = path.join(__dirname, 'bot');
-const dataPath = path.join(botPath, 'data');
-
-if (!fs.existsSync(botPath)) {
-  console.log('📦 Cloning repo...');
-  execSync('git clone --depth 1 ' + repoUrl + ' ' + botPath, { stdio: 'inherit' });
-  console.log('📦 Installing dependencies...');
-  execSync('cd ' + botPath + ' && npm install', { stdio: 'inherit' });
-}
-
-if (!fs.existsSync(dataPath)) {
-  fs.mkdirSync(dataPath, { recursive: true });
-}
-
-if (!fs.existsSync('./.env')) {
-  fs.writeFileSync('./.env', 'BOT_TOKEN=YOUR_BOT_TOKEN_HERE\nDASHBOARD_PASSWORD=admin\nPORT=3000\n');
-}
-
-require('dotenv').config();
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 const PORT = process.env.PORT || 3000;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
+
+const botPath = path.join(__dirname, '..', 'bot');
+const dataPath = path.join(botPath, 'data');
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -39,6 +20,10 @@ function requireAuth(req, res, next) {
     return res.status(401).send('Authentication required');
   }
   next();
+}
+
+function getDb() {
+  return require(path.join(botPath, 'src', 'database', 'db'));
 }
 
 app.post('/api/auth', (req, res) => {
@@ -50,102 +35,175 @@ app.post('/api/auth', (req, res) => {
   }
 });
 
-// Embeds API
+app.get('/api/guilds', requireAuth, async (req, res) => {
+  try {
+    const client = require(path.join(botPath, 'src', 'index'));
+    if (!client.isReady()) {
+      return res.json({ error: 'Bot not ready' });
+    }
+    const guilds = client.guilds.cache.map(g => ({ id: g.id, name: g.name }));
+    res.json(guilds);
+  } catch (e) {
+    res.json({ error: e.message });
+  }
+});
+
 app.get('/api/embeds/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json(db.getEmbeds(req.params.guildId));
+  try {
+    const db = getDb();
+    res.json(db.getEmbeds(req.params.guildId) || {});
+  } catch (e) {
+    res.json({});
+  }
 });
 
 app.post('/api/embeds/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  const { name, data } = req.body;
-  db.saveEmbed(req.params.guildId, name, data);
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    const { name, data } = req.body;
+    db.saveEmbed(req.params.guildId, name, data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.delete('/api/embeds/:guildId/:name', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  db.deleteEmbed(req.params.guildId, req.params.name);
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    db.deleteEmbed(req.params.guildId, req.params.name);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
-// Custom Commands API
 app.get('/api/commands/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json(db.getCustomCommands(req.params.guildId));
+  try {
+    const db = getDb();
+    res.json(db.getCustomCommands(req.params.guildId) || []);
+  } catch (e) {
+    res.json([]);
+  }
 });
 
 app.post('/api/commands/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  const { name, response } = req.body;
-  db.saveCustomCommand(req.params.guildId, name, { response, createdAt: Date.now() });
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    const { name, response } = req.body;
+    db.saveCustomCommand(req.params.guildId, name, { response, createdAt: Date.now() });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.delete('/api/commands/:guildId/:name', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  db.deleteCustomCommand(req.params.guildId, req.params.name);
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    db.deleteCustomCommand(req.params.guildId, req.params.name);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
-// Autoresponders API
 app.get('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json(db.getAutoresponders(req.params.guildId));
+  try {
+    const db = getDb();
+    res.json(db.getAutoresponders(req.params.guildId) || []);
+  } catch (e) {
+    res.json([]);
+  }
 });
 
 app.post('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  const { trigger, data } = req.body;
-  db.saveAutoresponder(req.params.guildId, trigger, data);
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    const { trigger, data } = req.body;
+    db.saveAutoresponder(req.params.guildId, trigger, data);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 app.delete('/api/autoresponders/:guildId/:trigger', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  db.deleteAutoresponder(req.params.guildId, req.params.trigger);
-  res.json({ success: true });
+  try {
+    const db = getDb();
+    db.deleteAutoresponder(req.params.guildId, req.params.trigger);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
-// Variables API
-app.get('/api/variables/:guildId/:userId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json(db.getAllUserVars(req.params.guildId, req.params.userId));
-});
-
-app.get('/api/variables/global', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json(db.getGlobalVars());
+app.get('/api/variables/:guildId', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    res.json({
+      global: db.getGlobalVars ? db.getGlobalVars() : {},
+      user: db.getUserVars ? db.getUserVars(req.params.guildId) : {}
+    });
+  } catch (e) {
+    res.json({ global: {}, user: {} });
+  }
 });
 
 app.post('/api/variables/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  const { type, name, value, userId } = req.body;
-  if (type === 'global') {
-    db.setGlobalVar(name, value);
-  } else {
-    db.setUserVar(req.params.guildId, userId, name, value);
+  try {
+    const db = getDb();
+    const { type, name, value, userId } = req.body;
+    if (type === 'global') {
+      db.setGlobalVar ? db.setGlobalVar(name, value) : null;
+    } else {
+      db.setUserVar ? db.setUserVar(req.params.guildId, userId, name, value) : null;
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
-  res.json({ success: true });
 });
 
-// Settings API
+app.delete('/api/variables/:guildId/:type/:name', requireAuth, (req, res) => {
+  try {
+    const db = getDb();
+    const { type, name } = req.params;
+    if (type === 'global') {
+      db.deleteGlobalVar ? db.deleteGlobalVar(name) : null;
+    } else {
+      db.deleteUserVar ? db.deleteUserVar(req.params.guildId, name) : null;
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 app.get('/api/settings/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  res.json({
-    prefix: db.getPrefix(req.params.guildId),
-    settings: db.getServerSettings(req.params.guildId)
-  });
+  try {
+    const db = getDb();
+    res.json({
+      prefix: db.getPrefix ? db.getPrefix(req.params.guildId) : '/',
+      settings: db.getServerSettings ? db.getServerSettings(req.params.guildId) : {}
+    });
+  } catch (e) {
+    res.json({ prefix: '/', settings: {} });
+  }
 });
 
 app.post('/api/settings/:guildId', requireAuth, (req, res) => {
-  const db = require('./bot/src/database/db');
-  const { prefix, ...settings } = req.body;
-  if (prefix) db.setPrefix(req.params.guildId, prefix);
-  for (const [key, value] of Object.entries(settings)) {
-    db.setServerSetting(req.params.guildId, key, value);
+  try {
+    const db = getDb();
+    const { prefix, ...settings } = req.body;
+    if (prefix && db.setPrefix) db.setPrefix(req.params.guildId, prefix);
+    for (const [key, value] of Object.entries(settings)) {
+      if (db.setServerSetting) db.setServerSetting(req.params.guildId, key, value);
+    }
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
   }
-  res.json({ success: true });
 });
 
 app.get('/', (req, res) => {
@@ -155,6 +213,4 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🌐 Dashboard running at http://localhost:${PORT}`);
   console.log(`🔐 Password: ${DASHBOARD_PASSWORD}`);
-  
-  const client = require('./bot/src/index');
 });
