@@ -25,6 +25,21 @@ function isUserTrusted(guildId, userId) {
     }
 }
 
+// Builds a message payload from a parsed result, handling both normal and
+// Components V2 mode (when {separator} is used).
+function buildPayload(parsed) {
+    const payload = {};
+    if (parsed.hasSeparators) {
+        payload.flags = 1 << 15; // IS_COMPONENTS_V2 = 32768
+        payload.components = parsed.rows;
+    } else {
+        if (parsed.text)        payload.content    = parsed.text;
+        if (parsed.embed)       payload.embeds     = [parsed.embed];
+        if (parsed.rows.length) payload.components = parsed.rows;
+    }
+    return payload;
+}
+
 module.exports = {
     name: 'interactionCreate',
     async execute(interaction, client) {
@@ -66,7 +81,6 @@ module.exports = {
                         if (!hasAll) {
                             return interaction.reply({
                                 content: '❌ You do not have permission to use this command.',
-                                
                             });
                         }
                     }
@@ -184,12 +198,9 @@ module.exports = {
                     } catch (e) { console.error('Role action failed:', e.message); }
                 }
 
-                const payload = {};
-                if (parsed.text)        payload.content    = parsed.text;
-                if (parsed.embed)       payload.embeds     = [parsed.embed];
-                if (parsed.rows.length) payload.components = parsed.rows;
+                const payload = buildPayload(parsed);
 
-                if (Object.keys(payload).length > 1) {
+                if (Object.keys(payload).length > 0) {
                     await interaction.reply(payload).catch(console.error);
                 } else {
                     await interaction.reply({ content: '✅ Done!' });
@@ -247,7 +258,6 @@ module.exports = {
                         .setStyle(ButtonStyle.Danger)
                 ));
 
-                // Guard against empty embed crashing the update
                 const hasContent = saved.title || saved.description || saved.footer ||
                                    saved.image || saved.thumbnail || saved.author || saved.url;
 
@@ -309,12 +319,7 @@ module.exports = {
                 } catch (e) { console.error('Role action failed:', e.message); }
             }
 
-            const payload = {};
-            if (parsed.text)        payload.content    = parsed.text;
-            if (parsed.embed)       payload.embeds     = [parsed.embed];
-            if (parsed.rows.length) payload.components = parsed.rows;
-
-            await interaction.reply(payload).catch(console.error);
+            await interaction.reply(buildPayload(parsed)).catch(console.error);
         }
     },
 };
