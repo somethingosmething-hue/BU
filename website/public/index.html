@@ -3,159 +3,169 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mimu Dashboard</title>
+  <title>MCDash</title>
+  <link rel="icon" type="image/png" href="https://cdn://github.com/Winterass/MCDash/raw/master/webui/public/assets/img/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg: #0d1117;
-      --bg2: #161b22;
-      --bg3: #21262d;
-      --bg4: #30363d;
-      --text: #e6edf3;
-      --text2: #8b949e;
-      --text3: #6e7681;
-      --accent: #5865f2;
-      --accent2: #4752c8;
-      --success: #238636;
-      --error: #da3633;
-      --border: #30363d;
+      --bg: #0f131a;
+      --bg-card: #1b1f27;
+      --bg-card-hover: #22262e;
+      --bg-input: #272c36;
+      --text: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --border: #334155;
     }
-    html, body { height: 100%; }
     body {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Plus Jakarta Sans', sans-serif;
       background: var(--bg);
       color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
+      min-height: 100vh;
     }
 
-    /* Login */
+    /* Login Page */
     #login-screen {
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, var(--bg) 0%, #1a1f2e 100%);
+      background: var(--bg);
     }
-    .login-card {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 40px;
+    .login-box {
+      background: var(--bg-card);
+      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      border-radius: 16px;
+      padding: 48px;
       width: 100%;
-      max-width: 400px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      max-width: 420px;
+      text-align: center;
     }
-    .login-card h1 {
-      font-size: 24px;
-      font-weight: 600;
-      margin-bottom: 8px;
+    .login-logo {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
     }
-    .login-card h1 span { color: var(--accent); }
-    .login-card p {
-      color: var(--text2);
-      margin-bottom: 24px;
+    .login-logo img {
+      width: 48px;
+      height: 48px;
+    }
+    .login-logo h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .login-subtitle {
+      color: var(--text-secondary);
+      margin-bottom: 32px;
       font-size: 14px;
     }
-    .login-card input {
+    .login-input {
       width: 100%;
-      padding: 12px 16px;
-      background: var(--bg3);
+      padding: 14px 18px;
+      background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       color: var(--text);
       font-size: 14px;
       font-family: inherit;
-      margin-bottom: 12px;
-      transition: border-color 0.2s;
+      margin-bottom: 14px;
+      transition: all 0.2s;
     }
-    .login-card input:focus {
+    .login-input:focus {
       outline: none;
-      border-color: var(--accent);
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
     }
-    .login-card input::placeholder { color: var(--text3); }
-    .login-card button {
+    .login-input::placeholder { color: var(--text-muted); }
+    .login-btn {
       width: 100%;
-      padding: 12px;
-      background: var(--accent);
+      padding: 14px;
+      background: var(--primary);
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 14px;
-      font-weight: 500;
+      font-weight: 600;
       font-family: inherit;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
+      margin-top: 8px;
     }
-    .login-card button:hover { background: var(--accent2); }
+    .login-btn:hover { background: var(--primary-hover); }
 
-    /* App */
+    /* App Layout */
     .app { display: none; height: 100vh; }
     .app.active { display: flex; }
 
     /* Sidebar */
     .sidebar {
-      width: 240px;
-      background: var(--bg2);
+      width: 260px;
+      background: var(--bg-card);
       border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       flex-shrink: 0;
     }
     .sidebar-header {
-      padding: 20px;
+      padding: 24px;
       border-bottom: 1px solid var(--border);
     }
     .sidebar-header h1 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--accent);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--primary);
     }
     .nav {
       flex: 1;
-      padding: 12px;
+      padding: 16px 12px;
       overflow-y: auto;
     }
     .nav-item {
-      padding: 10px 14px;
-      border-radius: 6px;
+      padding: 12px 16px;
+      border-radius: 8px;
       cursor: pointer;
-      color: var(--text2);
-      font-weight: 400;
+      color: var(--text-secondary);
+      font-weight: 500;
+      font-size: 14px;
       transition: all 0.15s;
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin-bottom: 2px;
+      gap: 12px;
+      margin-bottom: 4px;
     }
     .nav-item:hover {
-      background: var(--bg3);
+      background: var(--bg-input);
       color: var(--text);
     }
     .nav-item.active {
-      background: var(--accent);
+      background: var(--primary);
       color: white;
     }
     .sidebar-footer {
-      padding: 16px;
+      padding: 16px 20px;
       border-top: 1px solid var(--border);
     }
     .server-badge {
-      background: var(--bg3);
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-size: 12px;
-      color: var(--text2);
+      background: var(--bg-input);
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-muted);
       font-family: monospace;
+      text-align: center;
     }
 
-    /* Main */
+    /* Main Content */
     .main {
       flex: 1;
       display: flex;
@@ -163,8 +173,8 @@
       overflow: hidden;
     }
     .main-header {
-      padding: 16px 24px;
-      background: var(--bg2);
+      padding: 20px 32px;
+      background: var(--bg-card);
       border-bottom: 1px solid var(--border);
       display: flex;
       align-items: center;
@@ -175,19 +185,21 @@
       font-weight: 600;
     }
     .save-btn {
-      padding: 8px 16px;
-      background: var(--accent);
+      padding: 10px 20px;
+      background: var(--primary);
       color: white;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       cursor: pointer;
     }
+    .save-btn:hover { background: var(--primary-hover); }
     .main-content {
       flex: 1;
       overflow-y: auto;
-      padding: 24px;
+      padding: 24px 32px;
+      background: var(--bg);
     }
 
     /* Tabs */
@@ -196,90 +208,89 @@
 
     /* Cards */
     .card {
-      background: var(--bg2);
+      background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-bottom: 16px;
-      overflow: hidden;
+      border-radius: 12px;
+      margin-bottom: 20px;
     }
     .card-header {
-      padding: 14px 16px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .card-header h3 {
-      font-size: 14px;
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 600;
     }
-    .card-body { padding: 16px; }
+    .card-body { padding: 16px 20px; }
     .card-body.empty {
       text-align: center;
-      padding: 40px 20px;
-      color: var(--text3);
+      padding: 48px 20px;
+      color: var(--text-muted);
     }
 
     /* Buttons */
     .btn {
-      padding: 6px 12px;
-      border-radius: 6px;
-      font-size: 12px;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       border: none;
       font-family: inherit;
     }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-secondary { background: var(--bg4); color: var(--text); }
-    .btn-danger { background: var(--error); color: white; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: var(--bg-input); color: var(--text); }
+    .btn-secondary:hover { background: var(--bg-card-hover); }
+    .btn-danger { background: var(--danger); color: white; }
     .btn-success { background: var(--success); color: white; }
 
     /* Inputs */
-    .input-group { margin-bottom: 16px; }
+    .input-group { margin-bottom: 18px; }
     .input-group label {
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 8px;
       font-size: 13px;
-      color: var(--text2);
+      color: var(--text-secondary);
+      font-weight: 500;
     }
     .input-group input,
-    .input-group textarea,
-    .input-group select {
+    .input-group textarea {
       width: 100%;
-      padding: 10px 14px;
-      background: var(--bg3);
+      padding: 12px 16px;
+      background: var(--bg-input);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 8px;
       color: var(--text);
       font-size: 14px;
       font-family: inherit;
     }
     .input-group input:focus,
-    .input-group textarea:focus,
-    .input-group select:focus {
+    .input-group textarea:focus {
       outline: none;
-      border-color: var(--accent);
+      border-color: var(--primary);
     }
     .input-group textarea { min-height: 100px; resize: vertical; }
 
     /* List Items */
     .list-item {
-      padding: 12px 16px;
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .list-item:last-child { border-bottom: none; }
-    .list-item-name { font-weight: 500; }
-    .list-item-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
-    .list-item-actions { display: flex; gap: 6px; }
+    .list-item-name { font-weight: 600; font-size: 14px; }
+    .list-item-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+    .list-item-actions { display: flex; gap: 8px; }
 
     /* Grid */
-    .grid { display: grid; gap: 16px; }
+    .grid { display: grid; gap: 20px; }
     .grid-2 { grid-template-columns: repeat(2, 1fr); }
-    .grid-3 { grid-template-columns: repeat(3, 1fr); }
 
     /* Modal */
     .modal-overlay {
@@ -293,30 +304,30 @@
     }
     .modal-overlay.active { display: flex; }
     .modal {
-      background: var(--bg2);
-      border-radius: 12px;
+      background: var(--bg-card);
+      border-radius: 16px;
       width: 90%;
-      max-width: 700px;
+      max-width: 640px;
       max-height: 85vh;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     .modal-header {
-      padding: 16px 20px;
+      padding: 20px 24px;
       border-bottom: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
-    .modal-header h3 { font-weight: 600; }
+    .modal-header h3 { font-weight: 600; font-size: 16px; }
     .modal-body {
-      padding: 20px;
+      padding: 24px;
       overflow-y: auto;
       flex: 1;
     }
     .modal-footer {
-      padding: 14px 20px;
+      padding: 16px 24px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: flex-end;
@@ -326,89 +337,39 @@
     /* Variables */
     .var-row {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       align-items: center;
-      padding: 10px;
-      background: var(--bg3);
-      border-radius: 6px;
-      margin-bottom: 8px;
-    }
-    .var-row span { flex: 1; }
-    .var-row input {
-      flex: 1;
-      padding: 8px 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      color: var(--text);
-      font-size: 13px;
-    }
-
-    /* Preview */
-    .preview-box {
-      background: var(--bg);
+      padding: 12px 16px;
+      background: var(--bg-input);
       border-radius: 8px;
-      padding: 20px;
-      margin-top: 16px;
-    }
-    .preview-embed {
-      background: var(--bg3);
-      border-radius: 8px;
-      padding: 16px;
-      border-left: 4px solid var(--accent);
-    }
-
-    /* Blocks Editor */
-    .blocks-canvas {
-      background: var(--bg3);
-      border-radius: 8px;
-      padding: 16px;
-      min-height: 300px;
-    }
-    .block {
-      background: var(--bg);
-      border-radius: 6px;
-      padding: 14px;
       margin-bottom: 10px;
-      position: relative;
     }
-    .block-title {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--accent);
-      margin-bottom: 10px;
-      text-transform: uppercase;
-    }
-    .block-remove {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      background: var(--error);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      width: 22px;
-      height: 22px;
-      cursor: pointer;
-      font-size: 14px;
-    }
+    .var-row span { flex: 1; font-size: 14px; }
+    .var-row small { color: var(--text-muted); font-size: 13px; }
 
     @media (max-width: 768px) {
-      .sidebar { width: 60px; }
+      .sidebar { width: 72px; }
       .sidebar-header h1, .nav-item span { display: none; }
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+      .nav-item { justify-content: center; }
+      .grid-2 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
-  <!-- Login Screen -->
+  <!-- Login -->
   <div id="login-screen">
-    <div class="login-card">
-      <h1><span>◆</span> Mimu Dashboard</h1>
-      <p>Enter your server details to continue</p>
-      <input type="text" id="guild-input" placeholder="Server ID">
-      <input type="password" id="password-input" placeholder="Password">
-      <button onclick="login()">Continue</button>
+    <div class="login-box">
+      <div class="login-logo">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
+          <rect width="24" height="24" rx="6" fill="#6366f1"/>
+          <path d="M7 8h10M7 12h10M7 16h6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <h1>MCDash</h1>
+      </div>
+      <p class="login-subtitle">Sign in to continue</p>
+      <input type="text" id="guild-input" class="login-input" placeholder="Server ID">
+      <input type="password" id="password-input" class="login-input" placeholder="Password">
+      <button class="login-btn" onclick="login()">Sign in</button>
     </div>
   </div>
 
@@ -417,14 +378,24 @@
     <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <h1>◆ Mimu</h1>
+        <h1>MCDash</h1>
       </div>
       <div class="nav">
-        <div class="nav-item active" data-tab="embeds">📝 Embeds</div>
-        <div class="nav-item" data-tab="commands">💬 Commands</div>
-        <div class="nav-item" data-tab="autoresponders">⚡ Autoresponders</div>
-        <div class="nav-item" data-tab="variables">📊 Variables</div>
-        <div class="nav-item" data-tab="settings">⚙️ Settings</div>
+        <div class="nav-item active" data-tab="embeds">
+          <span>📝</span><span>Embeds</span>
+        </div>
+        <div class="nav-item" data-tab="commands">
+          <span>💬</span><span>Commands</span>
+        </div>
+        <div class="nav-item" data-tab="autoresponders">
+          <span>⚡</span><span>Autoresponders</span>
+        </div>
+        <div class="nav-item" data-tab="variables">
+          <span>📊</span><span>Variables</span>
+        </div>
+        <div class="nav-item" data-tab="settings">
+          <span>⚙️</span><span>Settings</span>
+        </div>
       </div>
       <div class="sidebar-footer">
         <div class="server-badge" id="display-guild"></div>
@@ -438,12 +409,12 @@
         <button class="save-btn" onclick="saveCurrentTab()">Save</button>
       </div>
       <div class="main-content">
-        <!-- Embeds Tab -->
+        <!-- Embeds -->
         <div class="tab-content active" id="tab-embeds">
           <div class="card">
             <div class="card-header">
               <h3>Saved Embeds</h3>
-              <button class="btn btn-primary" onclick="openEmbedEditor()">+ New</button>
+              <button class="btn btn-primary" onclick="openEmbedModal()">+ New</button>
             </div>
             <div class="card-body" id="embeds-list">
               <div class="card-body empty">No embeds yet</div>
@@ -451,7 +422,7 @@
           </div>
         </div>
 
-        <!-- Commands Tab -->
+        <!-- Commands -->
         <div class="tab-content" id="tab-commands">
           <div class="card">
             <div class="card-header">
@@ -464,12 +435,12 @@
           </div>
         </div>
 
-        <!-- Autoresponders Tab -->
+        <!-- Autoresponders -->
         <div class="tab-content" id="tab-autoresponders">
           <div class="card">
             <div class="card-header">
               <h3>Autoresponders</h3>
-              <button class="btn btn-primary" onclick="openAutoresponderEditor()">+ New</button>
+              <button class="btn btn-primary" onclick="openArModal()">+ New</button>
             </div>
             <div class="card-body" id="autoresponders-list">
               <div class="card-body empty">No autoresponders yet</div>
@@ -477,7 +448,7 @@
           </div>
         </div>
 
-        <!-- Variables Tab -->
+        <!-- Variables -->
         <div class="tab-content" id="tab-variables">
           <div class="grid grid-2">
             <div class="card">
@@ -501,7 +472,7 @@
           </div>
         </div>
 
-        <!-- Settings Tab -->
+        <!-- Settings -->
         <div class="tab-content" id="tab-settings">
           <div class="card">
             <div class="card-header">
@@ -531,14 +502,9 @@
           <label>Name</label>
           <input type="text" id="embed-name" placeholder="my-embed">
         </div>
-        <button class="btn btn-primary" onclick="addBlock()" style="margin-bottom: 16px;">+ Add Block</button>
-        <div class="blocks-canvas" id="blocks-canvas"></div>
-        <div class="preview-box">
-          <p style="color: var(--text3); margin-bottom: 10px;">Preview:</p>
-          <div class="preview-embed">
-            <div id="preview-title" style="font-weight: 600; margin-bottom: 8px;">Title</div>
-            <div id="preview-desc" style="color: var(--text2);">Description</div>
-          </div>
+        <div class="input-group">
+          <label>Description</label>
+          <textarea id="embed-description" placeholder="Description..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -575,7 +541,6 @@
   <script>
     let password = '', currentGuild = '';
     let data = { embeds: {}, commands: [], autoresponders: [], globalVars: {}, userVars: {} };
-    let embedBlocks = [], editingEmbed = null;
 
     function login() {
       currentGuild = document.getElementById('guild-input').value.trim();
@@ -599,14 +564,16 @@
 
     async function loadData() {
       const h = { 'Authorization': password, 'X-Guild-Id': currentGuild };
-      data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({}));
-      data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => []);
-      data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => []);
-      const vars = await fetch(`/api/variables/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({ global: {}, user: {} }));
-      data.globalVars = vars.global || {};
-      data.userVars = vars.user || {};
-      const settings = await fetch(`/api/settings/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({}));
-      data.prefix = settings.prefix || '/';
+      try {
+        data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json());
+        data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json());
+        data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json());
+        const vars = await fetch(`/api/variables/${currentGuild}`, { headers: h }).then(r => r.json());
+        data.globalVars = vars.global || {};
+        data.userVars = vars.user || {};
+        const settings = await fetch(`/api/settings/${currentGuild}`, { headers: h }).then(r => r.json());
+        data.prefix = settings.prefix || '/';
+      } catch(e) {}
       renderAll();
     }
 
@@ -615,24 +582,21 @@
       renderCommands();
       renderAutoresponders();
       renderVariables();
-      document.getElementById('settings-prefix').value = data.prefix;
+      document.getElementById('settings-prefix').value = data.prefix || '/';
     }
 
     function renderEmbeds() {
       const list = document.getElementById('embeds-list');
-      const keys = Object.keys(data.embeds);
+      const keys = Object.keys(data.embeds || {});
       if (!keys.length) {
         list.innerHTML = '<div class="card-body empty">No embeds yet</div>';
         return;
       }
       list.innerHTML = keys.map(name => `
         <div class="list-item">
-          <div>
-            <div class="list-item-name">${name}</div>
-          </div>
+          <div><div class="list-item-name">${name}</div></div>
           <div class="list-item-actions">
-            <button class="btn btn-secondary" onclick="editEmbed('${name}')">Edit</button>
-            <button class="btn btn-danger" onclick="deleteEmbed('${name}')">Delete</button>
+            <button class="btn btn-secondary" onclick="deleteEmbed('${name}')">Delete</button>
           </div>
         </div>
       `).join('');
@@ -648,7 +612,7 @@
         <div class="list-item">
           <div>
             <div class="list-item-name">${cmd.name}</div>
-            <div class="list-item-desc">${cmd.response?.substring(0, 50)}...</div>
+            <div class="list-item-desc">${cmd.response?.substring(0, 40)}...</div>
           </div>
           <button class="btn btn-danger" onclick="deleteCommand('${cmd.name}')">Delete</button>
         </div>
@@ -665,7 +629,7 @@
         <div class="list-item">
           <div>
             <div class="list-item-name">${ar.trigger}</div>
-            <div class="list-item-desc">${ar.data?.response?.substring(0, 50)}...</div>
+            <div class="list-item-desc">${ar.data?.response?.substring(0, 40)}...</div>
           </div>
           <button class="btn btn-danger" onclick="deleteAutoresponder('${ar.trigger}')">Delete</button>
         </div>
@@ -675,19 +639,13 @@
     function renderVariables() {
       const gv = document.getElementById('global-vars');
       const uv = document.getElementById('user-vars');
-      const gkeys = Object.keys(data.globalVars);
-      const ukeys = Object.keys(data.userVars);
+      const gkeys = Object.keys(data.globalVars || {});
+      const ukeys = Object.keys(data.userVars || {});
       gv.innerHTML = gkeys.length ? gkeys.map(k => `
-        <div class="var-row">
-          <span>${k}</span>
-          <span style="color: var(--text2)">${data.globalVars[k]}</span>
-        </div>
+        <div class="var-row"><span>${k}</span><small>${data.globalVars[k]}</small></div>
       `).join('') : '<div class="card-body empty">No variables</div>';
       uv.innerHTML = ukeys.length ? ukeys.map(k => `
-        <div class="var-row">
-          <span>${k}</span>
-          <span style="color: var(--text2)">${data.userVars[k]}</span>
-        </div>
+        <div class="var-row"><span>${k}</span><small>${data.userVars[k]}</small></div>
       `).join('') : '<div class="card-body empty">No variables</div>';
     }
 
@@ -699,92 +657,33 @@
         item.classList.add('active');
         const tab = item.dataset.tab;
         document.getElementById('tab-' + tab).classList.add('active');
-        document.getElementById('tab-title').textContent = item.textContent.trim();
+        document.getElementById('tab-title').textContent = item.querySelector('span:last-child').textContent;
       });
     });
 
     // Embeds
-    function openEmbedEditor() {
-      editingEmbed = null;
+    function openEmbedModal() {
       document.getElementById('embed-modal-title').textContent = 'New Embed';
       document.getElementById('embed-name').value = '';
-      embedBlocks = [];
-      renderBlocks();
+      document.getElementById('embed-description').value = '';
       document.getElementById('embed-modal').classList.add('active');
     }
-
-    function editEmbed(name) {
-      editingEmbed = name;
-      document.getElementById('embed-modal-title').textContent = 'Edit ' + name;
-      document.getElementById('embed-name').value = name;
-      embedBlocks = data.embeds[name] ? [data.embeds[name]] : [];
-      renderBlocks();
-      document.getElementById('embed-modal').classList.add('active');
-    }
-
     function closeEmbedModal() {
       document.getElementById('embed-modal').classList.remove('active');
     }
-
-    function addBlock() {
-      embedBlocks.push({ type: 'description', content: '' });
-      renderBlocks();
-    }
-
-    function renderBlocks() {
-      const canvas = document.getElementById('blocks-canvas');
-      if (!embedBlocks.length) {
-        canvas.innerHTML = '<div class="card-body empty">Click "+ Add Block" to start</div>';
-        return;
-      }
-      canvas.innerHTML = embedBlocks.map((block, i) => `
-        <div class="block">
-          <button class="block-remove" onclick="removeBlock(${i})">×</button>
-          <div class="block-title">${block.type}</div>
-          <textarea oninput="updateBlock(${i}, 'content', this.value)" placeholder="Content..." style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical;min-height:60px;">${block.content || ''}</textarea>
-        </div>
-      `).join('');
-      updatePreview();
-    }
-
-    function updateBlock(i, key, value) {
-      embedBlocks[i][key] = value;
-      updatePreview();
-    }
-
-    function removeBlock(i) {
-      embedBlocks.splice(i, 1);
-      renderBlocks();
-    }
-
-    function updatePreview() {
-      const title = document.getElementById('embed-name').value || 'Title';
-      let desc = '';
-      embedBlocks.forEach(b => { if (b.content) desc += b.content + '\n'; });
-      document.getElementById('preview-title').textContent = title;
-      document.getElementById('preview-desc').textContent = desc.trim() || 'Description';
-    }
-
     function saveEmbed() {
       const name = document.getElementById('embed-name').value;
-      if (!name) return alert('Enter a name');
-      const embedData = { description: embedBlocks.map(b => b.content).join('\n') };
+      const desc = document.getElementById('embed-description').value;
+      if (!name) return alert('Enter name');
       fetch(`/api/embeds/${currentGuild}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ name, data: embedData })
-      }).then(r => r.json()).then(d => {
-        closeEmbedModal();
-        loadData();
-      });
+        body: JSON.stringify({ name, data: { description: desc } })
+      }).then(r => r.json()).then(d => { closeEmbedModal(); loadData(); });
     }
-
     function deleteEmbed(name) {
       if (!confirm('Delete?')) return;
-      fetch(`/api/embeds/${currentGuild}/${name}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
-      }).then(() => loadData());
+      fetch(`/api/embeds/${currentGuild}/${name}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
     }
 
     // Commands
@@ -799,26 +698,18 @@
         body: JSON.stringify({ name, response })
       }).then(() => loadData());
     }
-
     function deleteCommand(name) {
       if (!confirm('Delete?')) return;
-      fetch(`/api/commands/${currentGuild}/${name}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
-      }).then(() => loadData());
+      fetch(`/api/commands/${currentGuild}/${name}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
     }
 
     // Autoresponders
-    function openAutoresponderEditor() {
+    function openArModal() {
       document.getElementById('ar-trigger').value = '';
       document.getElementById('ar-response').value = '';
       document.getElementById('ar-modal').classList.add('active');
     }
-
-    function closeArModal() {
-      document.getElementById('ar-modal').classList.remove('active');
-    }
-
+    function closeArModal() { document.getElementById('ar-modal').classList.remove('active'); }
     function saveAutoresponder() {
       const trigger = document.getElementById('ar-trigger').value;
       const response = document.getElementById('ar-response').value;
@@ -827,18 +718,11 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
         body: JSON.stringify({ trigger, data: { response } })
-      }).then(r => r.json()).then(d => {
-        closeArModal();
-        loadData();
-      });
+      }).then(r => r.json()).then(d => { closeArModal(); loadData(); });
     }
-
     function deleteAutoresponder(trigger) {
       if (!confirm('Delete?')) return;
-      fetch(`/api/autoresponders/${currentGuild}/${trigger}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
-      }).then(() => loadData());
+      fetch(`/api/autoresponders/${currentGuild}/${trigger}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
     }
 
     // Variables
@@ -854,7 +738,7 @@
       }).then(() => loadData());
     }
 
-    // Settings
+    // Save
     async function saveCurrentTab() {
       const prefix = document.getElementById('settings-prefix').value;
       await fetch(`/api/settings/${currentGuild}`, {
