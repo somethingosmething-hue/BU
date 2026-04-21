@@ -1,18 +1,27 @@
 require('dotenv').config();
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster';
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
-const PUBLIC_DIR = path.join(__dirname, 'public');
-const isVercel = !!process.env.VERCEL;
-const DATA_DIR = isVercel 
-  ? path.join(__dirname, 'data') 
-  : path.join(__dirname, '../bot/data');
+let db;
 
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+async function connectDB() {
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  db = client.db('cutils');
+  console.log('Connected to MongoDB');
+  
+  // Create indexes
+  await db.collection('embeds').createIndex({ guildId: 1 });
+  await db.collection('commands').createIndex({ guildId: 1 });
+  await db.collection('autoresponders').createIndex({ guildId: 1 });
+  await db.collection('variables').createIndex({ guildId: 1 });
+  await db.collection('settings').createIndex({ guildId: 1 });
+  await db.collection('editorpasswords').createIndex({ guildId: 1 });
 }
 
 app.use((req, res, next) => {
@@ -20,25 +29,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(PUBLIC_DIR));
-
-const PORT = process.env.PORT || 3000;
-const isVercel = !!process.env.VERCEL;
-const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || (process.env.VERCEL ? 'mimupassword' : 'admin');
-
-if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-
-function loadData(name) {
-  const file = path.join(DATA_DIR, `${name}.json`);
-  if (!fs.existsSync(file)) fs.writeFileSync(file, '{}');
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch { return {}; }
-}
-
-function saveData(name, data) {
-  const file = path.join(DATA_DIR, `${name}.json`);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
+app.use(express.static(__dirname + '/public'));
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
@@ -47,193 +38,188 @@ function requireAuth(req, res, next) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
     return res.status(401).send('Authentication required');
   }
-  const db = loadData('editorpasswords');
-  const stored = db[guildId];
-  if (stored && auth !== stored) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
-    return res.status(401).send('Authentication required');
-  }
-  next();
+  
+  db.collection('editorpasswords').findOne({ guildId }).then(stored => {
+    if (stored && auth !== stored.password) {
+      res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
+      return res.status(401).send('Authentication required');
+    }
+    next();
+  });
 }
 
-app.post('/api/auth', (req, res) => {
+app.post('/api/auth', async (req, res) => {
   const { guildId, password } = req.body;
   if (!guildId || !password) {
     return res.status(400).json({ success: false });
   }
-  const db = loadData('editorpasswords');
-  const stored = db[guildId];
+  
+  const stored = await db.collection('editorpasswords').findOne({ guildId });
   if (!stored) {
     return res.status(401).json({ success: false, error: 'Password not set. Ask an admin to run /setpassword' });
   }
-  if (password !== stored) {
+  if (password !== stored.password) {
     return res.status(401).json({ success: false, error: 'Invalid password' });
   }
   res.json({ success: true });
 });
 
-app.post('/api/set-password', (req, res) => {
+app.post('/api/set-password', async (req, res) => {
   const { guildId, password } = req.body;
   if (!guildId || !password) {
     return res.status(400).json({ error: 'Missing guildId or password' });
   }
-  const db = loadData('editorpasswords');
-  db[guildId] = password;
-  saveData('editorpasswords', db);
+  await db.collection('editorpasswords').updateOne(
+    { guildId },
+    { $set: { guildId, password } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.get('/api/guilds', requireAuth, (req, res) => {
-  const servers = loadData('servers');
-  const list = Object.entries(servers).map(([id, data]) => ({ id, name: data.name || id }));
+app.get('/api/guilds', requireAuth, async (req, res) => {
+  const servers = await db.collection('servers').find({}).toArray();
+  const list = servers.map(s => ({ id: s.guildId, name: s.name || s.guildId }));
   if (list.length === 0) list.push({ id: 'demo', name: 'Demo Server' });
   res.json(list);
 });
 
-app.get('/api/embeds/:guildId', requireAuth, (req, res) => {
-  const db = loadData('embeds');
-  res.json(db[req.params.guildId] || {});
+app.get('/api/embeds/:guildId', requireAuth, async (req, res) => {
+  const doc = await db.collection('embeds').findOne({ guildId: req.params.guildId });
+  res.json(doc?.data || {});
 });
 
-app.post('/api/embeds/:guildId', requireAuth, (req, res) => {
-  const db = loadData('embeds');
+app.post('/api/embeds/:guildId', requireAuth, async (req, res) => {
   const { name, data } = req.body;
-  (db[req.params.guildId] ??= {})[name] = data;
-  saveData('embeds', db);
+  await db.collection('embeds').updateOne(
+    { guildId: req.params.guildId },
+    { $set: { [`data.${name}`]: data } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/embeds/:guildId/:name', requireAuth, (req, res) => {
-  const db = loadData('embeds');
-  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
-  saveData('embeds', db);
+app.delete('/api/embeds/:guildId/:name', requireAuth, async (req, res) => {
+  await db.collection('embeds').updateOne(
+    { guildId: req.params.guildId },
+    { $unset: { [`data.${req.params.name}`]: 1 } }
+  );
   res.json({ success: true });
 });
 
-app.get('/api/commands/:guildId', requireAuth, (req, res) => {
-  const db = loadData('commands');
-  const list = Object.entries(db[req.params.guildId] || {}).map(([name, data]) => ({ name, ...data }));
+app.get('/api/commands/:guildId', requireAuth, async (req, res) => {
+  const doc = await db.collection('commands').findOne({ guildId: req.params.guildId });
+  const list = doc?.data ? Object.entries(doc.data).map(([name, data]) => ({ name, ...data })) : [];
   res.json(list);
 });
 
-app.post('/api/commands/:guildId', requireAuth, (req, res) => {
-  const db = loadData('commands');
+app.post('/api/commands/:guildId', requireAuth, async (req, res) => {
   const { name, response } = req.body;
-  (db[req.params.guildId] ??= {})[name] = { response, createdAt: Date.now() };
-  saveData('commands', db);
+  await db.collection('commands').updateOne(
+    { guildId: req.params.guildId },
+    { $set: { [`data.${name}`]: { response, createdAt: Date.now() } } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/commands/:guildId/:name', requireAuth, (req, res) => {
-  const db = loadData('commands');
-  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
-  saveData('commands', db);
+app.delete('/api/commands/:guildId/:name', requireAuth, async (req, res) => {
+  await db.collection('commands').updateOne(
+    { guildId: req.params.guildId },
+    { $unset: { [`data.${req.params.name}`]: 1 } }
+  );
   res.json({ success: true });
 });
 
-app.get('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  const db = loadData('autoresponders');
-  const list = Object.entries(db[req.params.guildId] || {}).map(([trigger, data]) => ({ trigger, data }));
+app.get('/api/autoresponders/:guildId', requireAuth, async (req, res) => {
+  const doc = await db.collection('autoresponders').findOne({ guildId: req.params.guildId });
+  const list = doc?.data ? Object.entries(doc.data).map(([trigger, data]) => ({ trigger, data })) : [];
   res.json(list);
 });
 
-app.post('/api/autoresponders/:guildId', requireAuth, (req, res) => {
-  const db = loadData('autoresponders');
+app.post('/api/autoresponders/:guildId', requireAuth, async (req, res) => {
   const { trigger, data } = req.body;
-  (db[req.params.guildId] ??= {})[trigger] = data;
-  saveData('autoresponders', db);
+  await db.collection('autoresponders').updateOne(
+    { guildId: req.params.guildId },
+    { $set: { [`data.${trigger}`]: data } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/autoresponders/:guildId/:trigger', requireAuth, (req, res) => {
-  const db = loadData('autoresponders');
-  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.trigger];
-  saveData('autoresponders', db);
+app.delete('/api/autoresponders/:guildId/:trigger', requireAuth, async (req, res) => {
+  await db.collection('autoresponders').updateOne(
+    { guildId: req.params.guildId },
+    { $unset: { [`data.${req.params.trigger}`]: 1 } }
+  );
   res.json({ success: true });
 });
 
-app.get('/api/variables/global', requireAuth, (req, res) => {
-  res.json(loadData('globalvars'));
+app.get('/api/variables/global', requireAuth, async (req, res) => {
+  const doc = await db.collection('variables').findOne({ guildId: 'global' });
+  res.json(doc?.data || {});
 });
 
-app.get('/api/variables/:guildId', requireAuth, (req, res) => {
-  const gv = loadData('globalvars');
-  const uv = loadData('uservars');
-  res.json({ global: gv, user: uv[req.params.guildId] || {} });
+app.get('/api/variables/:guildId', requireAuth, async (req, res) => {
+  const [globalDoc, userDoc] = await Promise.all([
+    db.collection('variables').findOne({ guildId: 'global' }),
+    db.collection('variables').findOne({ guildId: req.params.guildId })
+  ]);
+  res.json({ global: globalDoc?.data || {}, user: userDoc?.data || {} });
 });
 
-app.post('/api/variables/global', requireAuth, (req, res) => {
+app.post('/api/variables/global', requireAuth, async (req, res) => {
   const { name, value } = req.body;
-  const db = loadData('globalvars');
-  db[name] = value;
-  saveData('globalvars', db);
+  await db.collection('variables').updateOne(
+    { guildId: 'global' },
+    { $set: { [`data.${name}`]: value } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/variables/:guildId/:name', requireAuth, (req, res) => {
-  const db = loadData('uservars');
-  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
-  saveData('uservars', db);
+app.delete('/api/variables/global/:name', requireAuth, async (req, res) => {
+  await db.collection('variables').updateOne(
+    { guildId: 'global' },
+    { $unset: { [`data.${req.params.name}`]: 1 } }
+  );
   res.json({ success: true });
 });
 
-app.post('/api/variables/:guildId', requireAuth, (req, res) => {
+app.post('/api/variables/:guildId', requireAuth, async (req, res) => {
   const { name, value } = req.body;
-  const db = loadData('uservars');
-  (db[req.params.guildId] ??= {})[name] = value;
-  saveData('uservars', db);
+  await db.collection('variables').updateOne(
+    { guildId: req.params.guildId },
+    { $set: { [`data.${name}`]: value } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
-app.delete('/api/variables/global/:name', requireAuth, (req, res) => {
-  const db = loadData('globalvars');
-  delete db[req.params.name];
-  saveData('globalvars', db);
-  res.json({ success: true });
+app.get('/api/settings/:guildId', requireAuth, async (req, res) => {
+  const doc = await db.collection('settings').findOne({ guildId: req.params.guildId });
+  res.json({ prefix: doc?.prefix || '/', settings: doc || {} });
 });
 
-app.get('/api/settings/:guildId', requireAuth, (req, res) => {
-  const db = loadData('serversettings');
-  res.json({ prefix: db[req.params.guildId]?.prefix || '/', settings: db[req.params.guildId] || {} });
-});
-
-app.post('/api/settings/:guildId', requireAuth, (req, res) => {
-  const db = loadData('serversettings');
+app.post('/api/settings/:guildId', requireAuth, async (req, res) => {
   const { prefix, ...settings } = req.body;
-  (db[req.params.guildId] ??= {})[prefix ? 'prefix' : 'name'] = prefix || settings.name || {};
-  if (prefix) db[req.params.guildId].prefix = prefix;
-  Object.assign(db[req.params.guildId], settings);
-  saveData('serversettings', db);
+  await db.collection('settings').updateOne(
+    { guildId: req.params.guildId },
+    { $set: { prefix: prefix || '/', ...settings } },
+    { upsert: true }
+  );
   res.json({ success: true });
 });
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(__dirname + '/public/index.html');
 });
 
-app.post('/api/set-password', (req, res) => {
-  const { guildId, password, secret } = req.body;
-  if (secret !== process.env.API_SECRET) {
-    return res.status(403).json({ error: 'Invalid secret' });
-  }
-  const db = loadData('editorpasswords');
-  db[guildId] = password;
-  saveData('editorpasswords', db);
-  res.json({ success: true });
-});
-
-app.post('/api/set-password', (req, res) => {
-  const { guildId, password } = req.body;
-  if (!guildId || !password) {
-    return res.status(400).json({ error: 'Missing guildId or password' });
-  }
-  const db = loadData('editorpasswords');
-  db[guildId] = password;
-  saveData('editorpasswords', db);
-  res.json({ success: true });
-});
-
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🌐 Dashboard running on port ${PORT}`);
-  console.log(`🔐 Password: ${DASHBOARD_PASSWORD}`);
+connectDB().then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Dashboard running on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+  process.exit(1);
 });
