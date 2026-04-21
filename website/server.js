@@ -6,15 +6,13 @@ const path = require('path');
 const app = express();
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
-let DATA_DIR;
-if (process.env.VERCEL) {
-  DATA_DIR = path.join(__dirname, 'data');
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
-} else {
-  DATA_DIR = path.join(__dirname, '../bot/data');
-  const botDataPath = path.join(__dirname, '../bot');
-  if (!fs.existsSync(botDataPath)) fs.mkdirSync(botDataPath, { recursive: true });
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+const isVercel = !!process.env.VERCEL;
+const DATA_DIR = isVercel 
+  ? path.join(__dirname, 'data') 
+  : path.join(__dirname, '../bot/data');
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
 app.use((req, res, next) => {
@@ -26,7 +24,7 @@ app.use(express.static(PUBLIC_DIR));
 
 const PORT = process.env.PORT || 3000;
 const isVercel = !!process.env.VERCEL;
-const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || (isVercel ? 'mimupassword' : 'admin');
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || (process.env.VERCEL ? 'mimupassword' : 'admin');
 
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
