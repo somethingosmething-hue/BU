@@ -2,6 +2,7 @@ const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js'
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
+const db = require('./database/db');
 
 const client = new Client({
   intents: [
@@ -38,4 +39,10 @@ for (const file of eventFiles) {
   }
 }
 
-client.login(process.env.BOT_TOKEN);
+db.connectDB().then(() => {
+  console.log('Bot starting...');
+  client.login(process.env.BOT_TOKEN);
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+  process.exit(1);
+});

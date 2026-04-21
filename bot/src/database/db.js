@@ -1,281 +1,321 @@
-const fs = require('fs');
-const path = require('path');
+require('dotenv').config();
+const { MongoClient } = require('mongodb');
 
-const DB_PATH = path.join(__dirname, '../../data');
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster';
 
-if (!fs.existsSync(DB_PATH)) fs.mkdirSync(DB_PATH, { recursive: true });
+let db;
 
-function loadDB(name) {
-  const file = path.join(DB_PATH, `${name}.json`);
-  if (!fs.existsSync(file)) fs.writeFileSync(file, '{}');
-  try { return JSON.parse(fs.readFileSync(file, 'utf8')); }
-  catch { return {}; }
-}
-
-function saveDB(name, data) {
-  const file = path.join(DB_PATH, `${name}.json`);
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-}
-
-// ─── Divembs (Enhanced Embeds) ───────────────────────────────────────────────
-
-function getDivembs(guildId) {
-  const db = loadDB('divembs');
-  return db[guildId] || {};
-}
-
-function getDivemb(guildId, name) {
-  const db = loadDB('divembs');
-  return db[guildId]?.[name] || null;
-}
-
-function saveDivemb(guildId, name, data) {
-  const db = loadDB('divembs');
-  (db[guildId] ??= {})[name] = data;
-  saveDB('divembs', db);
-}
-
-function deleteDivemb(guildId, name) {
-  const db = loadDB('divembs');
-  if (db[guildId]) delete db[guildId][name];
-  saveDB('divembs', db);
-}
-
-// ─── Custom Commands ─────────────────────────────────────────────────────────
-
-function getCustomCommands(guildId) {
-  const db = loadDB('customcommands');
-  return db[guildId] || {};
-}
-
-function getCustomCommand(guildId, name) {
-  const db = loadDB('customcommands');
-  return db[guildId]?.[name] || null;
-}
-
-function saveCustomCommand(guildId, name, data) {
-  const db = loadDB('customcommands');
-  (db[guildId] ??= {})[name] = data;
-  saveDB('customcommands', db);
-}
-
-function deleteCustomCommand(guildId, name) {
-  const db = loadDB('customcommands');
-  if (db[guildId]) delete db[guildId][name];
-  saveDB('customcommands', db);
-}
-
-// ─── Custom User Variables ───────────────────────────────────────────────────
-
-function getGlobalVar(varName) {
-  const db = loadDB('globalvars');
-  return db[varName] || null;
-}
-
-function setGlobalVar(varName, value) {
-  const db = loadDB('globalvars');
-  db[varName] = value;
-  saveDB('globalvars', db);
-}
-
-function getGlobalVars() {
-  const db = loadDB('globalvars');
+async function connectDB() {
+  const client = new MongoClient(MONGODB_URI);
+  await client.connect();
+  db = client.db('cutils');
+  console.log('Bot connected to MongoDB');
+  
+  // Create indexes
+  await db.collection('divembs').createIndex({ guildId: 1 });
+  await db.collection('customcommands').createIndex({ guildId: 1 });
+  await db.collection('globalvars').createIndex({ name: 1 });
+  await db.collection('uservars').createIndex({ guildId: 1, userId: 1 });
+  await db.collection('embeds').createIndex({ guildId: 1 });
+  await db.collection('autoresponders').createIndex({ guildId: 1 });
+  await db.collection('buttonresponders').createIndex({ guildId: 1 });
+  await db.collection('reactiontriggers').createIndex({ guildId: 1 });
+  await db.collection('polls').createIndex({ guildId: 1 });
+  await db.collection('giveaways').createIndex({ guildId: 1 });
+  await db.collection('reactionroles').createIndex({ guildId: 1 });
+  await db.collection('reminders').createIndex({ guildId: 1 });
+  await db.collection('modlogs').createIndex({ guildId: 1 });
+  await db.collection('cooldowns').createIndex({ key: 1 });
+  await db.collection('levels').createIndex({ guildId: 1, userId: 1 });
+  await db.collection('levelsettings').createIndex({ guildId: 1 });
+  await db.collection('trusted').createIndex({ guildId: 1 });
+  await db.collection('serversettings').createIndex({ guildId: 1 });
+  
   return db;
 }
 
-function deleteGlobalVar(varName) {
-  const db = loadDB('globalvars');
-  delete db[varName];
-  saveDB('globalvars', db);
+function getCollection(name) {
+  return db.collection(name);
 }
 
-// ─── Server Settings ─────────────────────────────────────────────────────────
-
-function getServerSettings(guildId) {
-  const db = loadDB('serversettings');
-  return db[guildId] || {};
+// Divembs
+async function getDivembs(guildId) {
+  const doc = await getCollection('divembs').findOne({ guildId });
+  return doc?.data || {};
 }
 
-function setServerSetting(guildId, key, value) {
-  const db = loadDB('serversettings');
-  (db[guildId] ??= {})[key] = value;
-  saveDB('serversettings', db);
+async function getDivemb(guildId, name) {
+  const doc = await getCollection('divembs').findOne({ guildId });
+  return doc?.data?.[name] || null;
 }
 
-function getPrefix(guildId) {
-  const db = loadDB('serversettings');
-  return db[guildId]?.prefix || null;
+async function saveDivemb(guildId, name, data) {
+  await getCollection('divembs').updateOne({ guildId }, { $set: { [`data.${name}`]: data } }, { upsert: true });
 }
 
-function setPrefix(guildId, prefix) {
-  const db = loadDB('serversettings');
-  (db[guildId] ??= {}).prefix = prefix;
-  saveDB('serversettings', db);
+async function deleteDivemb(guildId, name) {
+  await getCollection('divembs').updateOne({ guildId }, { $unset: { [`data.${name}`]: 1 } });
 }
 
-function getUserVar(guildId, userId, varName) {
-  const db = loadDB('uservars');
-  return db[guildId]?.[userId]?.[varName] || null;
+// Custom Commands
+async function getCustomCommands(guildId) {
+  const doc = await getCollection('customcommands').findOne({ guildId });
+  return doc?.data || {};
 }
 
-function setUserVar(guildId, userId, varName, value) {
-  const db = loadDB('uservars');
-  (db[guildId] ??= {})[userId] ??= {};
-  db[guildId][userId][varName] = value;
-  saveDB('uservars', db);
+async function getCustomCommand(guildId, name) {
+  const doc = await getCollection('customcommands').findOne({ guildId });
+  return doc?.data?.[name] || null;
 }
 
-function getAllUserVars(guildId, userId) {
-  const db = loadDB('uservars');
-  return db[guildId]?.[userId] || {};
+async function saveCustomCommand(guildId, name, data) {
+  await getCollection('customcommands').updateOne({ guildId }, { $set: { [`data.${name}`]: data } }, { upsert: true });
 }
 
-function deleteUserVar(guildId, userId, varName) {
-  const db = loadDB('uservars');
-  if (db[guildId]?.[userId]) {
-    delete db[guildId][userId][varName];
-    saveDB('uservars', db);
-  }
+async function deleteCustomCommand(guildId, name) {
+  await getCollection('customcommands').updateOne({ guildId }, { $unset: { [`data.${name}`]: 1 } });
 }
 
-// ─── Embeds ───────────────────────────────────────────────────────────────────
-
-function getEmbeds(guildId)              { const db = loadDB('embeds'); return db[guildId] || {}; }
-function getEmbed(guildId, name)         { const db = loadDB('embeds'); return db[guildId]?.[name] || null; }
-function saveEmbed(guildId, name, data)  { const db = loadDB('embeds'); (db[guildId] ??= {})[name] = data; saveDB('embeds', db); }
-function deleteEmbed(guildId, name)      { const db = loadDB('embeds'); if (db[guildId]) delete db[guildId][name]; saveDB('embeds', db); }
-
-// ─── Autoresponders ───────────────────────────────────────────────────────────
-
-function getAutoresponders(guildId)              { const db = loadDB('autoresponders'); return db[guildId] || {}; }
-function saveAutoresponder(guildId, trigger, d)  { const db = loadDB('autoresponders'); (db[guildId] ??= {})[trigger] = d; saveDB('autoresponders', db); }
-function deleteAutoresponder(guildId, trigger)   { const db = loadDB('autoresponders'); if (db[guildId]) delete db[guildId][trigger]; saveDB('autoresponders', db); }
-
-// ─── Button Responders ────────────────────────────────────────────────────────
-
-function getButtonResponders(guildId)          { const db = loadDB('buttonresponders'); return db[guildId] || {}; }
-function getButtonResponder(guildId, name)     { const db = loadDB('buttonresponders'); return db[guildId]?.[name] || null; }
-function saveButtonResponder(guildId, name, d) { const db = loadDB('buttonresponders'); (db[guildId] ??= {})[name] = d; saveDB('buttonresponders', db); }
-function deleteButtonResponder(guildId, name)  { const db = loadDB('buttonresponders'); if (db[guildId]) delete db[guildId][name]; saveDB('buttonresponders', db); }
-
-// ─── Reaction Event Triggers ─────────────────────────────────────────────────
-
-function getReactionTriggers(guildId) { const db = loadDB('reactiontriggers'); return db[guildId] || {}; }
-function getReactionTrigger(guildId, msgId, emoji) { const db = loadDB('reactiontriggers'); return db[guildId]?.[`${msgId}:${emoji}`] || null; }
-function saveReactionTrigger(guildId, msgId, emoji, data) { const db = loadDB('reactiontriggers'); (db[guildId] ??= {})[`${msgId}:${emoji}`] = data; saveDB('reactiontriggers', db); }
-function deleteReactionTrigger(guildId, msgId, emoji) { const db = loadDB('reactiontriggers'); if (db[guildId]) delete db[guildId][`${msgId}:${emoji}`]; saveDB('reactiontriggers', db); }
-
-// ─── Polls ────────────────────────────────────────────────────────────────────
-
-function savePoll(guildId, msgId, data) {
-  const db = loadDB('polls');
-  (db[guildId] ??= {})[msgId] = data;
-  saveDB('polls', db);
+// Global Variables
+async function getGlobalVar(varName) {
+  const doc = await getCollection('globalvars').findOne({ name: varName });
+  return doc?.value || null;
 }
 
-function getPoll(guildId, msgId) {
-  const db = loadDB('polls');
-  return db[guildId]?.[msgId] || null;
+async function setGlobalVar(varName, value) {
+  await getCollection('globalvars').updateOne({ name: varName }, { $set: { value } }, { upsert: true });
 }
 
-// ─── Giveaways ───────────────────────────────────────────────────────────────
-
-function saveGiveaway(guildId, msgId, data) {
-  const db = loadDB('giveaways');
-  (db[guildId] ??= {})[msgId] = data;
-  saveDB('giveaways', db);
+async function getGlobalVars() {
+  const docs = await getCollection('globalvars').find({}).toArray();
+  const result = {};
+  docs.forEach(d => result[d.name] = d.value);
+  return result;
 }
 
-function getGiveaway(guildId, msgId) {
-  const db = loadDB('giveaways');
-  return db[guildId]?.[msgId] || null;
+async function deleteGlobalVar(varName) {
+  await getCollection('globalvars').deleteOne({ name: varName });
 }
 
-function getGiveaways(guildId) {
-  const db = loadDB('giveaways');
-  return db[guildId] || {};
+// User Variables
+async function getUserVar(guildId, userId, varName) {
+  const doc = await getCollection('uservars').findOne({ guildId, userId });
+  return doc?.data?.[varName] || null;
 }
 
-// ─── Reaction Roles ───────────────────────────────────────────────────────────
-
-function saveReactionRole(guildId, msgId, emoji, roleId) {
-  const db = loadDB('reactionroles');
-  (db[guildId] ??= {})[`${msgId}:${emoji}`] = roleId;
-  saveDB('reactionroles', db);
+async function setUserVar(guildId, userId, varName, value) {
+  await getCollection('uservars').updateOne({ guildId, userId }, { $set: { [`data.${varName}`]: value } }, { upsert: true });
 }
 
-function getReactionRole(guildId, msgId, emoji) {
-  const db = loadDB('reactionroles');
-  return db[guildId]?.[`${msgId}:${emoji}`] || null;
+async function getAllUserVars(guildId, userId) {
+  const doc = await getCollection('uservars').findOne({ guildId, userId });
+  return doc?.data || {};
 }
 
-function getReactionRoles(guildId) {
-  const db = loadDB('reactionroles');
-  return db[guildId] || {};
+async function deleteUserVar(guildId, userId, varName) {
+  await getCollection('uservars').updateOne({ guildId, userId }, { $unset: { [`data.${varName}`]: 1 } });
 }
 
-function deleteReactionRole(guildId, msgId, emoji) {
-  const db = loadDB('reactionroles');
-  if (db[guildId]) delete db[guildId][`${msgId}:${emoji}`];
-  saveDB('reactionroles', db);
+// Embeds
+async function getEmbeds(guildId) {
+  const doc = await getCollection('embeds').findOne({ guildId });
+  return doc?.data || {};
 }
 
-// ─── Reminders ───────────────────────────────────────────────────────────────
-
-function getReminders()       { return loadDB('reminders'); }
-function saveReminders(data)  { saveDB('reminders', data); }
-
-// ─── Mod Logs ─────────────────────────────────────────────────────────────────
-
-function addModLog(guildId, entry) {
-  const db = loadDB('modlogs');
-  db[guildId] ??= [];
-  const id = (db[guildId].reduce((m, l) => Math.max(m, l.id || 0), 0)) + 1;
-  db[guildId].push({ id, timestamp: Date.now(), ...entry });
-  saveDB('modlogs', db);
+async function getEmbed(guildId, name) {
+  const doc = await getCollection('embeds').findOne({ guildId });
+  return doc?.data?.[name] || null;
 }
 
-function getUserModLogs(guildId, userId) {
-  const db = loadDB('modlogs');
-  return (db[guildId] || []).filter(l => l.userId === userId);
+async function saveEmbed(guildId, name, data) {
+  await getCollection('embeds').updateOne({ guildId }, { $set: { [`data.${name}`]: data } }, { upsert: true });
 }
 
-// ─── Cooldowns ───────────────────────────────────────────────────────────────
-
-function getCooldown(guildId, userId, trigger) {
-  const db = loadDB('cooldowns');
-  return db[`${guildId}:${userId}:${trigger}`] || null;
+async function deleteEmbed(guildId, name) {
+  await getCollection('embeds').updateOne({ guildId }, { $unset: { [`data.${name}`]: 1 } });
 }
 
-function setCooldown(guildId, userId, trigger, timestamp) {
-  const db = loadDB('cooldowns');
-  db[`${guildId}:${userId}:${trigger}`] = timestamp;
-  saveDB('cooldowns', db);
+// Autoresponders
+async function getAutoresponders(guildId) {
+  const doc = await getCollection('autoresponders').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function saveAutoresponder(guildId, trigger, data) {
+  await getCollection('autoresponders').updateOne({ guildId }, { $set: { [`data.${trigger}`]: data } }, { upsert: true });
+}
+
+async function deleteAutoresponder(guildId, trigger) {
+  await getCollection('autoresponders').updateOne({ guildId }, { $unset: { [`data.${trigger}`]: 1 } });
+}
+
+// Button Responders
+async function getButtonResponders(guildId) {
+  const doc = await getCollection('buttonresponders').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function getButtonResponder(guildId, name) {
+  const doc = await getCollection('buttonresponders').findOne({ guildId });
+  return doc?.data?.[name] || null;
+}
+
+async function saveButtonResponder(guildId, name, data) {
+  await getCollection('buttonresponders').updateOne({ guildId }, { $set: { [`data.${name}`]: data } }, { upsert: true });
+}
+
+async function deleteButtonResponder(guildId, name) {
+  await getCollection('buttonresponders').updateOne({ guildId }, { $unset: { [`data.${name}`]: 1 } });
+}
+
+// Reaction Triggers
+async function getReactionTriggers(guildId) {
+  const doc = await getCollection('reactiontriggers').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function getReactionTrigger(guildId, msgId, emoji) {
+  const doc = await getCollection('reactiontriggers').findOne({ guildId });
+  return doc?.data?.[`${msgId}:${emoji}`] || null;
+}
+
+async function saveReactionTrigger(guildId, msgId, emoji, data) {
+  await getCollection('reactiontriggers').updateOne({ guildId }, { $set: { [`data.${msgId}:${emoji}`]: data } }, { upsert: true });
+}
+
+async function deleteReactionTrigger(guildId, msgId, emoji) {
+  await getCollection('reactiontriggers').updateOne({ guildId }, { $unset: { [`data.${msgId}:${emoji}`]: 1 } });
+}
+
+// Polls
+async function savePoll(guildId, msgId, data) {
+  await getCollection('polls').updateOne({ guildId }, { $set: { [`data.${msgId}`]: data } }, { upsert: true });
+}
+
+async function getPoll(guildId, msgId) {
+  const doc = await getCollection('polls').findOne({ guildId });
+  return doc?.data?.[msgId] || null;
+}
+
+// Giveaways
+async function saveGiveaway(guildId, msgId, data) {
+  await getCollection('giveaways').updateOne({ guildId }, { $set: { [`data.${msgId}`]: data } }, { upsert: true });
+}
+
+async function getGiveaway(guildId, msgId) {
+  const doc = await getCollection('giveaways').findOne({ guildId });
+  return doc?.data?.[msgId] || null;
+}
+
+async function getGiveaways(guildId) {
+  const doc = await getCollection('giveaways').findOne({ guildId });
+  return doc?.data || {};
+}
+
+// Reaction Roles
+async function saveReactionRole(guildId, msgId, emoji, roleId) {
+  await getCollection('reactionroles').updateOne({ guildId }, { $set: { [`data.${msgId}:${emoji}`]: roleId } }, { upsert: true });
+}
+
+async function getReactionRole(guildId, msgId, emoji) {
+  const doc = await getCollection('reactionroles').findOne({ guildId });
+  return doc?.data?.[`${msgId}:${emoji}`] || null;
+}
+
+async function getReactionRoles(guildId) {
+  const doc = await getCollection('reactionroles').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function deleteReactionRole(guildId, msgId, emoji) {
+  await getCollection('reactionroles').updateOne({ guildId }, { $unset: { [`data.${msgId}:${emoji}`]: 1 } });
+}
+
+// Reminders
+async function getReminders(guildId) {
+  const doc = await getCollection('reminders').findOne({ guildId });
+  return doc?.data || [];
+}
+
+async function saveReminders(guildId, reminders) {
+  await getCollection('reminders').updateOne({ guildId }, { $set: { data: reminders } }, { upsert: true });
+}
+
+// Mod Logs
+async function addModLog(guildId, entry) {
+  const coll = getCollection('modlogs');
+  const id = ((await coll.find({ guildId }).sort({ id: -1 }).limit(1).toArray())[0]?.id || 0) + 1;
+  await coll.updateOne({ guildId }, { $push: { data: { id, timestamp: Date.now(), ...entry } } }, { upsert: true });
+}
+
+async function getUserModLogs(guildId, userId) {
+  const doc = await getCollection('modlogs').findOne({ guildId });
+  return (doc?.data || []).filter(l => l.userId === userId);
+}
+
+// Cooldowns
+async function getCooldown(guildId, userId, trigger) {
+  const doc = await getCollection('cooldowns').findOne({ key: `${guildId}:${userId}:${trigger}` });
+  return doc?.timestamp || null;
+}
+
+async function setCooldown(guildId, userId, trigger, timestamp) {
+  await getCollection('cooldowns').updateOne({ key: `${guildId}:${userId}:${trigger}` }, { $set: { timestamp } }, { upsert: true });
 }
 
 // Levels
 function xpForLevel(level) { return Math.floor(100 * Math.pow(1.15, level)); }
-function getLevelUser(guildId, userId) { const db = loadDB('levels'); return db[guildId]?.[userId] || { xp: 0, level: 0, lastXP: 0 }; }
-function getLevelSettings(guildId) { const db = loadDB('levelsettings'); return db[guildId] || {}; }
-function setLevelSettings(guildId, update) { const db = loadDB('levelsettings'); db[guildId] = { ...(db[guildId] || {}), ...update }; saveDB('levelsettings', db); }
-function getLevelLeaderboard(guildId) { const db = loadDB('levels'); const guild = db[guildId] || {}; return Object.entries(guild).map(([userId, d]) => ({ userId, xp: d.xp || 0, level: d.level || 0 })).sort((a, b) => b.xp - a.xp).slice(0, 20); }
 
-
-// ─── Trusted Users ────────────────────────────────────────────────────────────
-
-function isTrusted(guildId, userId) {
-  const db = loadDB('trusted');
-  return !!(db[guildId]?.[userId]);
+async function getLevelUser(guildId, userId) {
+  const doc = await getCollection('levels').findOne({ guildId, userId });
+  return doc?.data || { xp: 0, level: 0, lastXP: 0 };
 }
 
-function setTrusted(guildId, userId, value) {
-  const db = loadDB('trusted');
-  (db[guildId] ??= {})[userId] = value;
-  saveDB('trusted', db);
+async function getLevelSettings(guildId) {
+  const doc = await getCollection('levelsettings').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function setLevelSettings(guildId, update) {
+  await getCollection('levelsettings').updateOne({ guildId }, { $set: { data: update } }, { upsert: true });
+}
+
+async function getLevelLeaderboard(guildId) {
+  const docs = await getCollection('levels').find({ guildId }).toArray();
+  return docs.map(d => ({ userId: d.userId, xp: d.data?.xp || 0, level: d.data?.level || 0 })).sort((a, b) => b.xp - a.xp).slice(0, 20);
+}
+
+// Server Settings
+async function getServerSettings(guildId) {
+  const doc = await getCollection('serversettings').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function setServerSetting(guildId, key, value) {
+  await getCollection('serversettings').updateOne({ guildId }, { $set: { [`data.${key}`]: value } }, { upsert: true });
+}
+
+async function getPrefix(guildId) {
+  const doc = await getCollection('serversettings').findOne({ guildId });
+  return doc?.prefix || null;
+}
+
+async function setPrefix(guildId, prefix) {
+  await getCollection('serversettings').updateOne({ guildId }, { $set: { prefix } }, { upsert: true });
+}
+
+// Trusted
+async function isTrusted(guildId, userId) {
+  const doc = await getCollection('trusted').findOne({ guildId });
+  return !!(doc?.data?.[userId]);
+}
+
+async function setTrusted(guildId, userId, value) {
+  await getCollection('trusted').updateOne({ guildId }, { $set: { [`data.${userId}`]: value } }, { upsert: true });
 }
 
 module.exports = {
-  loadDB, saveDB,
+  connectDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
   getCustomCommands, getCustomCommand, saveCustomCommand, deleteCustomCommand,
   getGlobalVar, setGlobalVar, getGlobalVars, deleteGlobalVar,
