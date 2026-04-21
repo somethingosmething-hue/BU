@@ -5,8 +5,17 @@ const path = require('path');
 
 const app = express();
 
-const PUBLIC_DIR = process.env.VERCEL ? path.join(__dirname, 'public') : path.join(__dirname, 'public');
-const DATA_DIR = path.join(__dirname, '../bot/data');
+const PUBLIC_DIR = path.join(__dirname, 'public');
+let DATA_DIR;
+if (process.env.VERCEL) {
+  DATA_DIR = path.join(__dirname, 'data');
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+} else {
+  DATA_DIR = path.join(__dirname, '../bot/data');
+  const botDataPath = path.join(__dirname, '../bot');
+  if (!fs.existsSync(botDataPath)) fs.mkdirSync(botDataPath, { recursive: true });
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+}
 
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com;");
