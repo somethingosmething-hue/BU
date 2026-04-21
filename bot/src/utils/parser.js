@@ -48,8 +48,16 @@ async function parseReply(replyStr, context) {
   const linkButtons = [];
   const reactEmojis = [];
   let requireRole = null;
+  let requireUser = null;
+  let requireChannel = null;
+  let denyChannel = null;
+  let denyRole = null;
   let cooldownSeconds = null;
   let selectMenus = [];
+  let setNick = null;
+  let reactReplyEmoji = null;
+  let dmMode = false;
+  let sendToChannel = null;
 
   // ── Extract {divemb:name} ─────────────────────────────────────────────────
   text = text.replace(/\{divemb:\s*([^}]+)\}/gi, (_, name) => {
@@ -60,6 +68,55 @@ async function parseReply(replyStr, context) {
   // ── Extract {requirerole:} ─────────────────────────────────────────────────
   text = text.replace(/\{requirerole:\s*([^}]+)\}/gi, (_, role) => {
     requireRole = role.trim();
+    return '';
+  });
+
+  // ── Extract {requireuser:} ────────────────────────────────────────────────
+  text = text.replace(/\{requireuser:\s*([^}]+)\}/gi, (_, user) => {
+    requireUser = user.trim();
+    return '';
+  });
+
+  // ── Extract {requirechannel:} ────────────────────────────────────────────────
+  text = text.replace(/\{requirechannel:\s*([^}]+)\}/gi, (_, chan) => {
+    requireChannel = chan.trim();
+    return '';
+  });
+
+  // ── Extract {denychannel:} ────────────────────────────────────────────────
+  text = text.replace(/\{denychannel:\s*([^}]+)\}/gi, (_, chan) => {
+    denyChannel = chan.trim();
+    return '';
+  });
+
+  // ── Extract {denyrole:} ────────────────────────────────────────────────────
+  text = text.replace(/\{denyrole:\s*([^}]+)\}/gi, (_, role) => {
+    denyRole = role.trim();
+    return '';
+  });
+
+  // ── Extract {setnick:} ────────────────────────────────────────────────────
+  text = text.replace(/\{setnick:\s*([^}]+)\}/gi, (_, nick) => {
+    setNick = nick.trim();
+    actions.push({ type: 'setnick', value: setNick });
+    return '';
+  });
+
+  // ── Extract {reactreply:} ───────────────────────────────────────────────────
+  text = text.replace(/\{reactreply:\s*([^}]+)\}/gi, (_, emoji) => {
+    reactReplyEmoji = emoji.trim();
+    return '';
+  });
+
+  // ── Extract {dm} ───────────────────────────────────────────────────────────
+  text = text.replace(/\{dm\}/gi, () => {
+    dmMode = true;
+    return '';
+  });
+
+  // ── Extract {sendto:} ─────────────────────────────────────────────────────
+  text = text.replace(/\{sendto:\s*([^}]+)\}/gi, (_, chan) => {
+    sendToChannel = chan.trim();
     return '';
   });
 
@@ -119,6 +176,13 @@ async function parseReply(replyStr, context) {
 
   // ── Extract {random:choice1|choice2|...} ─────────────────────────────────
   text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => {
+    const options = choices.split('|').map(s => s.trim()).filter(s => s);
+    if (options.length === 0) return '';
+    return options[Math.floor(Math.random() * options.length)];
+  });
+
+  // ── Extract {choose:choice1|choice2|...} ────────────────────────────────────
+  text = text.replace(/\{choose:([^}]+)\}/gi, (_, choices) => {
     const options = choices.split('|').map(s => s.trim()).filter(s => s);
     if (options.length === 0) return '';
     return options[Math.floor(Math.random() * options.length)];
@@ -205,14 +269,32 @@ async function parseReply(replyStr, context) {
 
   // ── Placeholders ───────────────────────────────────────────────────────────
   text = text.replace(/\{newline\}/gi, '\n');
+  text = text.replace(/\{user\}/gi, member ? `<@${member.id}>` : 'unknown');
   text = text.replace(/\{user_name\}/gi, member?.user?.username || 'unknown');
   text = text.replace(/\{user_mention\}/gi, member ? `<@${member.id}>` : 'unknown');
   text = text.replace(/\{user_tag\}/gi, member?.user?.tag || 'unknown');
   text = text.replace(/\{user_avatar\}/gi, member?.user?.displayAvatarURL() || '');
   text = text.replace(/\{user_id\}/gi, member?.id || '');
+  text = text.replace(/\{user_nick\}/gi, member?.nickname || member?.user?.username || 'unknown');
+  text = text.replace(/\{user_joindate\}/gi, member?.joinedAt ? member.joinedAt.toUTCString() : 'unknown');
+  text = text.replace(/\{user_createdate\}/gi, member?.user?.createdAt ? member.user.createdAt.toUTCString() : 'unknown');
+  text = text.replace(/\{user_displaycolor\}/gi, member?.displayColor ? '#' + member.displayColor.toString(16) : '#000000');
   text = text.replace(/\{server_name\}/gi, guild?.name || 'server');
+  text = text.replace(/\{server_id\}/gi, guild?.id || '');
   text = text.replace(/\{server_icon\}/gi, guild?.iconURL() || '');
   text = text.replace(/\{member_count\}/gi, guild?.memberCount?.toString() || '');
+  text = text.replace(/\{server_membercount\}/gi, guild?.memberCount?.toString() || '');
+  text = text.replace(/\{server_membercount_nobots\}/gi, guild?.memberCount?.toString() || '');
+  text = text.replace(/\{server_botcount\}/gi, '0');
+  text = text.replace(/\{server_owner\}/gi, guild?.ownerId ? `<@${guild.ownerId}>` : 'unknown');
+  text = text.replace(/\{server_owner_id\}/gi, guild?.ownerId || '');
+  text = text.replace(/\{server_rolecount\}/gi, guild?.roles?.cache?.size?.toString() || '0');
+  text = text.replace(/\{server_channelcount\}/gi, guild?.channels?.cache?.size?.toString() || '0');
+  text = text.replace(/\{channel\}/gi, message ? `<#${message.channelId}>` : '#channel');
+  text = text.replace(/\{channel_name\}/gi, message?.channel?.name || 'channel');
+  text = text.replace(/\{message_id\}/gi, message?.id || '');
+  text = text.replace(/\{message_content\}/gi, message?.content || '');
+  text = text.replace(/\{message_link\}/gi, message ? `https://discord.com/channels/${guild?.id}/${message.channelId}/${message.id}` : '');
   text = text.replace(/\{date\}/gi, new Date().toLocaleDateString());
   text = text.replace(/\{time\}/gi, new Date().toLocaleTimeString());
   text = text.replace(/\{timestamp\}/gi, Math.floor(Date.now() / 1000).toString());
@@ -326,15 +408,23 @@ async function parseReply(replyStr, context) {
   }
 
   return {
-    text: hasSeparators ? ' ' : text.trim(), // Placeholder when using separators (they take over content)
+    text: hasSeparators ? ' ' : text.trim(),
     embed,
     rows,
     componentRows,
     reactEmojis,
     actions,
     requireRole,
+    requireUser,
+    requireChannel,
+    denyChannel,
+    denyRole,
     cooldownSeconds,
     hasSeparators,
+    setNick,
+    reactReplyEmoji,
+    dmMode,
+    sendToChannel,
   };
 }
 

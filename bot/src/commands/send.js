@@ -1,5 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
-const { parseReply } = require('../utils/parser');
+const { parseReply, resolveRole } = require('../utils/parser');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -22,6 +22,15 @@ module.exports = {
     };
 
     const parsed = await parseReply(message, context);
+
+    if (parsed.requireRole) {
+        const role = resolveRole(interaction.guild, parsed.requireRole);
+        if (role && !interaction.member.roles.cache.has(role.id)) {
+            await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
+            return;
+        }
+    }
+
     const payload = {};
 
     if (parsed.hasSeparators) {
