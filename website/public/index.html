@@ -160,7 +160,8 @@
   <div id="login-screen">
     <div class="login-box">
       <h1>Mimu Dashboard</h1>
-      <input type="password" id="password-input" placeholder="Enter password">
+      <input type="text" id="guild-input" placeholder="Server ID (e.g. 123456789012345678)">
+      <input type="password" id="password-input" placeholder="Password">
       <button onclick="login()">Login</button>
     </div>
   </div>
@@ -178,9 +179,7 @@
         <div class="nav-item" data-tab="settings">⚙️ Settings</div>
       </div>
       <div class="sidebar-footer">
-        <select class="guild-select" id="guild-select" onchange="loadGuildData()">
-          <option value="">Select server...</option>
-        </select>
+        <div style="font-size:12px;color:var(--text3)">Server: <span id="display-guild"></span></div>
       </div>
     </div>
 
@@ -351,16 +350,23 @@
     let editingEmbed = null;
 
     function login() {
+      currentGuild = document.getElementById('guild-input').value.trim();
       password = document.getElementById('password-input').value;
+      if (!currentGuild) return alert('Enter Server ID');
       fetch('/api/auth', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password },
-        body: JSON.stringify({ password })
+        headers: { 
+          'Content-Type': 'application/json', 
+          'Authorization': password,
+          'X-Guild-Id': currentGuild
+        },
+        body: JSON.stringify({ guildId: currentGuild, password })
       }).then(r => r.json()).then(d => {
         if (d.success) {
           document.getElementById('login-screen').classList.add('hidden');
           document.getElementById('app').style.display = 'flex';
-          loadGuilds();
+          document.getElementById('display-guild').textContent = currentGuild;
+          loadData();
         } else {
           alert('Invalid password');
         }
@@ -368,7 +374,12 @@
     }
 
     function loadGuilds() {
-      fetch('/api/guilds', { headers: { 'Authorization': password } })
+      fetch('/api/guilds', { 
+        headers: { 
+          'Authorization': password,
+          'X-Guild-Id': currentGuild
+        } 
+      })
         .then(r => r.json())
         .then(guilds => {
           const sel = document.getElementById('guild-select');
@@ -386,7 +397,10 @@
     }
 
     async function loadData() {
-      const h = { 'Authorization': password };
+      const h = { 
+        'Authorization': password,
+        'X-Guild-Id': currentGuild
+      };
       data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json());
       data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json());
       data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json());

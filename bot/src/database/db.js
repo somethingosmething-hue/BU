@@ -274,6 +274,17 @@ function setTrusted(guildId, userId, value) {
   saveDB('trusted', db);
 }
 
+function getEditorPassword(guildId) {
+  const db = loadDB('editorpasswords');
+  return db[guildId] || null;
+}
+
+function setEditorPassword(guildId, password) {
+  const db = loadDB('editorpasswords');
+  db[guildId] = password;
+  saveDB('editorpasswords', db);
+}
+
 module.exports = {
   loadDB, saveDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -293,4 +304,5 @@ module.exports = {
   xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
+  getEditorPassword, setEditorPassword,
 };
