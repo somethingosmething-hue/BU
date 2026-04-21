@@ -4,203 +4,449 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mimu Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --bg: #0f0f12; --bg2: #18181c; --bg3: #222228; --bg4: #2a2a32;
-      --text: #e8e8ec; --text2: #a0a0a8; --text3: #686870;
-      --accent: #5865f2; --accent2: #4752c8; --success: #23a55a; --error: #f23f43;
+      --bg: #0d1117;
+      --bg2: #161b22;
+      --bg3: #21262d;
+      --bg4: #30363d;
+      --text: #e6edf3;
+      --text2: #8b949e;
+      --text3: #6e7681;
+      --accent: #5865f2;
+      --accent2: #4752c8;
+      --success: #238636;
+      --error: #da3633;
+      --border: #30363d;
     }
-    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
-    
+    html, body { height: 100%; }
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* Login */
     #login-screen {
-      position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 1000;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--bg) 0%, #1a1f2e 100%);
     }
-    #login-screen.hidden { display: none; }
-    .login-box { background: var(--bg2); padding: 40px; border-radius: 12px; width: 360px; text-align: center; border: 1px solid var(--bg3); }
-    .login-box h1 { margin-bottom: 24px; font-size: 24px; }
-    .login-box input { 
-      width: 100%; padding: 12px 16px; background: var(--bg3); border: 1px solid var(--bg4); 
-      border-radius: 8px; color: var(--text); font-size: 16px; margin-bottom: 16px; 
+    .login-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
     }
-    .login-box input:focus { outline: none; border-color: var(--accent); }
-    .login-box button {
-      width: 100%; padding: 12px; background: var(--accent); color: white; border: none; 
-      border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;
+    .login-card h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
-    .login-box button:hover { background: var(--accent2); }
+    .login-card h1 span { color: var(--accent); }
+    .login-card p {
+      color: var(--text2);
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    .login-card input {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+    }
+    .login-card input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .login-card input::placeholder { color: var(--text3); }
+    .login-card button {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .login-card button:hover { background: var(--accent2); }
 
-    .app { display: flex; height: 100vh; }
+    /* App */
+    .app { display: none; height: 100vh; }
+    .app.active { display: flex; }
+
+    /* Sidebar */
     .sidebar {
-      width: 220px; background: var(--bg2); border-right: 1px solid var(--bg3); display: flex; flex-direction: column;
+      width: 240px;
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
     }
-    .sidebar-header { padding: 20px; border-bottom: 1px solid var(--bg3); }
-    .sidebar-header h1 { font-size: 18px; }
-    .sidebar-nav { flex: 1; padding: 12px; }
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .nav {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
+    }
     .nav-item {
-      padding: 12px 16px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; font-size: 14px; transition: 0.2s;
+      padding: 10px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text2);
+      font-weight: 400;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 2px;
     }
-    .nav-item:hover { background: var(--bg3); }
-    .nav-item.active { background: var(--accent); color: white; }
-    .sidebar-footer { padding: 16px; border-top: 1px solid var(--bg3); }
-    .guild-select {
-      width: 100%; padding: 10px 12px; background: var(--bg3); border: 1px solid var(--bg4);
-      border-radius: 8px; color: var(--text); font-size: 14px;
+    .nav-item:hover {
+      background: var(--bg3);
+      color: var(--text);
+    }
+    .nav-item.active {
+      background: var(--accent);
+      color: white;
+    }
+    .sidebar-footer {
+      padding: 16px;
+      border-top: 1px solid var(--border);
+    }
+    .server-badge {
+      background: var(--bg3);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text2);
+      font-family: monospace;
     }
 
-    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .main-header {
-      padding: 16px 24px; background: var(--bg2); border-bottom: 1px solid var(--bg3); display: flex; align-items: center; justify-content: space-between;
+    /* Main */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
-    .main-header h2 { font-size: 18px; }
-    .main-content { flex: 1; overflow: auto; padding: 24px; }
+    .main-header {
+      padding: 16px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .main-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+    .save-btn {
+      padding: 8px 16px;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .main-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* Tabs */
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
-    .card { background: var(--bg2); border-radius: 12px; border: 1px solid var(--bg3); margin-bottom: 16px; }
-    .card-header { padding: 16px 20px; border-bottom: 1px solid var(--bg3); display: flex; justify-content: space-between; align-items: center; }
-    .card-body { padding: 20px; }
-    .card-title { font-size: 16px; font-weight: 600; }
+    /* Cards */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .card-header h3 {
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .card-body { padding: 16px; }
+    .card-body.empty {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text3);
+    }
 
+    /* Buttons */
     .btn {
-      padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; transition: 0.2s;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
     }
     .btn-primary { background: var(--accent); color: white; }
-    .btn-primary:hover { background: var(--accent2); }
-    .btn-success { background: var(--success); color: white; }
+    .btn-secondary { background: var(--bg4); color: var(--text); }
     .btn-danger { background: var(--error); color: white; }
-    .btn-secondary { background: var(--bg3); color: var(--text); }
-    .btn-sm { padding: 6px 12px; font-size: 13px; }
+    .btn-success { background: var(--success); color: white; }
 
+    /* Inputs */
     .input-group { margin-bottom: 16px; }
-    .input-group label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--text2); }
-    .input-group input, .input-group textarea, .input-group select {
-      width: 100%; padding: 10px 14px; background: var(--bg3); border: 1px solid var(--bg4);
-      border-radius: 8px; color: var(--text); font-size: 14px;
+    .input-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      color: var(--text2);
     }
-    .input-group input:focus, .input-group textarea:focus, .input-group select:focus { outline: none; border-color: var(--accent); }
-    .input-group textarea { min-height: 100px; resize: vertical; font-family: monospace; }
+    .input-group input,
+    .input-group textarea,
+    .input-group select {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+    }
+    .input-group input:focus,
+    .input-group textarea:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .input-group textarea { min-height: 100px; resize: vertical; }
 
+    /* List Items */
     .list-item {
-      padding: 12px 16px; border-bottom: 1px solid var(--bg3); display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
     .list-item:last-child { border-bottom: none; }
     .list-item-name { font-weight: 500; }
-    .list-item-desc { font-size: 13px; color: var(--text2); margin-top: 4px; }
+    .list-item-desc { font-size: 12px; color: var(--text2); margin-top: 2px; }
+    .list-item-actions { display: flex; gap: 6px; }
 
-    .blocks-editor {
-      min-height: 400px; background: var(--bg3); border-radius: 12px; padding: 20px; position: relative;
-    }
-    .blocks-palette {
-      position: absolute; top: 10px; left: 10px; background: var(--bg4); border-radius: 8px; padding: 10px; width: 180px;
-    }
-    .block-item {
-      padding: 10px 12px; background: var(--bg2); border-radius: 6px; margin-bottom: 8px; cursor: grab; font-size: 13px; border: 1px solid var(--bg3);
-    }
-    .block-item:active { cursor: grabbing; }
-    .blocks-canvas {
-      margin-left: 200px; min-height: 360px; background: var(--bg); border-radius: 8px; padding: 16px;
-    }
-    .added-block {
-      background: var(--bg2); border-radius: 8px; padding: 14px; margin-bottom: 10px; border: 1px solid var(--bg3); position: relative;
-    }
-    .added-block .remove-block {
-      position: absolute; top: 8px; right: 8px; background: var(--error); color: white; 
-      border: none; border-radius: 4px; width: 24px; height: 24px; cursor: pointer; font-size: 14px;
-    }
-    .added-block-title { font-weight: 600; font-size: 14px; margin-bottom: 12px; color: var(--accent); }
-    .added-block-content { display: grid; gap: 10px; }
-
+    /* Grid */
     .grid { display: grid; gap: 16px; }
     .grid-2 { grid-template-columns: repeat(2, 1fr); }
     .grid-3 { grid-template-columns: repeat(3, 1fr); }
 
-    .empty-state {
-      text-align: center; padding: 60px 20px; color: var(--text3);
-    }
-    .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text2); }
-
-    .embed-preview {
-      background: var(--bg); border-radius: 8px; padding: 20px; margin-top: 20px;
-    }
-    .embed-preview .embed {
-      background: var(--bg2); border-radius: 8px; padding: 16px; border-left: 4px solid var(--accent);
-    }
-    .embed-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; }
-    .embed-description { font-size: 14px; color: var(--text2); line-height: 1.5; }
-    .embed-field { margin-top: 12px; }
-    .embed-field-name { font-weight: 600; font-size: 14px; }
-    .embed-field-value { font-size: 14px; color: var(--text2); }
-    .embed-footer { font-size: 12px; color: var(--text3); margin-top: 12px; }
-
+    /* Modal */
     .modal-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 100;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
     }
     .modal-overlay.active { display: flex; }
     .modal {
-      background: var(--bg2); border-radius: 12px; width: 500px; max-height: 80vh; overflow: auto;
+      background: var(--bg2);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 85vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
-    .modal-header { padding: 20px; border-bottom: 1px solid var(--bg3); display: flex; justify-content: space-between; align-items: center; }
-    .modal-body { padding: 20px; }
-    .modal-footer { padding: 16px 20px; border-top: 1px solid var(--bg3); display: flex; justify-content: flex-end; gap: 10px; }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-header h3 { font-weight: 600; }
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
 
-    .variable-row { display: flex; gap: 10px; align-items: center; padding: 10px; background: var(--bg3); border-radius: 6px; margin-bottom: 8px; }
-    .variable-row input { flex: 1; padding: 8px 12px; background: var(--bg); border: 1px solid var(--bg4); border-radius: 6px; color: var(--text); }
+    /* Variables */
+    .var-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      background: var(--bg3);
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+    .var-row span { flex: 1; }
+    .var-row input {
+      flex: 1;
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    /* Preview */
+    .preview-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 20px;
+      margin-top: 16px;
+    }
+    .preview-embed {
+      background: var(--bg3);
+      border-radius: 8px;
+      padding: 16px;
+      border-left: 4px solid var(--accent);
+    }
+
+    /* Blocks Editor */
+    .blocks-canvas {
+      background: var(--bg3);
+      border-radius: 8px;
+      padding: 16px;
+      min-height: 300px;
+    }
+    .block {
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 14px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .block-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+    .block-remove {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: var(--error);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      width: 22px;
+      height: 22px;
+      cursor: pointer;
+      font-size: 14px;
+    }
 
     @media (max-width: 768px) {
-      .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .sidebar { width: 60px; }
-      .sidebar-header h1, .nav-item { display: none; }
-      .blocks-canvas { margin-left: 0; }
+      .sidebar-header h1, .nav-item span { display: none; }
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+  <!-- Login Screen -->
   <div id="login-screen">
-    <div class="login-box">
-      <h1>Mimu Dashboard</h1>
-      <input type="text" id="guild-input" placeholder="Server ID (e.g. 123456789012345678)">
+    <div class="login-card">
+      <h1><span>◆</span> Mimu Dashboard</h1>
+      <p>Enter your server details to continue</p>
+      <input type="text" id="guild-input" placeholder="Server ID">
       <input type="password" id="password-input" placeholder="Password">
-      <button onclick="login()">Login</button>
+      <button onclick="login()">Continue</button>
     </div>
   </div>
 
-  <div class="app" id="app" style="display:none;">
+  <!-- App -->
+  <div class="app" id="app">
+    <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <h1>Mimu</h1>
+        <h1>◆ Mimu</h1>
       </div>
-      <div class="sidebar-nav">
-        <div class="nav-item active" data-tab="embeds">📝 Embed Editor</div>
-        <div class="nav-item" data-tab="commands">💬 Command Manager</div>
+      <div class="nav">
+        <div class="nav-item active" data-tab="embeds">📝 Embeds</div>
+        <div class="nav-item" data-tab="commands">💬 Commands</div>
         <div class="nav-item" data-tab="autoresponders">⚡ Autoresponders</div>
         <div class="nav-item" data-tab="variables">📊 Variables</div>
         <div class="nav-item" data-tab="settings">⚙️ Settings</div>
       </div>
       <div class="sidebar-footer">
-        <div style="font-size:12px;color:var(--text3)">Server: <span id="display-guild"></span></div>
+        <div class="server-badge" id="display-guild"></div>
       </div>
     </div>
 
+    <!-- Main -->
     <div class="main">
       <div class="main-header">
-        <h2 id="tab-title">Embed Editor</h2>
-        <button class="btn btn-primary" onclick="saveCurrentTab()">Save Changes</button>
+        <h2 id="tab-title">Embeds</h2>
+        <button class="save-btn" onclick="saveCurrentTab()">Save</button>
       </div>
       <div class="main-content">
         <!-- Embeds Tab -->
         <div class="tab-content active" id="tab-embeds">
           <div class="card">
             <div class="card-header">
-              <span class="card-title">Saved Embeds</span>
-              <button class="btn btn-primary btn-sm" onclick="openEmbedEditor()">+ New Embed</button>
+              <h3>Saved Embeds</h3>
+              <button class="btn btn-primary" onclick="openEmbedEditor()">+ New</button>
             </div>
             <div class="card-body" id="embeds-list">
-              <div class="empty-state">
-                <h3>No embeds yet</h3>
-                <p>Create your first embed to get started</p>
-              </div>
+              <div class="card-body empty">No embeds yet</div>
             </div>
           </div>
         </div>
@@ -209,14 +455,11 @@
         <div class="tab-content" id="tab-commands">
           <div class="card">
             <div class="card-header">
-              <span class="card-title">Custom Commands</span>
-              <button class="btn btn-primary btn-sm" onclick="openCommandModal()">+ New Command</button>
+              <h3>Custom Commands</h3>
+              <button class="btn btn-primary" onclick="openCommandModal()">+ New</button>
             </div>
             <div class="card-body" id="commands-list">
-              <div class="empty-state">
-                <h3>No custom commands</h3>
-                <p>Add a custom command to respond to messages</p>
-              </div>
+              <div class="card-body empty">No commands yet</div>
             </div>
           </div>
         </div>
@@ -225,14 +468,11 @@
         <div class="tab-content" id="tab-autoresponders">
           <div class="card">
             <div class="card-header">
-              <span class="card-title">Autoresponders</span>
-              <button class="btn btn-primary btn-sm" onclick="openAutoresponderEditor()">+ New Autoresponder</button>
+              <h3>Autoresponders</h3>
+              <button class="btn btn-primary" onclick="openAutoresponderEditor()">+ New</button>
             </div>
             <div class="card-body" id="autoresponders-list">
-              <div class="empty-state">
-                <h3>No autoresponders</h3>
-                <p>Create triggers that automatically respond to messages</p>
-              </div>
+              <div class="card-body empty">No autoresponders yet</div>
             </div>
           </div>
         </div>
@@ -242,20 +482,20 @@
           <div class="grid grid-2">
             <div class="card">
               <div class="card-header">
-                <span class="card-title">Global Variables</span>
-                <button class="btn btn-primary btn-sm" onclick="addVariable('global')">+ Add</button>
+                <h3>Global Variables</h3>
+                <button class="btn btn-primary" onclick="addVariable('global')">+ Add</button>
               </div>
               <div class="card-body" id="global-vars">
-                <div class="empty-state"><p>No global variables</p></div>
+                <div class="card-body empty">No variables</div>
               </div>
             </div>
             <div class="card">
               <div class="card-header">
-                <span class="card-title">User Variables</span>
-                <button class="btn btn-primary btn-sm" onclick="addVariable('user')">+ Add</button>
+                <h3>User Variables</h3>
+                <button class="btn btn-primary" onclick="addVariable('user')">+ Add</button>
               </div>
               <div class="card-body" id="user-vars">
-                <div class="empty-state"><p>No user variables</p></div>
+                <div class="card-body empty">No variables</div>
               </div>
             </div>
           </div>
@@ -265,7 +505,7 @@
         <div class="tab-content" id="tab-settings">
           <div class="card">
             <div class="card-header">
-              <span class="card-title">Server Settings</span>
+              <h3>Server Settings</h3>
             </div>
             <div class="card-body">
               <div class="input-group">
@@ -279,75 +519,63 @@
     </div>
   </div>
 
-  <!-- Embed Editor Modal -->
+  <!-- Embed Modal -->
   <div class="modal-overlay" id="embed-modal">
-    <div class="modal" style="width: 800px;">
+    <div class="modal">
       <div class="modal-header">
-        <span class="card-title" id="embed-modal-title">New Embed</span>
-        <button class="btn btn-secondary btn-sm" onclick="closeEmbedModal()">Cancel</button>
+        <h3 id="embed-modal-title">New Embed</h3>
+        <button class="btn btn-secondary" onclick="closeEmbedModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="input-group">
-          <label>Embed Name</label>
+          <label>Name</label>
           <input type="text" id="embed-name" placeholder="my-embed">
         </div>
-        <button class="btn btn-primary btn-sm" onclick="addEmbedBlock()">+ Add Block</button>
-        <div class="blocks-editor">
-          <div class="blocks-canvas" id="embed-blocks-canvas">
-            <div class="empty-state"><p>Click "Add Block" to start building your embed</p></div>
-          </div>
-        </div>
-        <div class="embed-preview" id="embed-preview">
+        <button class="btn btn-primary" onclick="addBlock()" style="margin-bottom: 16px;">+ Add Block</button>
+        <div class="blocks-canvas" id="blocks-canvas"></div>
+        <div class="preview-box">
           <p style="color: var(--text3); margin-bottom: 10px;">Preview:</p>
-          <div class="embed">
-            <div class="embed-title" id="preview-title">Title</div>
-            <div class="embed-description" id="preview-description">Description</div>
+          <div class="preview-embed">
+            <div id="preview-title" style="font-weight: 600; margin-bottom: 8px;">Title</div>
+            <div id="preview-desc" style="color: var(--text2);">Description</div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="saveEmbed()">Save Embed</button>
+        <button class="btn btn-secondary" onclick="closeEmbedModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveEmbed()">Save</button>
       </div>
     </div>
   </div>
 
-  <!-- Autoresponder Editor Modal -->
-  <div class="modal-overlay" id="autoresponder-modal">
-    <div class="modal" style="width: 800px;">
+  <!-- Autoresponder Modal -->
+  <div class="modal-overlay" id="ar-modal">
+    <div class="modal">
       <div class="modal-header">
-        <span class="card-title">New Autoresponder</span>
-        <button class="btn btn-secondary btn-sm" onclick="closeAutoresponderModal()">Cancel</button>
+        <h3>New Autoresponder</h3>
+        <button class="btn btn-secondary" onclick="closeArModal()">✕</button>
       </div>
       <div class="modal-body">
         <div class="input-group">
-          <label>Trigger (what to watch for)</label>
+          <label>Trigger</label>
           <input type="text" id="ar-trigger" placeholder="hello">
         </div>
         <div class="input-group">
-          <label>Response Type</label>
-          <select id="ar-response-type" onchange="updateArResponseFields()">
-            <option value="reply">Reply Message</option>
-            <option value="dm">Send DM</option>
-            <option value="role_add">Add Role</option>
-            <option value="role_remove">Remove Role</option>
-          </select>
-        </div>
-        <div class="input-group" id="ar-response-group">
           <label>Response</label>
           <textarea id="ar-response" placeholder="Hello! {user}"></textarea>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-primary" onclick="saveAutoresponder()">Save Autoresponder</button>
+        <button class="btn btn-secondary" onclick="closeArModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveAutoresponder()">Save</button>
+      </div>
     </div>
   </div>
 
   <script>
-    let password = '';
-    let currentGuild = '';
+    let password = '', currentGuild = '';
     let data = { embeds: {}, commands: [], autoresponders: [], globalVars: {}, userVars: {} };
-    let embedBlocks = [];
-    let editingEmbed = null;
+    let embedBlocks = [], editingEmbed = null;
 
     function login() {
       currentGuild = document.getElementById('guild-input').value.trim();
@@ -355,16 +583,12 @@
       if (!currentGuild) return alert('Enter Server ID');
       fetch('/api/auth', {
         method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json', 
-          'Authorization': password,
-          'X-Guild-Id': currentGuild
-        },
+        headers: { 'Content-Type': 'application/json', 'X-Guild-Id': currentGuild },
         body: JSON.stringify({ guildId: currentGuild, password })
       }).then(r => r.json()).then(d => {
         if (d.success) {
-          document.getElementById('login-screen').classList.add('hidden');
-          document.getElementById('app').style.display = 'flex';
+          document.getElementById('login-screen').style.display = 'none';
+          document.getElementById('app').classList.add('active');
           document.getElementById('display-guild').textContent = currentGuild;
           loadData();
         } else {
@@ -373,41 +597,15 @@
       });
     }
 
-    function loadGuilds() {
-      fetch('/api/guilds', { 
-        headers: { 
-          'Authorization': password,
-          'X-Guild-Id': currentGuild
-        } 
-      })
-        .then(r => r.json())
-        .then(guilds => {
-          const sel = document.getElementById('guild-select');
-          sel.innerHTML = '<option value="">Select server...</option>';
-          guilds.forEach(g => {
-            sel.innerHTML += `<option value="${g.id}">${g.name}</option>`;
-          });
-        });
-    }
-
-    function loadGuildData() {
-      currentGuild = document.getElementById('guild-select').value;
-      if (!currentGuild) return;
-      loadData();
-    }
-
     async function loadData() {
-      const h = { 
-        'Authorization': password,
-        'X-Guild-Id': currentGuild
-      };
-      data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json());
-      data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json());
-      data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json());
-      const vars = await fetch(`/api/variables/${currentGuild}`, { headers: h }).then(r => r.json());
+      const h = { 'Authorization': password, 'X-Guild-Id': currentGuild };
+      data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({}));
+      data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => []);
+      data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => []);
+      const vars = await fetch(`/api/variables/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({ global: {}, user: {} }));
       data.globalVars = vars.global || {};
       data.userVars = vars.user || {};
-      const settings = await fetch(`/api/settings/${currentGuild}`, { headers: h }).then(r => r.json());
+      const settings = await fetch(`/api/settings/${currentGuild}`, { headers: h }).then(r => r.json()).catch(() => ({}));
       data.prefix = settings.prefix || '/';
       renderAll();
     }
@@ -417,61 +615,61 @@
       renderCommands();
       renderAutoresponders();
       renderVariables();
-      renderSettings();
+      document.getElementById('settings-prefix').value = data.prefix;
     }
 
     function renderEmbeds() {
       const list = document.getElementById('embeds-list');
       const keys = Object.keys(data.embeds);
-      if (keys.length === 0) {
-        list.innerHTML = '<div class="empty-state"><h3>No embeds yet</h3><p>Create your first embed to get started</p></div>';
-      } else {
-        list.innerHTML = keys.map(name => `
-          <div class="list-item">
-            <div>
-              <div class="list-item-name">${name}</div>
-            </div>
-            <div style="display:flex;gap:8px;">
-              <button class="btn btn-secondary btn-sm" onclick="editEmbed('${name}')">Edit</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteEmbed('${name}')">Delete</button>
-            </div>
-          </div>
-        `).join('');
+      if (!keys.length) {
+        list.innerHTML = '<div class="card-body empty">No embeds yet</div>';
+        return;
       }
+      list.innerHTML = keys.map(name => `
+        <div class="list-item">
+          <div>
+            <div class="list-item-name">${name}</div>
+          </div>
+          <div class="list-item-actions">
+            <button class="btn btn-secondary" onclick="editEmbed('${name}')">Edit</button>
+            <button class="btn btn-danger" onclick="deleteEmbed('${name}')">Delete</button>
+          </div>
+        </div>
+      `).join('');
     }
 
     function renderCommands() {
       const list = document.getElementById('commands-list');
-      if (data.commands.length === 0) {
-        list.innerHTML = '<div class="empty-state"><h3>No custom commands</h3><p>Add a custom command to respond to messages</p></div>';
-      } else {
-        list.innerHTML = data.commands.map(cmd => `
-          <div class="list-item">
-            <div>
-              <div class="list-item-name">${cmd.name}</div>
-              <div class="list-item-desc">${cmd.response}</div>
-            </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteCommand('${cmd.name}')">Delete</button>
-          </div>
-        `).join('');
+      if (!data.commands.length) {
+        list.innerHTML = '<div class="card-body empty">No commands yet</div>';
+        return;
       }
+      list.innerHTML = data.commands.map(cmd => `
+        <div class="list-item">
+          <div>
+            <div class="list-item-name">${cmd.name}</div>
+            <div class="list-item-desc">${cmd.response?.substring(0, 50)}...</div>
+          </div>
+          <button class="btn btn-danger" onclick="deleteCommand('${cmd.name}')">Delete</button>
+        </div>
+      `).join('');
     }
 
     function renderAutoresponders() {
       const list = document.getElementById('autoresponders-list');
-      if (data.autoresponders.length === 0) {
-        list.innerHTML = '<div class="empty-state"><h3>No autoresponders</h3><p>Create triggers that automatically respond to messages</p></div>';
-      } else {
-        list.innerHTML = data.autoresponders.map(ar => `
-          <div class="list-item">
-            <div>
-              <div class="list-item-name">${ar.trigger}</div>
-              <div class="list-item-desc">${ar.data ? ar.data.response : 'No response'}</div>
-            </div>
-            <button class="btn btn-danger btn-sm" onclick="deleteAutoresponder('${ar.trigger}')">Delete</button>
-          </div>
-        `).join('');
+      if (!data.autoresponders.length) {
+        list.innerHTML = '<div class="card-body empty">No autoresponders yet</div>';
+        return;
       }
+      list.innerHTML = data.autoresponders.map(ar => `
+        <div class="list-item">
+          <div>
+            <div class="list-item-name">${ar.trigger}</div>
+            <div class="list-item-desc">${ar.data?.response?.substring(0, 50)}...</div>
+          </div>
+          <button class="btn btn-danger" onclick="deleteAutoresponder('${ar.trigger}')">Delete</button>
+        </div>
+      `).join('');
     }
 
     function renderVariables() {
@@ -480,38 +678,47 @@
       const gkeys = Object.keys(data.globalVars);
       const ukeys = Object.keys(data.userVars);
       gv.innerHTML = gkeys.length ? gkeys.map(k => `
-        <div class="variable-row">
+        <div class="var-row">
           <span>${k}</span>
-          <span style="color:var(--text2)">${data.globalVars[k]}</span>
+          <span style="color: var(--text2)">${data.globalVars[k]}</span>
         </div>
-      `).join('') : '<div class="empty-state"><p>No global variables</p></div>';
+      `).join('') : '<div class="card-body empty">No variables</div>';
       uv.innerHTML = ukeys.length ? ukeys.map(k => `
-        <div class="variable-row">
+        <div class="var-row">
           <span>${k}</span>
-          <span style="color:var(--text2)">${data.userVars[k]}</span>
+          <span style="color: var(--text2)">${data.userVars[k]}</span>
         </div>
-      `).join('') : '<div class="empty-state"><p>No user variables</p></div>';
+      `).join('') : '<div class="card-body empty">No variables</div>';
     }
 
-    function renderSettings() {
-      document.getElementById('settings-prefix').value = data.prefix;
-    }
+    // Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        item.classList.add('active');
+        const tab = item.dataset.tab;
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('tab-title').textContent = item.textContent.trim();
+      });
+    });
 
+    // Embeds
     function openEmbedEditor() {
       editingEmbed = null;
       document.getElementById('embed-modal-title').textContent = 'New Embed';
       document.getElementById('embed-name').value = '';
       embedBlocks = [];
-      renderEmbedBlocks();
+      renderBlocks();
       document.getElementById('embed-modal').classList.add('active');
     }
 
     function editEmbed(name) {
       editingEmbed = name;
-      document.getElementById('embed-modal-title').textContent = 'Edit Embed: ' + name;
+      document.getElementById('embed-modal-title').textContent = 'Edit ' + name;
       document.getElementById('embed-name').value = name;
       embedBlocks = data.embeds[name] ? [data.embeds[name]] : [];
-      renderEmbedBlocks();
+      renderBlocks();
       document.getElementById('embed-modal').classList.add('active');
     }
 
@@ -519,105 +726,68 @@
       document.getElementById('embed-modal').classList.remove('active');
     }
 
-    function addEmbedBlock() {
-      embedBlocks.push({ type: 'title', content: '' });
-      renderEmbedBlocks();
+    function addBlock() {
+      embedBlocks.push({ type: 'description', content: '' });
+      renderBlocks();
     }
 
-    function renderEmbedBlocks() {
-      const canvas = document.getElementById('embed-blocks-canvas');
-      if (embedBlocks.length === 0) {
-        canvas.innerHTML = '<div class="empty-state"><p>Click "Add Block" to start building your embed</p></div>';
-        updateEmbedPreview();
+    function renderBlocks() {
+      const canvas = document.getElementById('blocks-canvas');
+      if (!embedBlocks.length) {
+        canvas.innerHTML = '<div class="card-body empty">Click "+ Add Block" to start</div>';
         return;
       }
-      canvas.innerHTML = embedBlocks.map((block, i) => {
-        let fields = '';
-        if (block.type === 'title') {
-          fields = `<div class="input-group"><label>Title</label><input type="text" value="${block.content||''}" oninput="updateBlock(${i},'content',this.value)"></div>`;
-        } else if (block.type === 'description') {
-          fields = `<div class="input-group"><label>Description</label><textarea oninput="updateBlock(${i},'content',this.value)">${block.content||''}</textarea></div>`;
-        } else if (block.type === 'field') {
-          fields = `
-            <div class="grid grid-2">
-              <div class="input-group"><label>Name</label><input type="text" value="${block.name||''}" oninput="updateBlock(${i},'name',this.value)"></div>
-              <div class="input-group"><label>Value</label><input type="text" value="${block.value||''}" oninput="updateBlock(${i},'value',this.value)"></div>
-            </div>
-            <div class="input-group"><label>Inline</label><select onchange="updateBlock(${i},'inline',this.value)"><option value="true" ${block.inline?'selected':''}>Yes</option><option value="false" ${!block.inline?'selected':''}>No</option></select></div>
-          `;
-        } else if (block.type === 'footer') {
-          fields = `<div class="input-group"><label>Footer Text</label><input type="text" value="${block.content||''}" oninput="updateBlock(${i},'content',this.value)"></div>`;
-        } else if (block.type === 'color') {
-          fields = `<div class="input-group"><label>Color (hex)</label><input type="text" value="${block.content||''}" oninput="updateBlock(${i},'content',this.value)"></div>`;
-        } else if (block.type === 'thumbnail') {
-          fields = `<div class="input-group"><label>Image URL</label><input type="text" value="${block.content||''}" oninput="updateBlock(${i},'content',this.value)"></div>`;
-        } else if (block.type === 'image') {
-          fields = `<div class="input-group"><label>Image URL</label><input type="text" value="${block.content||''}" oninput="updateBlock(${i},'content',this.value)"></div>`;
-        }
-        return `
-          <div class="added-block">
-            <button class="remove-block" onclick="removeBlock(${i})">×</button>
-            <div class="added-block-title">${block.type.charAt(0).toUpperCase() + block.type.slice(1)}</div>
-            <div class="added-block-content">${fields}</div>
-          </div>
-        `;
-      }).join('');
-      updateEmbedPreview();
+      canvas.innerHTML = embedBlocks.map((block, i) => `
+        <div class="block">
+          <button class="block-remove" onclick="removeBlock(${i})">×</button>
+          <div class="block-title">${block.type}</div>
+          <textarea oninput="updateBlock(${i}, 'content', this.value)" placeholder="Content..." style="width:100%;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);resize:vertical;min-height:60px;">${block.content || ''}</textarea>
+        </div>
+      `).join('');
+      updatePreview();
     }
 
     function updateBlock(i, key, value) {
       embedBlocks[i][key] = value;
-      updateEmbedPreview();
+      updatePreview();
     }
 
     function removeBlock(i) {
       embedBlocks.splice(i, 1);
-      renderEmbedBlocks();
+      renderBlocks();
     }
 
-    function updateEmbedPreview() {
-      const title = document.querySelector('#embed-blocks-canvas input[oninput*="title"]')?.value || '';
-      const desc = document.querySelector('#embed-blocks-canvas textarea')?.value || '';
-      document.getElementById('preview-title').textContent = title || 'Title';
-      document.getElementById('preview-description').textContent = desc || 'Description';
+    function updatePreview() {
+      const title = document.getElementById('embed-name').value || 'Title';
+      let desc = '';
+      embedBlocks.forEach(b => { if (b.content) desc += b.content + '\n'; });
+      document.getElementById('preview-title').textContent = title;
+      document.getElementById('preview-desc').textContent = desc.trim() || 'Description';
     }
 
     function saveEmbed() {
       const name = document.getElementById('embed-name').value;
-      if (!name) return alert('Please enter a name');
-      const embedData = {};
-      embedBlocks.forEach(b => {
-        if (b.type === 'title') embedData.title = b.content;
-        else if (b.type === 'description') embedData.description = b.content;
-        else if (b.type === 'field') {
-          if (!embedData.fields) embedData.fields = [];
-          embedData.fields.push({ name: b.name, value: b.value, inline: b.inline === 'true' });
-        }
-        else if (b.type === 'footer') embedData.footer = { text: b.content };
-        else if (b.type === 'color') embedData.color = b.content;
-        else if (b.type === 'thumbnail') embedData.thumbnail = { url: b.content };
-        else if (b.type === 'image') embedData.image = { url: b.content };
-      });
+      if (!name) return alert('Enter a name');
+      const embedData = { description: embedBlocks.map(b => b.content).join('\n') };
       fetch(`/api/embeds/${currentGuild}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password },
+        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
         body: JSON.stringify({ name, data: embedData })
       }).then(r => r.json()).then(d => {
-        if (d.success) {
-          closeEmbedModal();
-          loadData();
-        }
+        closeEmbedModal();
+        loadData();
       });
     }
 
     function deleteEmbed(name) {
-      if (!confirm('Delete embed?')) return;
+      if (!confirm('Delete?')) return;
       fetch(`/api/embeds/${currentGuild}/${name}`, {
         method: 'DELETE',
-        headers: { 'Authorization': password }
-      }).then(r => r.json()).then(d => loadData());
+        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
+      }).then(() => loadData());
     }
 
+    // Commands
     function openCommandModal() {
       const name = prompt('Command name:');
       if (!name) return;
@@ -625,98 +795,75 @@
       if (!response) return;
       fetch(`/api/commands/${currentGuild}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password },
+        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
         body: JSON.stringify({ name, response })
-      }).then(r => r.json()).then(d => loadData());
+      }).then(() => loadData());
     }
 
     function deleteCommand(name) {
-      if (!confirm('Delete command?')) return;
+      if (!confirm('Delete?')) return;
       fetch(`/api/commands/${currentGuild}/${name}`, {
         method: 'DELETE',
-        headers: { 'Authorization': password }
-      }).then(r => r.json()).then(d => loadData());
+        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
+      }).then(() => loadData());
     }
 
+    // Autoresponders
     function openAutoresponderEditor() {
       document.getElementById('ar-trigger').value = '';
       document.getElementById('ar-response').value = '';
-      document.getElementById('autoresponder-modal').classList.add('active');
+      document.getElementById('ar-modal').classList.add('active');
     }
 
-    function closeAutoresponderModal() {
-      document.getElementById('autoresponder-modal').classList.remove('active');
-    }
-
-    function updateArResponseFields() {
-      const type = document.getElementById('ar-response-type').value;
-      const group = document.getElementById('ar-response-group');
-      if (type === 'reply' || type === 'dm') {
-        group.innerHTML = '<label>Response</label><textarea id="ar-response" placeholder="Hello! {user}"></textarea>';
-      } else {
-        group.innerHTML = '<label>Role ID</label><input type="text" id="ar-response" placeholder="123456789">';
-      }
+    function closeArModal() {
+      document.getElementById('ar-modal').classList.remove('active');
     }
 
     function saveAutoresponder() {
       const trigger = document.getElementById('ar-trigger').value;
-      const type = document.getElementById('ar-response-type').value;
       const response = document.getElementById('ar-response').value;
-      if (!trigger) return alert('Enter a trigger');
-      const data = { type, response };
+      if (!trigger) return alert('Enter trigger');
       fetch(`/api/autoresponders/${currentGuild}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password },
-        body: JSON.stringify({ trigger, data })
+        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
+        body: JSON.stringify({ trigger, data: { response } })
       }).then(r => r.json()).then(d => {
-        closeAutoresponderModal();
+        closeArModal();
         loadData();
       });
     }
 
     function deleteAutoresponder(trigger) {
-      if (!confirm('Delete autoresponder?')) return;
+      if (!confirm('Delete?')) return;
       fetch(`/api/autoresponders/${currentGuild}/${trigger}`, {
         method: 'DELETE',
-        headers: { 'Authorization': password }
-      }).then(r => r.json()).then(d => loadData());
+        headers: { 'Authorization': password, 'X-Guild-Id': currentGuild }
+      }).then(() => loadData());
     }
 
+    // Variables
     function addVariable(type) {
       const name = prompt('Variable name:');
       if (!name) return;
-      const value = prompt('Variable value:');
-      fetch(`/api/variables/${currentGuild}`, {
+      const value = prompt('Value:') || '';
+      const endpoint = type === 'global' ? '/api/variables/global' : `/api/variables/${currentGuild}`;
+      fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password },
-        body: JSON.stringify({ type, name, value })
-      }).then(r => r.json()).then(d => loadData());
+        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
+        body: JSON.stringify({ name, value })
+      }).then(() => loadData());
     }
 
+    // Settings
     async function saveCurrentTab() {
-      const tab = document.querySelector('.nav-item.active').dataset.tab;
-      if (tab === 'settings') {
-        const prefix = document.getElementById('settings-prefix').value;
-        await fetch(`/api/settings/${currentGuild}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': password },
-          body: JSON.stringify({ prefix })
-        });
-        alert('Settings saved!');
-      } else {
-        alert('Changes auto-saved!');
-      }
-    }
-
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        item.classList.add('active');
-        document.getElementById('tab-' + item.dataset.tab).classList.add('active');
-        document.getElementById('tab-title').textContent = item.textContent.trim();
+      const prefix = document.getElementById('settings-prefix').value;
+      await fetch(`/api/settings/${currentGuild}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
+        body: JSON.stringify({ prefix })
       });
-    });
+      alert('Saved!');
+    }
   </script>
 </body>
 </html>
