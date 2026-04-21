@@ -6,7 +6,7 @@ const path = require('path');
 const app = express();
 
 const PUBLIC_DIR = process.env.VERCEL ? path.join(__dirname, 'public') : path.join(__dirname, 'public');
-const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? path.join(__dirname, 'data') : path.join(__dirname, '../bot/data'));
+const DATA_DIR = path.join(__dirname, '../bot/data');
 
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com;");
