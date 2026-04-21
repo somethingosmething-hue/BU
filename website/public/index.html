@@ -1,753 +1,854 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MCDash</title>
-  <link rel="icon" type="image/png" href="https://cdn://github.com/Winterass/MCDash/raw/master/webui/public/assets/img/favicon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    :root {
-      --bg: #0f131a;
-      --bg-card: #1b1f27;
-      --bg-card-hover: #22262e;
-      --bg-input: #272c36;
-      --text: #e2e8f0;
-      --text-secondary: #94a3b8;
-      --text-muted: #64748b;
-      --primary: #6366f1;
-      --primary-hover: #818cf8;
-      --success: #22c55e;
-      --danger: #ef4444;
-      --border: #334155;
-    }
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CUtils Web</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0d1117;--bg1:#161b22;--bg2:#21262d;--bg3:#2d333b;
+  --text:#e6edf3;--text2:#8b949e;--text3:#6e7681;
+  --accent:#5865f2;--accent2:#4752c4;
+  --green:#3fb950;--red:#f85149;--yellow:#d4a017;--orange:#f57731;
+  --border:#30363d;--border2:#21262d;
+  --r:10px;--rsm:6px;--rlg:16px;
+  --shadow:0 8px 32px rgba(0,0,0,.4);
+}
+html,body{height:100%;font-family:'Lexend',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:3px}
+input,textarea,select,button{font-family:'Lexend',sans-serif}
+button{cursor:pointer}
 
-    /* Login Page */
-    #login-screen {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--bg);
-    }
-    .login-box {
-      background: var(--bg-card);
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
-      border-radius: 16px;
-      padding: 48px;
-      width: 100%;
-      max-width: 420px;
-      text-align: center;
-    }
-    .login-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 8px;
-    }
-    .login-logo img {
-      width: 48px;
-      height: 48px;
-    }
-    .login-logo h1 {
-      font-size: 28px;
-      font-weight: 700;
-      color: var(--primary);
-    }
-    .login-subtitle {
-      color: var(--text-secondary);
-      margin-bottom: 32px;
-      font-size: 14px;
-    }
-    .login-input {
-      width: 100%;
-      padding: 14px 18px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-      margin-bottom: 14px;
-      transition: all 0.2s;
-    }
-    .login-input:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-    }
-    .login-input::placeholder { color: var(--text-muted); }
-    .login-btn {
-      width: 100%;
-      padding: 14px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 600;
-      font-family: inherit;
-      cursor: pointer;
-      transition: all 0.2s;
-      margin-top: 8px;
-    }
-    .login-btn:hover { background: var(--primary-hover); }
+/* LOGIN */
+#login{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:999}
+#login::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(88,101,242,.15),transparent);pointer-events:none}
+.lcard{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rlg);padding:42px;width:100%;max-width:400px;position:relative}
+.llogo{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.llogo h1{font-size:24px;font-weight:700;color:var(--accent)}
+.lsub{color:var(--text2);font-size:13px;margin-bottom:26px}
+.lfield{margin-bottom:12px}
+.lfield label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.lfield input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);padding:10px 14px;font-size:14px;transition:border-color .15s}
+.lfield input:focus{outline:none;border-color:var(--accent)}
+.lfield input::placeholder{color:var(--text3)}
+#lerr{color:var(--red);font-size:13px;margin-top:8px;display:none}
 
-    /* App Layout */
-    .app { display: none; height: 100vh; }
-    .app.active { display: flex; }
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:var(--rsm);font-size:13px;font-weight:500;border:none;transition:all .15s;white-space:nowrap;cursor:pointer}
+.btn-p{background:var(--accent);color:#fff}.btn-p:hover{background:var(--accent2)}
+.btn-s{background:var(--bg3);color:var(--text)}.btn-s:hover{background:#373e47}
+.btn-d{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.25)}.btn-d:hover{background:rgba(248,81,73,.22)}
+.btn-g{background:transparent;color:var(--text2);border:1px solid var(--border)}.btn-g:hover{background:var(--bg2);color:var(--text)}
+.btn-full{width:100%;justify-content:center}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-ico{padding:6px;border-radius:var(--rsm);background:var(--bg2);color:var(--text2);border:1px solid var(--border);transition:all .15s;cursor:pointer}.btn-ico:hover{background:var(--bg3);color:var(--text)}
+.mt8{margin-top:8px}.mb8{margin-bottom:8px}.mt12{margin-top:12px}.mb12{margin-bottom:12px}
 
-    /* Sidebar */
-    .sidebar {
-      width: 260px;
-      background: var(--bg-card);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
-    .sidebar-header {
-      padding: 24px;
-      border-bottom: 1px solid var(--border);
-    }
-    .sidebar-header h1 {
-      font-size: 20px;
-      font-weight: 700;
-      color: var(--primary);
-    }
-    .nav {
-      flex: 1;
-      padding: 16px 12px;
-      overflow-y: auto;
-    }
-    .nav-item {
-      padding: 12px 16px;
-      border-radius: 8px;
-      cursor: pointer;
-      color: var(--text-secondary);
-      font-weight: 500;
-      font-size: 14px;
-      transition: all 0.15s;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 4px;
-    }
-    .nav-item:hover {
-      background: var(--bg-input);
-      color: var(--text);
-    }
-    .nav-item.active {
-      background: var(--primary);
-      color: white;
-    }
-    .sidebar-footer {
-      padding: 16px 20px;
-      border-top: 1px solid var(--border);
-    }
-    .server-badge {
-      background: var(--bg-input);
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      color: var(--text-muted);
-      font-family: monospace;
-      text-align: center;
-    }
+/* FIELDS */
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+.field input,.field select,.field textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);padding:9px 12px;font-size:13px;transition:border-color .15s}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent)}
+.field input::placeholder,.field textarea::placeholder{color:var(--text3)}
+.field textarea{resize:vertical;min-height:76px}
+.field select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238b949e' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 
-    /* Main Content */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    .main-header {
-      padding: 20px 32px;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .main-header h2 {
-      font-size: 18px;
-      font-weight: 600;
-    }
-    .save-btn {
-      padding: 10px 20px;
-      background: var(--primary);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    .save-btn:hover { background: var(--primary-hover); }
-    .main-content {
-      flex: 1;
-      overflow-y: auto;
-      padding: 24px 32px;
-      background: var(--bg);
-    }
+/* APP SHELL */
+#app{display:none;height:100vh;overflow:hidden}
+#app.show{display:flex}
 
-    /* Tabs */
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+/* SIDEBAR */
+.sidebar{width:218px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sbhdr{padding:18px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.sbhdr span{font-weight:700;font-size:15px;color:var(--accent)}
+.sbnav{flex:1;padding:8px 8px;overflow-y:auto}
+.sbsec{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);padding:10px 8px 3px}
+.navitem{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--rsm);color:var(--text2);font-weight:500;font-size:13px;cursor:pointer;transition:all .12s;margin-bottom:1px}
+.navitem:hover{background:var(--bg2);color:var(--text)}
+.navitem.active{background:rgba(88,101,242,.16);color:var(--accent)}
+.navitem .ico{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.navbadge{margin-left:auto;background:var(--bg3);color:var(--text3);font-size:10px;font-family:'JetBrains Mono',monospace;padding:1px 6px;border-radius:99px}
+.navitem.active .navbadge{background:rgba(88,101,242,.25);color:var(--accent)}
+.sbfoot{padding:12px;border-top:1px solid var(--border)}
+.schip{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:7px 10px;display:flex;align-items:center;gap:7px}
+.schip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.schip .id{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-    /* Cards */
-    .card {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      margin-bottom: 20px;
-    }
-    .card-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .card-header h3 {
-      font-size: 15px;
-      font-weight: 600;
-    }
-    .card-body { padding: 16px 20px; }
-    .card-body.empty {
-      text-align: center;
-      padding: 48px 20px;
-      color: var(--text-muted);
-    }
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:0 26px;height:56px;background:var(--bg1);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.topbar h2{font-size:15px;font-weight:600;flex:1}
+.content{flex:1;overflow-y:auto;padding:22px 26px}
 
-    /* Buttons */
-    .btn {
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      font-family: inherit;
-    }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: var(--bg-input); color: var(--text); }
-    .btn-secondary:hover { background: var(--bg-card-hover); }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-success { background: var(--success); color: white; }
+/* TABS */
+.tab{display:none}.tab.active{display:block}
 
-    /* Inputs */
-    .input-group { margin-bottom: 18px; }
-    .input-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      font-weight: 500;
-    }
-    .input-group input,
-    .input-group textarea {
-      width: 100%;
-      padding: 12px 16px;
-      background: var(--bg-input);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 14px;
-      font-family: inherit;
-    }
-    .input-group input:focus,
-    .input-group textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-    .input-group textarea { min-height: 100px; resize: vertical; }
+/* SECTION HEADER */
+.sechdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px}
+.sechdr h3{font-size:14px;font-weight:600}
+.sechdr p{font-size:12px;color:var(--text2);margin-top:2px}
 
-    /* List Items */
-    .list-item {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .list-item:last-child { border-bottom: none; }
-    .list-item-name { font-weight: 600; font-size: 14px; }
-    .list-item-desc { font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
-    .list-item-actions { display: flex; gap: 8px; }
+/* CARD */
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.card-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-hdr h4{font-size:13px;font-weight:600}
+.card-body{padding:14px 16px}
+.cempty{padding:44px 20px;text-align:center;color:var(--text3);font-size:13px}
+.cempty .ei{font-size:30px;margin-bottom:6px}
 
-    /* Grid */
-    .grid { display: grid; gap: 20px; }
-    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+/* LIST ITEM */
+.litem{padding:12px 16px;border-bottom:1px solid var(--border2);display:flex;align-items:center;gap:11px;transition:background .1s}
+.litem:last-child{border-bottom:none}
+.litem:hover{background:var(--bg2)}
+.lico{width:32px;height:32px;border-radius:var(--rsm);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.linfo{flex:1;min-width:0}
+.lname{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ldesc{font-size:12px;color:var(--text2);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lacts{display:flex;gap:5px;flex-shrink:0}
 
-    /* Modal */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.7);
-      display: none;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
-    }
-    .modal-overlay.active { display: flex; }
-    .modal {
-      background: var(--bg-card);
-      border-radius: 16px;
-      width: 90%;
-      max-width: 640px;
-      max-height: 85vh;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-header {
-      padding: 20px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .modal-header h3 { font-weight: 600; font-size: 16px; }
-    .modal-body {
-      padding: 24px;
-      overflow-y: auto;
-      flex: 1;
-    }
-    .modal-footer {
-      padding: 16px 24px;
-      border-top: 1px solid var(--border);
-      display: flex;
-      justify-content: flex-end;
-      gap: 10px;
-    }
+/* TAGS */
+.tag{display:inline-flex;align-items:center;padding:1px 7px;border-radius:99px;font-size:10px;font-weight:500;font-family:'JetBrains Mono',monospace}
+.tb{background:rgba(88,101,242,.2);color:#818cf8}
+.tg{background:rgba(63,185,80,.2);color:#3fb950}
+.tr{background:rgba(248,81,73,.2);color:#f85149}
+.ty{background:rgba(212,160,23,.2);color:#e3b341}
+.tp{background:rgba(188,110,242,.2);color:#bc6ef2}
+.to{background:rgba(245,119,49,.2);color:#f57731}
 
-    /* Variables */
-    .var-row {
-      display: flex;
-      gap: 12px;
-      align-items: center;
-      padding: 12px 16px;
-      background: var(--bg-input);
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .var-row span { flex: 1; font-size: 14px; }
-    .var-row small { color: var(--text-muted); font-size: 13px; }
+/* OVERLAY */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(2px);z-index:200;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.modal{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rlg);width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+.modal-xl{max-width:1060px}
+.modal-lg{max-width:680px}
+.mhdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.mhdr h3{font-size:14px;font-weight:600}
+.mbody{padding:20px;overflow-y:auto;flex:1}
+.mfoot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.cbtn{width:26px;height:26px;border-radius:var(--rsm);background:var(--bg2);border:1px solid var(--border);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;line-height:1;transition:all .15s}
+.cbtn:hover{background:var(--bg3);color:var(--text)}
 
-    @media (max-width: 768px) {
-      .sidebar { width: 72px; }
-      .sidebar-header h1, .nav-item span { display: none; }
-      .nav-item { justify-content: center; }
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-  </style>
+/* GRID */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* EMBED BUILDER */
+.ebgrid{display:grid;grid-template-columns:1fr 300px;gap:18px;min-height:0}
+.epanel{overflow-y:auto;display:flex;flex-direction:column;gap:0}
+.esec{border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.esechdr{padding:9px 12px;background:var(--bg2);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.esechdr .etitle{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:500}
+.esecbody{padding:12px;border-top:1px solid var(--border);display:none}
+.esecbody.open{display:block}
+.etog{color:var(--text3);font-size:10px;transition:transform .15s}
+.esec.exp .etog{transform:rotate(180deg)}
+.efrow{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:8px 10px;display:grid;grid-template-columns:1fr 1fr auto auto;gap:7px;align-items:center;margin-bottom:6px}
+.efrow input{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 8px;font-size:12px}
+.efrow input:focus{outline:none;border-color:var(--accent)}
+.inltog{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)}
+.inltog input[type=checkbox]{accent-color:var(--accent)}
+.colrow{display:flex;gap:8px;align-items:center}
+.cswatch{width:34px;height:34px;border-radius:var(--rsm);border:2px solid var(--border);cursor:pointer;overflow:hidden;flex-shrink:0}
+.cswatch input[type=color]{width:100%;height:100%;border:none;cursor:pointer;padding:0;transform:scale(1.4)}
+.tstog{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.tstog label{font-size:12px;color:var(--text2)}
+.tog{width:34px;height:18px;background:var(--bg3);border-radius:99px;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tog::after{content:'';position:absolute;left:2px;top:2px;width:14px;height:14px;background:#fff;border-radius:50%;transition:transform .2s}
+.tog.on::after{transform:translateX(16px)}
+
+/* DISCORD PREVIEW */
+.dprev{background:var(--bg2);border-radius:var(--r);padding:12px;position:sticky;top:0;overflow-y:auto;max-height:560px}
+.dprev h4{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:10px}
+.dmsg{display:flex;gap:12px}
+.davatar{width:38px;height:38px;border-radius:50%;background:var(--accent);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#fff}
+.dcontent{flex:1;min-width:0}
+.duname{font-weight:600;font-size:13px;color:#fff;margin-bottom:2px}
+.dembed{border-radius:4px;overflow:hidden;position:relative;padding-left:4px;background:#2b2d31;margin-top:4px}
+.destripe{position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px}
+.deinner{padding:10px 12px}
+.deauthor{display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.deaico{width:18px;height:18px;border-radius:50%;background:var(--bg3);flex-shrink:0}
+.deaname{font-size:11px;font-weight:500;color:#dcddde}
+.detitle{font-size:14px;font-weight:600;color:#00aff4;margin-bottom:3px;word-break:break-word}
+.detitle.nurl{color:#dcddde}
+.dedesc{font-size:13px;color:#dcddde;white-space:pre-wrap;word-break:break-word;margin-bottom:6px}
+.defields{display:grid;gap:6px;margin-bottom:6px}
+.defname{font-size:11px;font-weight:600;color:#dcddde;margin-bottom:1px}
+.defval{font-size:13px;color:#b9bbbe}
+.deimage{width:100%;border-radius:4px;margin-top:6px;max-height:180px;object-fit:cover;background:var(--bg3);display:block}
+.dethumb{float:right;width:64px;height:64px;border-radius:4px;margin-left:10px;object-fit:cover;background:var(--bg3)}
+.defoot{display:flex;align-items:center;gap:5px;margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.06)}
+.defico{width:14px;height:14px;border-radius:50%;background:var(--bg3);flex-shrink:0}
+.deftxt{font-size:11px;color:#72767d}
+.noembed{color:var(--text3);font-size:12px;text-align:center;padding:24px 0}
+
+/* BLOCK BUILDER */
+.bbgrid{display:grid;grid-template-columns:190px 1fr;gap:14px;height:460px}
+.palette{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow-y:auto;padding:8px}
+.psec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);padding:8px 6px 3px}
+.pblock{display:flex;align-items:center;gap:7px;padding:6px 9px;border-radius:var(--rsm);cursor:pointer;font-size:12px;font-weight:500;transition:all .12s;border:1px solid transparent;margin-bottom:2px}
+.pblock:hover{background:var(--bg3);border-color:var(--border)}
+.pico{font-size:13px;width:16px;text-align:center}
+.bcanvas{display:flex;flex-direction:column;overflow-y:auto;gap:0}
+.bcempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--text3);font-size:13px;gap:7px;border:2px dashed var(--border);border-radius:var(--r);margin:2px;padding:30px}
+.bcempty .bei{font-size:36px}
+.rblock{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rsm);margin-bottom:5px;overflow:hidden}
+.bkhdr{padding:8px 10px;display:flex;align-items:center;gap:7px;cursor:pointer;user-select:none}
+.bkstripe{width:3px;height:18px;border-radius:2px;flex-shrink:0}
+.bklabel{flex:0 0 auto;font-size:12px;font-weight:500}
+.bkprev{flex:1;font-size:11px;color:var(--text2);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;margin:0 6px}
+.bkacts{display:flex;gap:3px;flex-shrink:0}
+.bkbody{padding:10px;border-top:1px solid var(--border2);background:var(--bg2);display:none}
+.bkbody.open{display:block}
+.bkbody .field{margin-bottom:8px}
+.bkbody .field:last-child{margin-bottom:0}
+.bkbody .field label{font-size:10px}
+.outlabel{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:4px}
+.outprev{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text2);word-break:break-all;min-height:34px;margin-top:8px}
+
+/* PILLS */
+.pills{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.pill{padding:4px 10px;border-radius:99px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:all .12s}
+.pill.on{background:rgba(88,101,242,.18);border-color:var(--accent);color:var(--accent)}
+
+/* VARS */
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.vrow{display:grid;grid-template-columns:1fr 1fr auto;gap:7px;align-items:center;padding:7px 10px;background:var(--bg2);border-radius:var(--rsm);margin-bottom:5px;border:1px solid var(--border2)}
+.vkey{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent)}
+.vval{font-size:12px;color:var(--text2)}
+
+/* SETTINGS */
+.srow{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:start;padding:14px 0;border-bottom:1px solid var(--border)}
+.srow:last-child{border-bottom:none}
+.slabel{font-size:13px;font-weight:500}
+.sdesc{font-size:12px;color:var(--text2);margin-top:2px}
+
+/* TOAST */
+#toast{position:fixed;bottom:22px;right:22px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toastitem{background:var(--bg1);border:1px solid var(--border);border-radius:var(--rsm);padding:9px 14px;font-size:13px;box-shadow:var(--shadow);animation:tsi .2s ease;display:flex;align-items:center;gap:7px}
+.toastitem.ok{border-left:3px solid var(--green)}.toastitem.err{border-left:3px solid var(--red)}
+@keyframes tsi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+</style>
 </head>
 <body>
-  <!-- Login -->
-  <div id="login-screen">
-    <div class="login-box">
-      <div class="login-logo">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-          <rect width="24" height="24" rx="6" fill="#6366f1"/>
-          <path d="M7 8h10M7 12h10M7 16h6" stroke="white" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-        <h1>MCDash</h1>
-      </div>
-      <p class="login-subtitle">Sign in to continue</p>
-      <input type="text" id="guild-input" class="login-input" placeholder="Server ID">
-      <input type="password" id="password-input" class="login-input" placeholder="Password">
-      <button class="login-btn" onclick="login()">Sign in</button>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="lcard">
+    <div class="llogo">
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#5865f2"/><path d="M8 10h16M8 16h16M8 22h10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      <h1>CUtils Web</h1>
     </div>
+    <p class="lsub">Sign in to manage your server</p>
+    <div class="lfield"><label>Server ID</label><input id="ig" placeholder="e.g. 123456789012345678" autocomplete="off"></div>
+    <div class="lfield"><label>Password</label><input id="ip" type="password" placeholder="Dashboard password"></div>
+    <button class="btn btn-p btn-full mt8" onclick="doLogin()">Sign in →</button>
+    <div id="lerr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="sbhdr">
+      <svg width="26" height="26" viewBox="0 0 32 32" fill="none"><rect width="32" height="32" rx="8" fill="#5865f2"/><path d="M8 10h16M8 16h16M8 22h10" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+      <span>CUtils Web</span>
+    </div>
+    <nav class="sbnav">
+      <div class="sbsec">Content</div>
+      <div class="navitem active" data-tab="embeds"><span class="ico">🎨</span>Embeds<span class="navbadge" id="nb-e">0</span></div>
+      <div class="navitem" data-tab="commands"><span class="ico">💬</span>Commands<span class="navbadge" id="nb-c">0</span></div>
+      <div class="navitem" data-tab="ar"><span class="ico">⚡</span>Autoresponders<span class="navbadge" id="nb-a">0</span></div>
+      <div class="sbsec">Data</div>
+      <div class="navitem" data-tab="vars"><span class="ico">📦</span>Variables</div>
+      <div class="sbsec">Config</div>
+      <div class="navitem" data-tab="settings"><span class="ico">⚙️</span>Settings</div>
+    </nav>
+    <div class="sbfoot"><div class="schip"><span class="dot"></span><span class="id" id="dg">—</span></div><button class="btn btn-d btn-sm" style="margin-top:8px;width:100%" onclick="logout()">Logout</button></div>
   </div>
 
-  <!-- App -->
-  <div class="app" id="app">
-    <!-- Sidebar -->
-    <div class="sidebar">
-      <div class="sidebar-header">
-        <h1>MCDash</h1>
-      </div>
-      <div class="nav">
-        <div class="nav-item active" data-tab="embeds">
-          <span>📝</span><span>Embeds</span>
-        </div>
-        <div class="nav-item" data-tab="commands">
-          <span>💬</span><span>Commands</span>
-        </div>
-        <div class="nav-item" data-tab="autoresponders">
-          <span>⚡</span><span>Autoresponders</span>
-        </div>
-        <div class="nav-item" data-tab="variables">
-          <span>📊</span><span>Variables</span>
-        </div>
-        <div class="nav-item" data-tab="settings">
-          <span>⚙️</span><span>Settings</span>
-        </div>
-      </div>
-      <div class="sidebar-footer">
-        <div class="server-badge" id="display-guild"></div>
-      </div>
+  <div class="main">
+    <div class="topbar">
+      <h2 id="tt">Embeds</h2>
+      <button class="btn btn-g btn-sm" onclick="loadData()">↻ Refresh</button>
     </div>
+    <div class="content">
 
-    <!-- Main -->
-    <div class="main">
-      <div class="main-header">
-        <h2 id="tab-title">Embeds</h2>
-        <button class="save-btn" onclick="saveCurrentTab()">Save</button>
+      <!-- EMBEDS -->
+      <div class="tab active" id="tab-embeds">
+        <div class="sechdr"><div><h3>Saved Embeds</h3><p>Visual embed cards you can send via bot commands</p></div><button class="btn btn-p" onclick="openEmbedBuilder()">+ New Embed</button></div>
+        <div class="card" id="ec"></div>
       </div>
-      <div class="main-content">
-        <!-- Embeds -->
-        <div class="tab-content active" id="tab-embeds">
-          <div class="card">
-            <div class="card-header">
-              <h3>Saved Embeds</h3>
-              <button class="btn btn-primary" onclick="openEmbedModal()">+ New</button>
-            </div>
-            <div class="card-body" id="embeds-list">
-              <div class="card-body empty">No embeds yet</div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Commands -->
-        <div class="tab-content" id="tab-commands">
-          <div class="card">
-            <div class="card-header">
-              <h3>Custom Commands</h3>
-              <button class="btn btn-primary" onclick="openCommandModal()">+ New</button>
-            </div>
-            <div class="card-body" id="commands-list">
-              <div class="card-body empty">No commands yet</div>
-            </div>
-          </div>
-        </div>
+      <!-- COMMANDS -->
+      <div class="tab" id="tab-commands">
+        <div class="sechdr"><div><h3>Custom Commands</h3><p>Prefix commands — use <code style="font-family:'JetBrains Mono',monospace;background:var(--bg2);padding:1px 5px;border-radius:4px">/cc add</code> in Discord or create here</p></div><button class="btn btn-p" onclick="openCmdBuilder()">+ New Command</button></div>
+        <div class="card" id="cc"></div>
+      </div>
 
-        <!-- Autoresponders -->
-        <div class="tab-content" id="tab-autoresponders">
-          <div class="card">
-            <div class="card-header">
-              <h3>Autoresponders</h3>
-              <button class="btn btn-primary" onclick="openArModal()">+ New</button>
-            </div>
-            <div class="card-body" id="autoresponders-list">
-              <div class="card-body empty">No autoresponders yet</div>
-            </div>
-          </div>
-        </div>
+      <!-- AUTORESPONDERS -->
+      <div class="tab" id="tab-ar">
+        <div class="sechdr"><div><h3>Autoresponders</h3><p>Automatically reply when messages match a trigger</p></div><button class="btn btn-p" onclick="openArBuilder()">+ New Autoresponder</button></div>
+        <div class="card" id="ac"></div>
+      </div>
 
-        <!-- Variables -->
-        <div class="tab-content" id="tab-variables">
-          <div class="grid grid-2">
-            <div class="card">
-              <div class="card-header">
-                <h3>Global Variables</h3>
-                <button class="btn btn-primary" onclick="addVariable('global')">+ Add</button>
-              </div>
-              <div class="card-body" id="global-vars">
-                <div class="card-body empty">No variables</div>
-              </div>
-            </div>
-            <div class="card">
-              <div class="card-header">
-                <h3>User Variables</h3>
-                <button class="btn btn-primary" onclick="addVariable('user')">+ Add</button>
-              </div>
-              <div class="card-body" id="user-vars">
-                <div class="card-body empty">No variables</div>
-              </div>
-            </div>
-          </div>
+      <!-- VARIABLES -->
+      <div class="tab" id="tab-vars">
+        <div class="vgrid">
+          <div><div class="sechdr"><h3>Global Variables</h3><button class="btn btn-p btn-sm" onclick="addVar('global')">+ Add</button></div><div id="gvl"></div></div>
+          <div><div class="sechdr"><h3>User Variables</h3><button class="btn btn-p btn-sm" onclick="addVar('user')">+ Add</button></div><div id="uvl"></div></div>
         </div>
+      </div>
 
-        <!-- Settings -->
-        <div class="tab-content" id="tab-settings">
-          <div class="card">
-            <div class="card-header">
-              <h3>Server Settings</h3>
-            </div>
-            <div class="card-body">
-              <div class="input-group">
-                <label>Command Prefix</label>
-                <input type="text" id="settings-prefix" placeholder="/">
-              </div>
-            </div>
-          </div>
-        </div>
+      <!-- SETTINGS -->
+      <div class="tab" id="tab-settings">
+        <div class="card"><div class="card-hdr"><h4>Server Settings</h4></div><div class="card-body">
+          <div class="srow"><div><div class="slabel">Command Prefix</div><div class="sdesc">Prefix for custom commands (e.g. ! or /)</div></div>
+          <div style="display:flex;gap:8px;align-items:center"><input id="sp" style="width:100px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rsm);color:var(--text);padding:8px 12px;font-size:13px" placeholder="/"><button class="btn btn-p btn-sm" onclick="saveSettings()">Save</button></div></div>
+        </div></div>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- Embed Modal -->
-  <div class="modal-overlay" id="embed-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3 id="embed-modal-title">New Embed</h3>
-        <button class="btn btn-secondary" onclick="closeEmbedModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="input-group">
-          <label>Name</label>
-          <input type="text" id="embed-name" placeholder="my-embed">
+<!-- EMBED BUILDER MODAL -->
+<div class="overlay" id="mo-emb">
+<div class="modal modal-xl">
+  <div class="mhdr"><h3 id="emb-title">New Embed</h3><span class="cbtn" onclick="cm('mo-emb')">✕</span></div>
+  <div class="mbody" style="padding:16px">
+    <div class="field mb12"><label>Embed Name</label><input id="en" placeholder="e.g. welcome-msg"></div>
+    <div class="ebgrid">
+      <div class="epanel">
+        <!-- Color -->
+        <div class="esec exp" id="es-color">
+          <div class="esechdr" onclick="et('es-color')"><div class="etitle">🎨 Color</div><span class="etog">▾</span></div>
+          <div class="esecbody open"><div class="colrow">
+            <div class="cswatch"><input type="color" id="ec-c" value="#5865F2" oninput="syncCol(true);up()"></div>
+            <input class="field" id="ec-h" value="#5865F2" placeholder="#RRGGBB" oninput="syncCol(false);up()" style="flex:1">
+            <button class="btn btn-g btn-sm" onclick="ec.value='#5865F2';ech.value='#5865F2';up()">Reset</button>
+          </div></div>
         </div>
-        <div class="input-group">
-          <label>Description</label>
-          <textarea id="embed-description" placeholder="Description..."></textarea>
+        <!-- Author -->
+        <div class="esec" id="es-author">
+          <div class="esechdr" onclick="et('es-author')"><div class="etitle">👤 Author</div><span class="etog">▾</span></div>
+          <div class="esecbody"><div class="field"><label>Author Name</label><input id="ea" placeholder="MCBot" oninput="up()"></div><div class="field"><label>Author Icon URL</label><input id="eai" placeholder="https://..." oninput="up()"></div></div>
+        </div>
+        <!-- Title -->
+        <div class="esec" id="es-title">
+          <div class="esechdr" onclick="et('es-title')"><div class="etitle">📌 Title</div><span class="etog">▾</span></div>
+          <div class="esecbody"><div class="field"><label>Title Text</label><input id="et-t" placeholder="Embed Title" oninput="up()"></div><div class="field"><label>Title URL (optional)</label><input id="et-u" placeholder="https://..." oninput="up()"></div></div>
+        </div>
+        <!-- Description -->
+        <div class="esec exp" id="es-desc">
+          <div class="esechdr" onclick="et('es-desc')"><div class="etitle">📝 Description</div><span class="etog">▾</span></div>
+          <div class="esecbody open"><div class="field"><textarea id="ed" placeholder="Embed description — supports **markdown**" rows="4" oninput="up()"></textarea></div></div>
+        </div>
+        <!-- Fields -->
+        <div class="esec" id="es-fields">
+          <div class="esechdr" onclick="et('es-fields')"><div class="etitle">📋 Fields</div><span class="etog">▾</span></div>
+          <div class="esecbody"><div id="efl"></div><button class="btn btn-g btn-sm mt8" onclick="addEF()">+ Add Field</button></div>
+        </div>
+        <!-- Images -->
+        <div class="esec" id="es-img">
+          <div class="esechdr" onclick="et('es-img')"><div class="etitle">🖼️ Images</div><span class="etog">▾</span></div>
+          <div class="esecbody"><div class="field"><label>Image URL (full-width)</label><input id="ei" placeholder="https://..." oninput="up()"></div><div class="field"><label>Thumbnail URL (top-right)</label><input id="eth" placeholder="https://..." oninput="up()"></div></div>
+        </div>
+        <!-- Footer -->
+        <div class="esec" id="es-foot">
+          <div class="esechdr" onclick="et('es-foot')"><div class="etitle">🔖 Footer</div><span class="etog">▾</span></div>
+          <div class="esecbody"><div class="field"><label>Footer Text</label><input id="ef" placeholder="Footer..." oninput="up()"></div><div class="field"><label>Footer Icon URL</label><input id="efi" placeholder="https://..." oninput="up()"></div><div class="tstog"><label>Include Timestamp</label><div class="tog" id="ets" onclick="this.classList.toggle('on');up()"></div></div></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeEmbedModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveEmbed()">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Autoresponder Modal -->
-  <div class="modal-overlay" id="ar-modal">
-    <div class="modal">
-      <div class="modal-header">
-        <h3>New Autoresponder</h3>
-        <button class="btn btn-secondary" onclick="closeArModal()">✕</button>
-      </div>
-      <div class="modal-body">
-        <div class="input-group">
-          <label>Trigger</label>
-          <input type="text" id="ar-trigger" placeholder="hello">
-        </div>
-        <div class="input-group">
-          <label>Response</label>
-          <textarea id="ar-response" placeholder="Hello! {user}"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn btn-secondary" onclick="closeArModal()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveAutoresponder()">Save</button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    let password = '', currentGuild = '';
-    let data = { embeds: {}, commands: [], autoresponders: [], globalVars: {}, userVars: {} };
-
-    function login() {
-      currentGuild = document.getElementById('guild-input').value.trim();
-      password = document.getElementById('password-input').value;
-      if (!currentGuild) return alert('Enter Server ID');
-      fetch('/api/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ guildId: currentGuild, password })
-      }).then(r => r.json()).then(d => {
-        if (d.success) {
-          document.getElementById('login-screen').style.display = 'none';
-          document.getElementById('app').classList.add('active');
-          document.getElementById('display-guild').textContent = currentGuild;
-          loadData();
-        } else {
-          alert(d.error || 'Invalid password');
-        }
-      });
-    }
-
-    async function loadData() {
-      const h = { 'Authorization': password, 'X-Guild-Id': currentGuild };
-      try {
-        data.embeds = await fetch(`/api/embeds/${currentGuild}`, { headers: h }).then(r => r.json());
-        data.commands = await fetch(`/api/commands/${currentGuild}`, { headers: h }).then(r => r.json());
-        data.autoresponders = await fetch(`/api/autoresponders/${currentGuild}`, { headers: h }).then(r => r.json());
-        const vars = await fetch(`/api/variables/${currentGuild}`, { headers: h }).then(r => r.json());
-        data.globalVars = vars.global || {};
-        data.userVars = vars.user || {};
-        const settings = await fetch(`/api/settings/${currentGuild}`, { headers: h }).then(r => r.json());
-        data.prefix = settings.prefix || '/';
-      } catch(e) {}
-      renderAll();
-    }
-
-    function renderAll() {
-      renderEmbeds();
-      renderCommands();
-      renderAutoresponders();
-      renderVariables();
-      document.getElementById('settings-prefix').value = data.prefix || '/';
-    }
-
-    function renderEmbeds() {
-      const list = document.getElementById('embeds-list');
-      const keys = Object.keys(data.embeds || {});
-      if (!keys.length) {
-        list.innerHTML = '<div class="card-body empty">No embeds yet</div>';
-        return;
-      }
-      list.innerHTML = keys.map(name => `
-        <div class="list-item">
-          <div><div class="list-item-name">${name}</div></div>
-          <div class="list-item-actions">
-            <button class="btn btn-secondary" onclick="deleteEmbed('${name}')">Delete</button>
+      <!-- Preview -->
+      <div class="dprev">
+        <h4>Live Preview</h4>
+        <div class="dmsg">
+          <div class="davatar">M</div>
+          <div class="dcontent">
+            <div class="duname">MCBot <span style="font-size:9px;background:#5865f2;color:#fff;border-radius:3px;padding:1px 4px">BOT</span></div>
+            <div id="epv"><div class="noembed">Fill in fields to preview</div></div>
           </div>
         </div>
-      `).join('');
-    }
+      </div>
+    </div>
+  </div>
+  <div class="mfoot"><button class="btn btn-g" onclick="cm('mo-emb')">Cancel</button><button class="btn btn-p" onclick="saveEmbed()">Save Embed</button></div>
+</div>
+</div>
 
-    function renderCommands() {
-      const list = document.getElementById('commands-list');
-      if (!data.commands.length) {
-        list.innerHTML = '<div class="card-body empty">No commands yet</div>';
-        return;
-      }
-      list.innerHTML = data.commands.map(cmd => `
-        <div class="list-item">
+<!-- COMMAND BUILDER MODAL -->
+<div class="overlay" id="mo-cmd">
+<div class="modal modal-xl">
+  <div class="mhdr"><h3 id="cmd-title">New Command</h3><span class="cbtn" onclick="cm('mo-cmd')">✕</span></div>
+  <div class="mbody">
+    <div class="g2 mb12">
+      <div class="field"><label>Command Name</label><input id="cn" placeholder="rules, help, info..."></div>
+      <div class="field"><label>Description (optional)</label><input id="cdes" placeholder="What does this do?"></div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Click a block from the palette to build the response ↓ Blocks run in order</div>
+    <div class="bbgrid" id="cmd-bb">
+      <div class="bcanvas" id="cmd-cw">
+        <div class="bcempty" id="cmd-ce"><div class="bei">🧩</div><div>Click a block to add it</div></div>
+        <div id="cmd-c"></div>
+      </div>
+    </div>
+    <div class="outlabel mt8">Output Preview</div>
+    <div class="outprev" id="cmd-op">—</div>
+  </div>
+  <div class="mfoot"><button class="btn btn-g" onclick="cm('mo-cmd')">Cancel</button><button class="btn btn-p" onclick="saveCmd()">Save Command</button></div>
+</div>
+</div>
+
+<!-- AR BUILDER MODAL -->
+<div class="overlay" id="mo-ar">
+<div class="modal modal-xl">
+  <div class="mhdr"><h3 id="ar-title">New Autoresponder</h3><span class="cbtn" onclick="cm('mo-ar')">✕</span></div>
+  <div class="mbody">
+    <div class="card mb12">
+      <div class="card-hdr"><h4>⚡ Trigger</h4></div>
+      <div class="card-body">
+        <div class="g2">
           <div>
-            <div class="list-item-name">${cmd.name}</div>
-            <div class="list-item-desc">${cmd.response?.substring(0, 40)}...</div>
+            <div class="field"><label>Trigger Text</label><input id="atr" placeholder='e.g. hello, "good morning", ^hi$'></div>
+            <div class="field"><label>Match Type</label>
+              <div class="pills" id="mt-pills">
+                <span class="pill on" data-mt="exact">Exact</span>
+                <span class="pill" data-mt="contains">Contains</span>
+                <span class="pill" data-mt="startsWith">Starts with</span>
+                <span class="pill" data-mt="endsWith">Ends with</span>
+                <span class="pill" data-mt="regex">Regex</span>
+              </div>
+            </div>
           </div>
-          <button class="btn btn-danger" onclick="deleteCommand('${cmd.name}')">Delete</button>
-        </div>
-      `).join('');
-    }
-
-    function renderAutoresponders() {
-      const list = document.getElementById('autoresponders-list');
-      if (!data.autoresponders.length) {
-        list.innerHTML = '<div class="card-body empty">No autoresponders yet</div>';
-        return;
-      }
-      list.innerHTML = data.autoresponders.map(ar => `
-        <div class="list-item">
           <div>
-            <div class="list-item-name">${ar.trigger}</div>
-            <div class="list-item-desc">${ar.data?.response?.substring(0, 40)}...</div>
+            <div class="field"><label>Send Type</label>
+              <div class="pills" id="st-pills">
+                <span class="pill on" data-st="reply">Reply</span>
+                <span class="pill" data-st="send">Send</span>
+              </div>
+            </div>
+            <div class="field"><label>Cooldown (seconds)</label><input id="acd" type="number" placeholder="e.g. 30 — leave blank for none"></div>
+            <div class="field"><label>Channel ID restriction</label><input id="ach" placeholder="Blank = all channels"></div>
           </div>
-          <button class="btn btn-danger" onclick="deleteAutoresponder('${ar.trigger}')">Delete</button>
         </div>
-      `).join('');
-    }
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:8px">Build the response:</div>
+    <div class="bbgrid" id="ar-bb">
+      <div class="bcanvas" id="ar-cw">
+        <div class="bcempty" id="ar-ce"><div class="bei">🧩</div><div>Click a block to add it</div></div>
+        <div id="ar-c"></div>
+      </div>
+    </div>
+    <div class="outlabel mt8">Output Preview</div>
+    <div class="outprev" id="ar-op">—</div>
+  </div>
+  <div class="mfoot"><button class="btn btn-g" onclick="cm('mo-ar')">Cancel</button><button class="btn btn-p" onclick="saveAr()">Save Autoresponder</button></div>
+</div>
+</div>
 
-    function renderVariables() {
-      const gv = document.getElementById('global-vars');
-      const uv = document.getElementById('user-vars');
-      const gkeys = Object.keys(data.globalVars || {});
-      const ukeys = Object.keys(data.userVars || {});
-      gv.innerHTML = gkeys.length ? gkeys.map(k => `
-        <div class="var-row"><span>${k}</span><small>${data.globalVars[k]}</small></div>
-      `).join('') : '<div class="card-body empty">No variables</div>';
-      uv.innerHTML = ukeys.length ? ukeys.map(k => `
-        <div class="var-row"><span>${k}</span><small>${data.userVars[k]}</small></div>
-      `).join('') : '<div class="card-body empty">No variables</div>';
-    }
+<div id="toast"></div>
 
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach(item => {
-      item.addEventListener('click', () => {
-        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-        item.classList.add('active');
-        const tab = item.dataset.tab;
-        document.getElementById('tab-' + tab).classList.add('active');
-        document.getElementById('tab-title').textContent = item.querySelector('span:last-child').textContent;
-      });
-    });
+<script>
+// ── SHORTCUTS FOR EMBED FIELDS ──
+const $ = id => document.getElementById(id);
+const ec = () => $('ec-c'), ech = () => $('ec-h');
 
-    // Embeds
-    function openEmbedModal() {
-      document.getElementById('embed-modal-title').textContent = 'New Embed';
-      document.getElementById('embed-name').value = '';
-      document.getElementById('embed-description').value = '';
-      document.getElementById('embed-modal').classList.add('active');
-    }
-    function closeEmbedModal() {
-      document.getElementById('embed-modal').classList.remove('active');
-    }
-    function saveEmbed() {
-      const name = document.getElementById('embed-name').value;
-      const desc = document.getElementById('embed-description').value;
-      if (!name) return alert('Enter name');
-      fetch(`/api/embeds/${currentGuild}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ name, data: { description: desc } })
-      }).then(r => r.json()).then(d => { closeEmbedModal(); loadData(); });
-    }
-    function deleteEmbed(name) {
-      if (!confirm('Delete?')) return;
-      fetch(`/api/embeds/${currentGuild}/${name}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
-    }
+// ── STATE ──
+let A = { guild:'', pass:'' };
+let D = { embeds:{}, commands:[], ar:[], gv:{}, uv:{}, prefix:'/' };
+let EF = []; // embed fields array
+let CB = []; // command blocks
+let AB = []; // ar blocks
+let arMT = 'exact', arST = 'reply';
+let editE = null, editC = null, editA = null;
 
-    // Commands
-    function openCommandModal() {
-      const name = prompt('Command name:');
-      if (!name) return;
-      const response = prompt('Response:');
-      if (!response) return;
-      fetch(`/api/commands/${currentGuild}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ name, response })
-      }).then(() => loadData());
-    }
-    function deleteCommand(name) {
-      if (!confirm('Delete?')) return;
-      fetch(`/api/commands/${currentGuild}/${name}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
-    }
+// Check saved session on load
+(function(){
+  const saved = localStorage.getItem('cutils_auth');
+  if(saved){
+    try{
+      A = JSON.parse(saved);
+      if(A.guild && A.pass){
+        $('login').style.display = 'none';
+        $('app').classList.add('show');
+        $('dg').textContent = A.guild;
+        loadData();
+      }
+    }catch(e){}
+  }
+})();
 
-    // Autoresponders
-    function openArModal() {
-      document.getElementById('ar-trigger').value = '';
-      document.getElementById('ar-response').value = '';
-      document.getElementById('ar-modal').classList.add('active');
-    }
-    function closeArModal() { document.getElementById('ar-modal').classList.remove('active'); }
-    function saveAutoresponder() {
-      const trigger = document.getElementById('ar-trigger').value;
-      const response = document.getElementById('ar-response').value;
-      if (!trigger) return alert('Enter trigger');
-      fetch(`/api/autoresponders/${currentGuild}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ trigger, data: { response } })
-      }).then(r => r.json()).then(d => { closeArModal(); loadData(); });
-    }
-    function deleteAutoresponder(trigger) {
-      if (!confirm('Delete?')) return;
-      fetch(`/api/autoresponders/${currentGuild}/${trigger}`, { method: 'DELETE', headers: { 'Authorization': password, 'X-Guild-Id': currentGuild } }).then(() => loadData());
-    }
+function logout(){
+  A = { guild:'', pass:'' };
+  localStorage.removeItem('cutils_auth');
+  $('app').classList.remove('show');
+  $('login').style.display = 'flex';
+  $('ig').value = '';
+  $('ip').value = '';
+}
 
-    // Variables
-    function addVariable(type) {
-      const name = prompt('Variable name:');
-      if (!name) return;
-      const value = prompt('Value:') || '';
-      const endpoint = type === 'global' ? '/api/variables/global' : `/api/variables/${currentGuild}`;
-      fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ name, value })
-      }).then(() => loadData());
-    }
+// ── UTILS ──
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+function toast(msg, type='ok'){
+  const w=$('toast'), el=document.createElement('div');
+  el.className='toastitem '+type;
+  el.innerHTML=(type==='ok'?'✓':'✕')+' '+msg;
+  w.appendChild(el); setTimeout(()=>el.remove(),3200);
+}
+function api(path, opts={}){
+  return fetch(path,{...opts,headers:{'Content-Type':'application/json','Authorization':A.pass,'X-Guild-Id':A.guild,...(opts.headers||{})}}).then(r=>r.json()).catch(()=>({}));
+}
+function cm(id){ $(id).classList.remove('show') }
+function om(id){ $(id).classList.add('show') }
 
-    // Save
-    async function saveCurrentTab() {
-      const prefix = document.getElementById('settings-prefix').value;
-      await fetch(`/api/settings/${currentGuild}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': password, 'X-Guild-Id': currentGuild },
-        body: JSON.stringify({ prefix })
-      });
-      alert('Saved!');
-    }
-  </script>
+// ── LOGIN ──
+$('ip').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin() });
+async function doLogin(){
+  const guild=$('ig').value.trim(), pass=$('ip').value;
+  if(!guild||!pass){ const e=$('lerr'); e.textContent='Fill in both fields'; e.style.display='block'; return; }
+  const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json','X-Guild-Id':guild},body:JSON.stringify({guildId:guild,password:pass})}).then(r=>r.json()).catch(()=>({}));
+  if(r.success){ A={guild,pass}; localStorage.setItem('cutils_auth',JSON.stringify(A)); $('login').style.display='none'; $('app').classList.add('show'); $('dg').textContent=guild; loadData(); }
+  else{ const e=$('lerr'); e.textContent=r.error||'Invalid password'; e.style.display='block'; }
+}
+
+// ── NAV ──
+document.querySelectorAll('.navitem').forEach(n=>{
+  n.addEventListener('click',()=>{
+    document.querySelectorAll('.navitem').forEach(i=>i.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    n.classList.add('active');
+    $('tab-'+n.dataset.tab).classList.add('active');
+    $('tt').textContent = n.textContent.replace(/\d+/,'').trim();
+  });
+});
+// close overlay on backdrop
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')}));
+
+// ── LOAD ──
+async function loadData(){
+  try{
+    const [embs,cmds,ars,vs,ss] = await Promise.all([
+      api(`/api/embeds/${A.guild}`),api(`/api/commands/${A.guild}`),
+      api(`/api/autoresponders/${A.guild}`),api(`/api/variables/${A.guild}`),
+      api(`/api/settings/${A.guild}`)
+    ]);
+    D.embeds=embs||{}; D.commands=Array.isArray(cmds)?cmds:[]; D.ar=Array.isArray(ars)?ars:[];
+    D.gv=vs?.global||{}; D.uv=vs?.user||{}; D.prefix=ss?.prefix||'/';
+    renderAll(); toast('Data loaded');
+  }catch(e){ toast('Failed to load data','err') }
+}
+function renderAll(){ rEmbs(); rCmds(); rAr(); rVars(); $('sp').value=D.prefix; $('nb-e').textContent=Object.keys(D.embeds).length; $('nb-c').textContent=D.commands.length; $('nb-a').textContent=D.ar.length; }
+
+// ── RENDER EMBEDS ──
+function rEmbs(){
+  const c=$('ec'), ks=Object.keys(D.embeds);
+  if(!ks.length){ c.innerHTML='<div class="cempty"><div class="ei">🎨</div>No embeds yet — click New Embed to create one</div>'; return; }
+  c.innerHTML=ks.map(n=>{
+    const e=D.embeds[n], col=e.color||'#5865f2';
+    return `<div class="litem"><div class="lico" style="background:${col}18;border:1px solid ${col}44;color:${col}">◼</div>
+    <div class="linfo"><div class="lname">${esc(n)}</div><div class="ldesc">${e.title?esc(e.title):e.description?esc(e.description.substring(0,55)):'No preview'}</div></div>
+    <div class="lacts"><button class="btn btn-g btn-sm" onclick="openEmbedBuilder('${esc(n)}')">✏️ Edit</button><button class="btn btn-d btn-sm" onclick="delEmb('${esc(n)}')">Delete</button></div></div>`;
+  }).join('');
+}
+
+// ── RENDER COMMANDS ──
+function rCmds(){
+  const c=$('cc');
+  if(!D.commands.length){ c.innerHTML='<div class="cempty"><div class="ei">💬</div>No commands yet. Use /cc add in Discord or create here.</div>'; return; }
+  c.innerHTML=D.commands.map(cmd=>{
+    const name=cmd.name||cmd.trigger||'?', resp=cmd.response||cmd.reply||'';
+    return `<div class="litem"><div class="lico" style="background:rgba(88,101,242,.12);color:var(--accent)">💬</div>
+    <div class="linfo"><div class="lname">${esc(D.prefix)}${esc(name)}</div><div class="ldesc">${esc(resp.substring(0,65))}${resp.length>65?'…':''}</div></div>
+    <div class="lacts"><button class="btn btn-g btn-sm" onclick="openCmdBuilder('${esc(name)}')">✏️ Edit</button><button class="btn btn-d btn-sm" onclick="delCmd('${esc(name)}')">Delete</button></div></div>`;
+  }).join('');
+}
+
+// ── RENDER AR ──
+function rAr(){
+  const c=$('ac');
+  if(!D.ar.length){ c.innerHTML='<div class="cempty"><div class="ei">⚡</div>No autoresponders yet</div>'; return; }
+  const mco={exact:'tb',contains:'tg',startsWith:'ty',endsWith:'to',regex:'tp'};
+  c.innerHTML=D.ar.map(a=>{
+    const tr=a.trigger||'?', rep=a.reply||a.data?.response||a.response||'', mt=a.matchType||'exact';
+    return `<div class="litem"><div class="lico" style="background:rgba(245,119,49,.12);color:var(--orange)">⚡</div>
+    <div class="linfo"><div class="lname">"${esc(tr)}" <span class="tag ${mco[mt]||'tb'}">${esc(mt)}</span></div><div class="ldesc">${esc(rep.substring(0,65))}${rep.length>65?'…':''}</div></div>
+    <div class="lacts"><button class="btn btn-g btn-sm" onclick="openArBuilder('${esc(tr)}')">✏️ Edit</button><button class="btn btn-d btn-sm" onclick="delAr('${esc(tr)}')">Delete</button></div></div>`;
+  }).join('');
+}
+
+// ── RENDER VARS ──
+function rVars(){
+  const rv=(obj,cid)=>{
+    const el=$(cid), ks=Object.keys(obj);
+    if(!ks.length){ el.innerHTML='<div style="color:var(--text3);font-size:12px;padding:10px 0">No variables</div>'; return; }
+    el.innerHTML=ks.map(k=>`<div class="vrow"><span class="vkey">${esc(k)}</span><span class="vval">${esc(String(obj[k]))}</span><button class="btn-ico" onclick="delVar('${cid==='gvl'?'global':'user'}','${esc(k)}')">✕</button></div>`).join('');
+  };
+  rv(D.gv,'gvl'); rv(D.uv,'uvl');
+}
+async function addVar(type){
+  const name=prompt('Variable name:'); if(!name)return;
+  const value=prompt('Value:','0'); if(value===null)return;
+  const ep=type==='global'?'/api/variables/global':`/api/variables/${A.guild}`;
+  await api(ep,{method:'POST',body:JSON.stringify({name,value})});
+  loadData(); toast('Variable added');
+}
+async function delVar(type,name){
+  if(!confirm(`Delete variable "${name}"?`))return;
+  const ep=type==='global'?`/api/variables/global/${name}`:`/api/variables/${A.guild}/${name}`;
+  await api(ep,{method:'DELETE'}); loadData(); toast('Variable deleted');
+}
+async function saveSettings(){ const p=$('sp').value; await api(`/api/settings/${A.guild}`,{method:'POST',body:JSON.stringify({prefix:p})}); D.prefix=p; toast('Settings saved'); }
+
+// ── EMBED BUILDER ──
+function et(id){ const s=$(id); s.classList.toggle('exp'); s.querySelector('.esecbody').classList.toggle('open') }
+function syncCol(fromPicker){ if(fromPicker){ $('ec-h').value=$('ec-c').value } else { const h=$('ec-h').value; if(/^#[0-9A-Fa-f]{6}$/.test(h)) $('ec-c').value=h } }
+
+function openEmbedBuilder(name=null){
+  editE=name; $('emb-title').textContent=name?`Edit Embed: ${name}`:'New Embed'; EF=[];
+  const clear=ids=>ids.forEach(id=>{const e=$(id);if(e)e.value=''});
+  clear(['en','ea','eai','et-t','et-u','ed','ei','eth','ef','efi']);
+  $('ec-c').value='#5865F2'; $('ec-h').value='#5865F2'; $('ets').classList.remove('on');
+  if(name&&D.embeds[name]){
+    const e=D.embeds[name];
+    $('en').value=name;
+    if(e.color){$('ec-c').value=e.color;$('ec-h').value=e.color;}
+    if(e.author)$('ea').value=e.author; if(e.authorIcon)$('eai').value=e.authorIcon;
+    if(e.title)$('et-t').value=e.title; if(e.url)$('et-u').value=e.url;
+    if(e.description)$('ed').value=e.description;
+    if(e.image)$('ei').value=e.image; if(e.thumbnail)$('eth').value=e.thumbnail;
+    if(e.footer)$('ef').value=e.footer; if(e.footerIcon)$('efi').value=e.footerIcon;
+    if(e.timestamp)$('ets').classList.add('on');
+    EF=(e.fields||[]).map(f=>({...f}));
+  }
+  rEF(); up(); om('mo-emb');
+}
+function addEF(){ EF.push({name:'Field',value:'Value',inline:false}); rEF(); up(); const s=$('es-fields'); if(!s.classList.contains('exp'))et('es-fields'); }
+function remEF(i){ EF.splice(i,1); rEF(); up(); }
+function rEF(){
+  $('efl').innerHTML=EF.map((f,i)=>`<div class="efrow">
+    <input value="${esc(f.name)}" placeholder="Name" oninput="EF[${i}].name=this.value;up()">
+    <input value="${esc(f.value)}" placeholder="Value" oninput="EF[${i}].value=this.value;up()">
+    <label class="inltog"><input type="checkbox" ${f.inline?'checked':''} onchange="EF[${i}].inline=this.checked;up()"> Inline</label>
+    <button class="btn-ico" onclick="remEF(${i})">✕</button>
+  </div>`).join('');
+}
+function up(){
+  const col=$('ec-c').value||'#5865F2', auth=$('ea').value, aico=$('eai').value,
+    tit=$('et-t').value, turl=$('et-u').value, desc=$('ed').value,
+    img=$('ei').value, thumb=$('eth').value, foot=$('ef').value, fico=$('efi').value,
+    ts=$('ets').classList.contains('on');
+  const has=auth||tit||desc||img||foot||EF.length;
+  const pw=$('epv');
+  if(!has){ pw.innerHTML='<div class="noembed">Fill in fields to preview</div>'; return; }
+  const fhtml=EF.length?`<div class="defields" style="display:grid;grid-template-columns:${EF.some(f=>f.inline)?'repeat(3,1fr)':'1fr'};gap:6px;margin-bottom:6px">${EF.map(f=>`<div ${!f.inline?'style="grid-column:1/-1"':''}><div class="defname">${esc(f.name)}</div><div class="defval">${esc(f.value)}</div></div>`).join('')}</div>`:'';
+  const now=new Date(), tstr=now.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  pw.innerHTML=`<div class="dembed"><div class="destripe" style="background:${col}"></div><div class="deinner">
+    ${thumb?`<img class="dethumb" src="${esc(thumb)}" onerror="this.style.display='none'">`:''}
+    ${auth?`<div class="deauthor">${aico?`<img class="deaico" src="${esc(aico)}" onerror="this.style.display='none'">`:''}
+    <span class="deaname">${esc(auth)}</span></div>`:''}
+    ${tit?`<div class="detitle${turl?'':' nurl'}">${esc(tit)}</div>`:''}
+    ${desc?`<div class="dedesc">${esc(desc)}</div>`:''}
+    ${fhtml}
+    ${img?`<img src="${esc(img)}" class="deimage" onerror="this.style.display='none'">`:''}
+    ${(foot||ts)?`<div class="defoot">${fico?`<img class="defico" src="${esc(fico)}" onerror="this.style.display='none'">`:''}
+    <span class="deftxt">${foot?esc(foot):''}${foot&&ts?' • ':''}${ts?`Today at ${tstr}`:''}</span></div>`:''}
+  </div></div>`;
+}
+async function saveEmbed(){
+  const name=$('en').value.trim(); if(!name){toast('Enter an embed name','err');return;}
+  const data={color:$('ec-c').value};
+  const set=(k,id)=>{const v=$(id).value;if(v)data[k]=v;};
+  set('author','ea');set('authorIcon','eai');set('title','et-t');set('url','et-u');
+  set('description','ed');set('image','ei');set('thumbnail','eth');
+  set('footer','ef');set('footerIcon','efi');
+  if($('ets').classList.contains('on'))data.timestamp=true;
+  if(EF.length)data.fields=EF;
+  await api(`/api/embeds/${A.guild}`,{method:'POST',body:JSON.stringify({name,data})});
+  cm('mo-emb'); loadData(); toast(`Embed "${name}" saved`);
+}
+async function delEmb(name){ if(!confirm(`Delete embed "${name}"?`))return; await api(`/api/embeds/${A.guild}/${name}`,{method:'DELETE'}); loadData(); toast('Embed deleted'); }
+
+// ── BLOCK DEFINITIONS ──
+const BD=[
+  {t:'text',l:'Text',i:'📝',c:'#5865f2',cat:'Response',f:[{id:'content',type:'textarea',l:'Message text',p:'Hello {user}! Welcome to {server}.',rows:3}],s:d=>d.content||''},
+  {t:'embed',l:'Embed Ref',i:'🎨',c:'#9b59b6',cat:'Response',f:[{id:'name',type:'text',l:'Embed name',p:'my-embed'}],s:d=>`{embed:${d.name||''}}`},
+  {t:'button',l:'Button',i:'🔘',c:'#3fb950',cat:'Components',f:[{id:'name',type:'text',l:'Button name',p:'open-ticket'}],s:d=>`{addbutton:${d.name||''}}`},
+  {t:'linkbtn',l:'Link Button',i:'🔗',c:'#fee75c',cat:'Components',f:[{id:'label',type:'text',l:'Label',p:'Click here'},{id:'url',type:'text',l:'URL',p:'https://...'}],s:d=>`{addlinkbutton:${d.label||'Link'}|${d.url||''}}`},
+  {t:'role_add',l:'Add Role',i:'➕',c:'#3fb950',cat:'Actions',f:[{id:'role',type:'text',l:'Role ID',p:'1234567890'}],s:d=>`{addrole:${d.role||''}}`},
+  {t:'role_rm',l:'Remove Role',i:'➖',c:'#f85149',cat:'Actions',f:[{id:'role',type:'text',l:'Role ID',p:'1234567890'}],s:d=>`{removerole:${d.role||''}}`},
+  {t:'setnick',l:'Set Nickname',i:'🏷️',c:'#f57731',cat:'Actions',f:[{id:'nick',type:'text',l:'Nickname',p:'{user} [Member]'}],s:d=>`{setnick:${d.nick||''}}`},
+  {t:'react',l:'React',i:'😄',c:'#fee75c',cat:'Actions',f:[{id:'emoji',type:'text',l:'Emoji',p:'👋'}],s:d=>`{react:${d.emoji||''}}`},
+  {t:'dm',l:'Send as DM',i:'📨',c:'#36aee8',cat:'Actions',f:[],s:()=>'{dm}'},
+  {t:'sendto',l:'Send to Channel',i:'📢',c:'#36aee8',cat:'Actions',f:[{id:'ch',type:'text',l:'Channel ID',p:'1234567890'}],s:d=>`{sendto:${d.ch||''}}`},
+  {t:'random',l:'Random Choice',i:'🎲',c:'#e91e63',cat:'Logic',f:[{id:'choices',type:'textarea',l:'One choice per line',p:'Option A\nOption B\nOption C',rows:4}],s:d=>`{random:${(d.choices||'').split('\n').filter(Boolean).join('|')}}`},
+  {t:'reqrole',l:'Require Role',i:'🔒',c:'#d4a017',cat:'Logic',f:[{id:'role',type:'text',l:'Required role ID',p:'Staff'}],s:d=>`{requirerole:${d.role||''}}`},
+  {t:'denyrole',l:'Deny Role',i:'🚫',c:'#f85149',cat:'Logic',f:[{id:'role',type:'text',l:'Denied role ID',p:'Muted'}],s:d=>`{denyrole:${d.role||''}}`},
+  {t:'cooldown',l:'Cooldown',i:'⏱️',c:'#f57731',cat:'Logic',f:[{id:'secs',type:'number',l:'Seconds',p:'30'}],s:d=>`{cooldown:${d.secs||30}}`},
+  {t:'cvar_get',l:'Show Variable',i:'📊',c:'#1abc9c',cat:'Variables',f:[{id:'scope',type:'select',l:'Scope',opts:['global','user']},{id:'name',type:'text',l:'Variable name',p:'points'}],s:d=>`{cvar:get:${d.scope||'global'}::${d.name||''}}`},
+  {t:'cvar_set',l:'Set Variable',i:'📝',c:'#1abc9c',cat:'Variables',f:[{id:'scope',type:'select',l:'Scope',opts:['global','user']},{id:'name',type:'text',l:'Name',p:'points'},{id:'value',type:'text',l:'Value',p:'100'}],s:d=>`{cvar:set:${d.scope||'global'}::${d.name||''}:${d.value||''}}`},
+  {t:'cvar_add',l:'Add to Variable',i:'➕',c:'#1abc9c',cat:'Variables',f:[{id:'scope',type:'select',l:'Scope',opts:['global','user']},{id:'name',type:'text',l:'Name',p:'points'},{id:'amt',type:'number',l:'Amount',p:'10'}],s:d=>`{cvar:add:${d.scope||'global'}::${d.name||''}:${d.amt||1}}`},
+];
+
+function palHtml(prefix){
+  const cats=[...new Set(BD.map(b=>b.cat))];
+  return cats.map(cat=>`<div class="psec-title">${cat}</div>${BD.filter(b=>b.cat===cat).map(b=>`<div class="pblock" onclick="${prefix}('${b.t}')" style="border-left:3px solid ${b.c}30"><span class="pico">${b.i}</span>${b.l}</div>`).join('')}`).join('');
+}
+function injectPalette(builderId, fnName){
+  const bb=$(builderId);
+  if(bb.querySelector('.palette'))return;
+  const pal=document.createElement('div'); pal.className='palette'; pal.innerHTML=palHtml(fnName);
+  bb.insertBefore(pal, bb.firstChild);
+}
+
+function mkBlockHtml(block, blocks, i, canvasId, outputId, emptyId){
+  const def=BD.find(d=>d.t===block.t); if(!def)return'';
+  const prev=def.s(block.d||{});
+  const fhtml=def.f.map(f=>{
+    const v=block.d?.[f.id]??'';
+    const oc=`bud('${block.id}','${f.id}',this.value,'${canvasId}','${outputId}','${emptyId}')`;
+    if(f.type==='textarea')return`<div class="field"><label>${f.l}</label><textarea placeholder="${esc(f.p||'')}" onchange="${oc}" rows="${f.rows||2}">${esc(v)}</textarea></div>`;
+    if(f.type==='select')return`<div class="field"><label>${f.l}</label><select onchange="${oc}">${f.opts.map(o=>`<option value="${o}"${v===o?' selected':''}>${o}</option>`).join('')}</select></div>`;
+    if(f.type==='number')return`<div class="field"><label>${f.l}</label><input type="number" value="${esc(String(v))}" placeholder="${esc(f.p||'')}" oninput="${oc}"></div>`;
+    return`<div class="field"><label>${f.l}</label><input type="text" value="${esc(String(v))}" placeholder="${esc(f.p||'')}" oninput="${oc}"></div>`;
+  }).join('');
+  return`<div class="rblock" id="rb-${block.id}">
+    <div class="bkhdr" onclick="tbk('${block.id}')">
+      <div class="bkstripe" style="background:${def.c}"></div>
+      <span style="font-size:13px">${def.i}</span>
+      <span class="bklabel">${def.l}</span>
+      <span class="bkprev" id="bp-${block.id}">${esc(prev.substring(0,40))}</span>
+      <div class="bkacts" onclick="event.stopPropagation()">
+        ${i>0?`<button class="btn-ico" style="padding:4px 7px;font-size:11px" onclick="mvb('${block.id}',-1,'${canvasId}','${outputId}','${emptyId}')">↑</button>`:''}
+        ${i<blocks.length-1?`<button class="btn-ico" style="padding:4px 7px;font-size:11px" onclick="mvb('${block.id}',1,'${canvasId}','${outputId}','${emptyId}')">↓</button>`:''}
+        <button class="btn-ico" style="padding:4px 7px;font-size:11px;color:var(--red)" onclick="rmb('${block.id}','${canvasId}','${outputId}','${emptyId}')">✕</button>
+      </div>
+    </div>
+    <div class="bkbody" id="bkb-${block.id}">${fhtml}</div>
+  </div>`;
+}
+
+function rbks(blocks, canvasId, outputId, emptyId){
+  const canvas=$(canvasId), empty=$(emptyId);
+  if(!blocks.length){ canvas.innerHTML=''; if(empty)empty.style.display='flex'; $(outputId).textContent='—'; return; }
+  if(empty)empty.style.display='none';
+  canvas.innerHTML=blocks.map((b,i)=>mkBlockHtml(b,blocks,i,canvasId,outputId,emptyId)).join('');
+  const out=blocks.map(b=>{const d=BD.find(x=>x.t===b.t);return d?d.s(b.d||{}):''}).join(' ');
+  $(outputId).textContent=out||'—';
+}
+
+function tbk(id){ const b=$(`bkb-${id}`); if(b)b.classList.toggle('open') }
+function bud(id,fid,val,cid,oid,eid){
+  const blocks=cid.includes('cmd')?CB:AB;
+  const b=blocks.find(x=>x.id===id); if(!b)return;
+  if(!b.d)b.d={};
+  b.d[fid]=val;
+  const out=blocks.map(x=>{const d=BD.find(y=>y.t===x.t);return d?d.s(x.d||{}):''}).join(' ');
+  $(oid).textContent=out||'—';
+  const def=BD.find(d=>d.t===b.t); if(def){const el=$(`bp-${id}`);if(el)el.textContent=def.s(b.d).substring(0,40);}
+}
+function mvb(id,dir,cid,oid,eid){
+  const blocks=cid.includes('cmd')?CB:AB;
+  const i=blocks.findIndex(b=>b.id===id), j=i+dir;
+  if(j<0||j>=blocks.length)return;
+  [blocks[i],blocks[j]]=[blocks[j],blocks[i]];
+  rbks(blocks,cid,oid,eid);
+}
+function rmb(id,cid,oid,eid){
+  if(cid.includes('cmd'))CB=CB.filter(b=>b.id!==id);else AB=AB.filter(b=>b.id!==id);
+  rbks(cid.includes('cmd')?CB:AB,cid,oid,eid);
+}
+function addBlock(type,blocks,cid,oid,eid){
+  const def=BD.find(d=>d.t===type); if(!def)return;
+  const id='b'+Date.now()+Math.floor(Math.random()*1000), data={};
+  def.f.forEach(f=>{if(f.type==='select')data[f.id]=f.opts[0];});
+  blocks.push({id,t:type,d:data});
+  rbks(blocks,cid,oid,eid);
+  setTimeout(()=>{ const b=$(`bkb-${id}`); if(b)b.classList.add('open'); },40);
+}
+function caddb(type){ addBlock(type,CB,'cmd-c','cmd-op','cmd-ce') }
+function aaddb(type){ addBlock(type,AB,'ar-c','ar-op','ar-ce') }
+
+function deser(str){
+  const blocks=[]; if(!str)return blocks;
+  const rx=/\{([^}]+)\}/g; let li=0, m;
+  while((m=rx.exec(str))!==null){
+    const before=str.slice(li,m.index).trim();
+    if(before)blocks.push({id:'b'+Date.now()+Math.random(),t:'text',d:{content:before}});
+    const tag=m[1]; const bl=parseTag(tag); if(bl)blocks.push({id:'b'+Date.now()+Math.random(),...bl});
+    li=rx.lastIndex;
+  }
+  const after=str.slice(li).trim(); if(after)blocks.push({id:'b'+Date.now()+Math.random(),t:'text',d:{content:after}});
+  return blocks;
+}
+function parseTag(tag){
+  if(tag.startsWith('embed:'))return{t:'embed',d:{name:tag.slice(6)}};
+  if(tag.startsWith('addbutton:'))return{t:'button',d:{name:tag.slice(10)}};
+  if(tag.startsWith('addlinkbutton:')){const[l,u]=tag.slice(14).split('|');return{t:'linkbtn',d:{label:l,url:u}};}
+  if(tag.startsWith('addrole:'))return{t:'role_add',d:{role:tag.slice(8)}};
+  if(tag.startsWith('removerole:'))return{t:'role_rm',d:{role:tag.slice(11)}};
+  if(tag.startsWith('setnick:'))return{t:'setnick',d:{nick:tag.slice(8)}};
+  if(tag.startsWith('react:'))return{t:'react',d:{emoji:tag.slice(6)}};
+  if(tag==='dm')return{t:'dm',d:{}};
+  if(tag.startsWith('sendto:'))return{t:'sendto',d:{ch:tag.slice(7)}};
+  if(tag.startsWith('random:'))return{t:'random',d:{choices:tag.slice(7).split('|').join('\n')}};
+  if(tag.startsWith('requirerole:'))return{t:'reqrole',d:{role:tag.slice(12)}};
+  if(tag.startsWith('denyrole:'))return{t:'denyrole',d:{role:tag.slice(9)}};
+  if(tag.startsWith('cooldown:'))return{t:'cooldown',d:{secs:tag.slice(9)}};
+  if(tag.startsWith('cvar:get:')){const p=tag.split(':');return{t:'cvar_get',d:{scope:p[2],name:p[4]}};}
+  if(tag.startsWith('cvar:set:')){const p=tag.split(':');return{t:'cvar_set',d:{scope:p[2],name:p[4],value:p[5]}};}
+  if(tag.startsWith('cvar:add:')){const p=tag.split(':');return{t:'cvar_add',d:{scope:p[2],name:p[4],amt:p[5]}};}
+  return null;
+}
+function serBlocks(blocks){ return blocks.map(b=>{const d=BD.find(x=>x.t===b.t);return d?d.s(b.d||{}):''}).join(' ').trim() }
+
+// ── COMMAND BUILDER ──
+function openCmdBuilder(name=null){
+  editC=name; $('cmd-title').textContent=name?`Edit Command: ${name}`:'New Command';
+  $('cn').value=name||''; $('cdes').value=''; CB=[];
+  if(name){ const cmd=D.commands.find(c=>(c.name||c.trigger)===name); if(cmd){ $('cdes').value=cmd.description||''; CB=deser(cmd.response||cmd.reply||''); } }
+  injectPalette('cmd-bb','caddb');
+  rbks(CB,'cmd-c','cmd-op','cmd-ce'); om('mo-cmd');
+}
+async function saveCmd(){
+  const name=$('cn').value.trim(); if(!name){toast('Enter a command name','err');return;}
+  const response=serBlocks(CB); if(!response){toast('Add at least one block','err');return;}
+  await api(`/api/commands/${A.guild}`,{method:'POST',body:JSON.stringify({name,response,description:$('cdes').value})});
+  cm('mo-cmd'); loadData(); toast(`Command "${name}" saved`);
+}
+async function delCmd(name){ if(!confirm(`Delete command "${name}"?`))return; await api(`/api/commands/${A.guild}/${name}`,{method:'DELETE'}); loadData(); toast('Command deleted'); }
+
+// ── AR BUILDER ──
+function openArBuilder(trigger=null){
+  editA=trigger; $('ar-title').textContent=trigger?`Edit Autoresponder: "${trigger}"`:'New Autoresponder';
+  $('atr').value=trigger||''; $('acd').value=''; $('ach').value=''; AB=[]; arMT='exact'; arST='reply';
+  document.querySelectorAll('#mt-pills .pill').forEach(p=>p.classList.toggle('on',p.dataset.mt==='exact'));
+  document.querySelectorAll('#st-pills .pill').forEach(p=>p.classList.toggle('on',p.dataset.st==='reply'));
+  if(trigger){ const ar=D.ar.find(a=>a.trigger===trigger); if(ar){ arMT=ar.matchType||'exact'; arST=ar.sendType||'reply'; if(ar.cooldown)$('acd').value=ar.cooldown; if(ar.channelId)$('ach').value=ar.channelId; document.querySelectorAll('#mt-pills .pill').forEach(p=>p.classList.toggle('on',p.dataset.mt===arMT)); document.querySelectorAll('#st-pills .pill').forEach(p=>p.classList.toggle('on',p.dataset.st===arST)); AB=deser(ar.reply||ar.data?.response||ar.response||''); } }
+  injectPalette('ar-bb','aaddb');
+  rbks(AB,'ar-c','ar-op','ar-ce'); om('mo-ar');
+}
+async function saveAr(){
+  const trigger=$('atr').value.trim(); if(!trigger){toast('Enter a trigger','err');return;}
+  const reply=serBlocks(AB); if(!reply){toast('Add at least one block','err');return;}
+  const cooldown=$('acd').value||null, channelId=$('ach').value||null;
+  await api(`/api/autoresponders/${A.guild}`,{method:'POST',body:JSON.stringify({trigger,data:{response:reply},matchType:arMT,sendType:arST,cooldown:cooldown?Number(cooldown):null,channelId})});
+  cm('mo-ar'); loadData(); toast('Autoresponder saved');
+}
+async function delAr(trigger){ if(!confirm(`Delete autoresponder "${trigger}"?`))return; await api(`/api/autoresponders/${A.guild}/${encodeURIComponent(trigger)}`,{method:'DELETE'}); loadData(); toast('Autoresponder deleted'); }
+
+// ── PILL HANDLERS ──
+document.addEventListener('click',e=>{
+  if(e.target.classList.contains('pill')&&e.target.dataset.mt){ const g=e.target.closest('.pills'); g.querySelectorAll('.pill').forEach(p=>p.classList.remove('on')); e.target.classList.add('on'); arMT=e.target.dataset.mt; }
+  if(e.target.classList.contains('pill')&&e.target.dataset.st){ const g=e.target.closest('.pills'); g.querySelectorAll('.pill').forEach(p=>p.classList.remove('on')); e.target.classList.add('on'); arST=e.target.dataset.st; }
+});
+</script>
 </body>
 </html>
