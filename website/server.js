@@ -4,6 +4,10 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com;");
+  next();
+});
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -127,6 +131,21 @@ app.post('/api/variables/global', requireAuth, (req, res) => {
   const db = loadData('globalvars');
   db[name] = value;
   saveData('globalvars', db);
+  res.json({ success: true });
+});
+
+app.delete('/api/variables/:guildId/:name', requireAuth, (req, res) => {
+  const db = loadData('uservars');
+  if (db[req.params.guildId]) delete db[req.params.guildId][req.params.name];
+  saveData('uservars', db);
+  res.json({ success: true });
+});
+
+app.post('/api/variables/:guildId', requireAuth, (req, res) => {
+  const { name, value } = req.body;
+  const db = loadData('uservars');
+  (db[req.params.guildId] ??= {})[name] = value;
+  saveData('uservars', db);
   res.json({ success: true });
 });
 
