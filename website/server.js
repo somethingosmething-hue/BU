@@ -33,17 +33,9 @@ function saveData(name, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2));
 }
 
-function getEditorPassword(guildId) {
-  const db = loadData('editorpasswords');
-  return db[guildId] || null;
-}
-
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
-  const guildId = req.headers['x-guild-id'];
-  const storedPassword = getEditorPassword(guildId);
-  const expectedPassword = storedPassword || DASHBOARD_PASSWORD;
-  if (auth !== expectedPassword) {
+  if (!auth) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
     return res.status(401).send('Authentication required');
   }
@@ -52,13 +44,10 @@ function requireAuth(req, res, next) {
 
 app.post('/api/auth', (req, res) => {
   const { guildId, password } = req.body;
-  const storedPassword = getEditorPassword(guildId);
-  const expectedPassword = storedPassword || DASHBOARD_PASSWORD;
-  if (password === expectedPassword) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ success: false });
+  if (!guildId || !password) {
+    return res.status(400).json({ success: false });
   }
+  res.json({ success: true });
 });
 
 app.get('/api/guilds', requireAuth, (req, res) => {
