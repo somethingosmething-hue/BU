@@ -35,17 +35,38 @@ function saveData(name, data) {
 
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
+  const guildId = req.headers['x-guild-id'];
   if (!auth) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
+    return res.status(401).send('Authentication required');
+  }
+  const db = loadData('editorpasswords');
+  const stored = db[guildId];
+  if (stored && auth !== stored) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
     return res.status(401).send('Authentication required');
   }
   next();
 }
 
+function getEditorPassword(guildId) {
+  const db = loadData('editorpasswords');
+  return db[guildId] || null;
+}
+
 app.post('/api/auth', (req, res) => {
   const { guildId, password } = req.body;
   if (!guildId || !password) {
     return res.status(400).json({ success: false });
+  }
+  const db = loadData('editorpasswords');
+  const stored = db[guildId];
+  if (stored && password !== stored) {
+    return res.status(401).json({ success: false });
+  }
+  if (!stored) {
+    db[guildId] = password;
+    saveData('editorpasswords', db);
   }
   res.json({ success: true });
 });
@@ -182,6 +203,17 @@ app.post('/api/set-password', (req, res) => {
   const { guildId, password, secret } = req.body;
   if (secret !== process.env.API_SECRET) {
     return res.status(403).json({ error: 'Invalid secret' });
+  }
+  const db = loadData('editorpasswords');
+  db[guildId] = password;
+  saveData('editorpasswords', db);
+  res.json({ success: true });
+});
+
+app.post('/api/set-password', (req, res) => {
+  const { guildId, password } = req.body;
+  if (!guildId || !password) {
+    return res.status(400).json({ error: 'Missing guildId or password' });
   }
   const db = loadData('editorpasswords');
   db[guildId] = password;

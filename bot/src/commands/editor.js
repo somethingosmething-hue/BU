@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 const EDITOR_URL = process.env.EDITOR_URL || 'https://catboy-amber.vercel.app';
+const EDITOR_API = process.env.EDITOR_API || 'https://catboy-amber.vercel.app';
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -18,15 +19,14 @@ module.exports = {
 
     if (sub === 'password') {
       const password = interaction.options.getString('password');
-      const embed = new EmbedBuilder()
-        .setTitle('📊 Editor Password Set')
-        .setDescription(`**[Open Dashboard](${EDITOR_URL}/?guild=${guildId})**`)
-        .addFields(
-          { name: 'Server ID', value: `\`${guildId}\``, inline: true },
-          { name: 'Password', value: `\`${password}\``, inline: true }
-        )
-        .setColor('#23a55a');
-      await interaction.reply({ embeds: [embed], ephemeral: true });
+      try {
+        await fetch(`${EDITOR_API}/api/set-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ guildId, password })
+        });
+      } catch (e) {}
+      await interaction.reply({ content: `✅ Password set! Server: \`${guildId}\` Password: \`${password}\``, ephemeral: true });
       return;
     }
 
