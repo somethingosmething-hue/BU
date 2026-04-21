@@ -49,11 +49,6 @@ function requireAuth(req, res, next) {
   next();
 }
 
-function getEditorPassword(guildId) {
-  const db = loadData('editorpasswords');
-  return db[guildId] || null;
-}
-
 app.post('/api/auth', (req, res) => {
   const { guildId, password } = req.body;
   if (!guildId || !password) {
@@ -61,13 +56,23 @@ app.post('/api/auth', (req, res) => {
   }
   const db = loadData('editorpasswords');
   const stored = db[guildId];
-  if (stored && password !== stored) {
-    return res.status(401).json({ success: false });
-  }
   if (!stored) {
-    db[guildId] = password;
-    saveData('editorpasswords', db);
+    return res.status(401).json({ success: false, error: 'Password not set. Ask an admin to run /setpassword' });
   }
+  if (password !== stored) {
+    return res.status(401).json({ success: false, error: 'Invalid password' });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/set-password', (req, res) => {
+  const { guildId, password } = req.body;
+  if (!guildId || !password) {
+    return res.status(400).json({ error: 'Missing guildId or password' });
+  }
+  const db = loadData('editorpasswords');
+  db[guildId] = password;
+  saveData('editorpasswords', db);
   res.json({ success: true });
 });
 

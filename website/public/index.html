@@ -557,7 +557,7 @@
           document.getElementById('display-guild').textContent = currentGuild;
           loadData();
         } else {
-          alert('Invalid password');
+          alert(d.error || 'Invalid password');
         }
       });
     }
