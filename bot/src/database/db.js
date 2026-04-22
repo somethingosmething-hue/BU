@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster&tls=true';
 
 let db;
 
