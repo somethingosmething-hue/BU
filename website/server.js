@@ -4,7 +4,7 @@ const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster&tls=true';
+const MONGODB_URI = process.env.MONGODB_URI;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
 let db;
