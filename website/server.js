@@ -1,4 +1,4 @@
-require('dotenv').config();
+if (process.env.VERCEL !== 'true') require('dotenv').config();
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
 
@@ -7,12 +7,21 @@ const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not set');
+  process.exit(1);
+}
+
 let db;
 let client;
 
 async function connectDB() {
   if (client && db) return;
-  client = new MongoClient(MONGODB_URI);
+  client = new MongoClient(MONGODB_URI, {
+    tls: true,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+  });
   await client.connect();
   db = client.db('cutils');
   console.log('Connected to MongoDB');
@@ -42,7 +51,6 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '50mb' }));
 
-// Ensure DB connection before proceeding
 app.use(async (req, res, next) => {
   try { await ensureDB(); next(); }
   catch(e) { res.status(500).json({ error: 'Database not connected' }); }
