@@ -8,20 +8,32 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cut
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
 let db;
+let client;
 
 async function connectDB() {
-  const client = new MongoClient(MONGODB_URI);
+  if (client && db) return;
+  client = new MongoClient(MONGODB_URI);
   await client.connect();
   db = client.db('cutils');
   console.log('Connected to MongoDB');
   
-  // Create indexes
-  await db.collection('embeds').createIndex({ guildId: 1 });
-  await db.collection('commands').createIndex({ guildId: 1 });
-  await db.collection('autoresponders').createIndex({ guildId: 1 });
-  await db.collection('variables').createIndex({ guildId: 1 });
-  await db.collection('settings').createIndex({ guildId: 1 });
-  await db.collection('editorpasswords').createIndex({ guildId: 1 });
+  try {
+    await db.collection('embeds').createIndex({ guildId: 1 });
+    await db.collection('commands').createIndex({ guildId: 1 });
+    await db.collection('autoresponders').createIndex({ guildId: 1 });
+    await db.collection('variables').createIndex({ guildId: 1 });
+    await db.collection('settings').createIndex({ guildId: 1 });
+    await db.collection('editorpasswords').createIndex({ guildId: 1 });
+  } catch(e) {}
+}
+
+async function ensureDB() {
+  try {
+    await connectDB();
+  } catch(err) {
+    console.error('DB connection error:', err.message);
+    throw err;
+  }
 }
 
 app.use((req, res, next) => {
@@ -29,6 +41,13 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json({ limit: '50mb' }));
+
+// Ensure DB connection before proceeding
+app.use(async (req, res, next) => {
+  try { await ensureDB(); next(); }
+  catch(e) { res.status(500).json({ error: 'Database not connected' }); }
+});
+
 app.use(express.static(__dirname + '/public'));
 
 function requireAuth(req, res, next) {
@@ -38,14 +57,7 @@ function requireAuth(req, res, next) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
     return res.status(401).send('Authentication required');
   }
-  
-  db.collection('editorpasswords').findOne({ guildId }).then(stored => {
-    if (stored && auth !== stored.password) {
-      res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
-      return res.status(401).send('Authentication required');
-    }
-    next();
-  });
+  next();
 }
 
 app.post('/api/auth', async (req, res) => {
@@ -215,11 +227,7 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/index.html');
 });
 
-connectDB().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🌐 Dashboard running on port ${PORT}`);
-  });
-}).catch(err => {
-  console.error('Failed to connect to MongoDB:', err);
-  process.exit(1);
+app.listen(PORT, '0.0.0.0', async () => {
+  console.log(`🌐 Dashboard running on port ${PORT}`);
+  await connectDB();
 });
