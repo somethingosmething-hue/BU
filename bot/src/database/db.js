@@ -1,12 +1,22 @@
 require('dotenv').config();
 const { MongoClient } = require('mongodb');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:admin000@cutil-cluster.qogpvrb.mongodb.net/?appName=CUtil-Cluster&tls=true';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  console.error('MONGODB_URI is not set in .env');
+  process.exit(1);
+}
 
 let db;
 
 async function connectDB() {
-  const client = new MongoClient(MONGODB_URI);
+  const client = new MongoClient(MONGODB_URI, {
+    tls: true,
+    tlsAllowInvalidCertificates: false,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+  });
   await client.connect();
   db = client.db('cutils');
   console.log('Bot connected to MongoDB');
