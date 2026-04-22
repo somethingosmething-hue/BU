@@ -10,14 +10,14 @@ module.exports = {
         const content = message.content.trim();
 
         // ── Custom Commands (prefix-based) ────────────────────────────────────
-        const prefix = db.getPrefix(guildId) || '/';
+        const prefix = (await db.getPrefix(guildId)) || '/';
 
         if (content.toLowerCase().startsWith(prefix.toLowerCase())) {
             const cmdContent = content.slice(prefix.length).trim();
             const cmdName    = cmdContent.split(' ')[0].toLowerCase();
             const args       = cmdContent.slice(cmdName.length).trim();
 
-            const customCommands = db.getCustomCommands(guildId);
+            const customCommands = await db.getCustomCommands(guildId);
             const cmdData        = customCommands[cmdName];
 
             if (cmdData) {
@@ -67,7 +67,7 @@ module.exports = {
 
         // ── Autoresponders ────────────────────────────────────────────────────
         // Runs on every message regardless of prefix.
-        const autoresponders = db.getAutoresponders(guildId);
+        const autoresponders = await db.getAutoresponders(guildId);
 
         for (const [trigger, data] of Object.entries(autoresponders)) {
             let matched = false;
@@ -101,13 +101,13 @@ module.exports = {
 
             // Cooldown
             if (data.cooldown) {
-                const last = db.getCooldown(guildId, message.author.id, trigger);
+                const last = await db.getCooldown(guildId, message.author.id, trigger);
                 if (last && Date.now() - last < data.cooldown * 1000) {
                     const remaining = Math.ceil((data.cooldown * 1000 - (Date.now() - last)) / 1000);
                     await message.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` }).catch(() => {});
                     return;
                 }
-                db.setCooldown(guildId, message.author.id, trigger, Date.now());
+                await db.setCooldown(guildId, message.author.id, trigger, Date.now());
             }
 
             const context = {
