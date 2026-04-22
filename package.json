@@ -2,11 +2,22 @@
   "name": "mimu-clone",
   "version": "1.0.0",
   "description": "A Mimu-inspired Discord bot with web dashboard",
+  "main": "bot/src/index.js",
   "scripts": {
     "start": "concurrently \"npm run bot\" \"npm run web\"",
-    "bot": "cd bot && npm start",
-    "web": "cd website && npm start",
-    "dev": "cd bot && npm run dev"
+    "bot": "node bot/src/index.js",
+    "web": "node website/server.js",
+    "dev": "nodemon bot/src/index.js"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.2",
+    "discord.js": "^14.26.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongodb": "^6.21.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0"
