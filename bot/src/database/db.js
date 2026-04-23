@@ -324,6 +324,16 @@ async function setTrusted(guildId, userId, value) {
   await getCollection('trusted').updateOne({ guildId }, { $set: { [`data.${userId}`]: value } }, { upsert: true });
 }
 
+// Pending Sends
+async function getPendingSends() {
+  const docs = await getCollection('pending_sends').find({}).toArray();
+  return docs;
+}
+
+async function deletePendingSend(guildId, name) {
+  await getCollection('pending_sends').deleteOne({ guildId, name });
+}
+
 module.exports = {
   connectDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -343,4 +353,5 @@ module.exports = {
   xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
+  getPendingSends, deletePendingSend,
 };

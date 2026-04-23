@@ -32,6 +32,7 @@ async function connectDB() {
     await db.collection('variables').createIndex({ guildId: 1 });
     await db.collection('settings').createIndex({ guildId: 1 });
     await db.collection('editorpasswords').createIndex({ guildId: 1 });
+    await db.collection('pending_sends').createIndex({ guildId: 1 });
   } catch(e) {}
 }
 
@@ -227,6 +228,29 @@ app.post('/api/settings/:guildId', requireAuth, async (req, res) => {
     { $set: { prefix: prefix || '/', ...settings } },
     { upsert: true }
   );
+  res.json({ success: true });
+});
+
+app.post('/api/send-embed/:guildId', requireAuth, async (req, res) => {
+  const { name, channelId } = req.body;
+  if (!name || !channelId) {
+    return res.status(400).json({ error: 'Missing name or channelId' });
+  }
+  await db.collection('pending_sends').updateOne(
+    { guildId: req.params.guildId, name },
+    { $set: { guildId: req.params.guildId, name, channelId, createdAt: Date.now() } },
+    { upsert: true }
+  );
+  res.json({ success: true, message: 'Embed queued to send' });
+});
+
+app.get('/api/pending-sends/:guildId', requireAuth, async (req, res) => {
+  const sends = await db.collection('pending_sends').find({ guildId: req.params.guildId }).toArray();
+  res.json(sends);
+});
+
+app.delete('/api/pending-sends/:guildId/:name', requireAuth, async (req, res) => {
+  await db.collection('pending_sends').deleteOne({ guildId: req.params.guildId, name: req.params.name });
   res.json({ success: true });
 });
 

@@ -454,6 +454,22 @@ button{cursor:pointer}
 </div>
 </div>
 
+<!-- SEND EMBED MODAL -->
+<div class="overlay" id="mo-send">
+<div class="modal" style="max-width:420px">
+  <div class="mhdr"><h3>Send Embed</h3><span class="cbtn" onclick="cm('mo-send')">✕</span></div>
+  <div class="mbody">
+    <div class="card" style="margin-bottom:14px"><div class="card-body">
+      <div class="field"><label>Embed Name</label><input id="send-name" readonly style="opacity:.6"></div>
+      <div class="field"><label>Channel ID</label><input id="send-ch" placeholder="e.g. 123456789012345678"></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:8px">Right-click a channel in Discord → Copy Channel ID</div>
+    </div></div>
+    <div id="send-preview" class="dprev" style="max-height:200px"></div>
+  </div>
+  <div class="mfoot"><button class="btn btn-g" onclick="cm('mo-send')">Cancel</button><button class="btn btn-p" onclick="doSendEmbed()">Send Now</button></div>
+</div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -555,7 +571,7 @@ function rEmbs(){
     const e=D.embeds[n], col=e.color||'#5865f2';
     return `<div class="litem"><div class="lico" style="background:${col}18;border:1px solid ${col}44;color:${col}">◼</div>
     <div class="linfo"><div class="lname">${esc(n)}</div><div class="ldesc">${e.title?esc(e.title):e.description?esc(e.description.substring(0,55)):'No preview'}</div></div>
-    <div class="lacts"><button class="btn btn-g btn-sm" onclick="openEmbedBuilder('${esc(n)}')">✏️ Edit</button><button class="btn btn-d btn-sm" onclick="delEmb('${esc(n)}')">Delete</button></div></div>`;
+    <div class="lacts"><button class="btn btn-p btn-sm" onclick="openSendEmbed('${esc(n)}')">📤 Send</button><button class="btn btn-g btn-sm" onclick="openEmbedBuilder('${esc(n)}')">✏️ Edit</button><button class="btn btn-d btn-sm" onclick="delEmb('${esc(n)}')">Delete</button></div></div>`;
   }).join('');
 }
 
@@ -849,6 +865,29 @@ document.addEventListener('click',e=>{
   if(e.target.classList.contains('pill')&&e.target.dataset.mt){ const g=e.target.closest('.pills'); g.querySelectorAll('.pill').forEach(p=>p.classList.remove('on')); e.target.classList.add('on'); arMT=e.target.dataset.mt; }
   if(e.target.classList.contains('pill')&&e.target.dataset.st){ const g=e.target.closest('.pills'); g.querySelectorAll('.pill').forEach(p=>p.classList.remove('on')); e.target.classList.add('on'); arST=e.target.dataset.st; }
 });
+// ── SEND EMBED ──
+let sendEmbedName = null;
+function openSendEmbed(name) {
+  sendEmbedName = name;
+  $('send-name').value = name;
+  $('send-ch').value = '';
+  const e = D.embeds[name] || {};
+  const col = e.color || '#5865F2';
+  const thumb = e.thumbnail ? `<img class="dethumb" src="${esc(e.thumbnail)}" onerror="this.style.display='none'">` : '';
+  const auth = e.author ? `<div class="deauthor">${e.authorIcon ? `<img class="deaico" src="${esc(e.authorIcon)}" onerror="this.style.display='none'">` : ''}<span class="deaname">${esc(e.author)}</span></div>` : '';
+  const tit = e.title ? `<div class="detitle${e.url ? '' : ' nurl'}">${esc(e.title)}</div>` : '';
+  const fhtml = (e.fields || []).length ? `<div class="defields" style="gap:6px;margin-bottom:6px">${e.fields.map(f => `<div><div class="defname">${esc(f.name)}</div><div class="defval">${esc(f.value)}</div></div>`).join('')}</div>` : '';
+  $('send-preview').innerHTML = thumb || auth || tit || e.description || fhtml || e.image ? `<div class="dembed"><div class="destripe" style="background:${col}"></div><div class="deinner">${thumb}${auth}${tit}${e.description ? `<div class="dedesc">${esc(e.description)}</div>` : ''}${fhtml}${e.image ? `<img src="${esc(e.image)}" class="deimage" onerror="this.style.display='none'">` : ''}</div></div>` : `<div class="noembed">No preview</div>`;
+  om('mo-send');
+}
+async function doSendEmbed() {
+  const name = $('send-name').value;
+  const channelId = $('send-ch').value.trim();
+  if (!channelId) { toast('Enter a channel ID', 'err'); return; }
+  const r = await api(`/api/send-embed/${A.guild}`, { method: 'POST', body: JSON.stringify({ name, channelId }) });
+  if (r.success) { cm('mo-send'); toast(r.message || 'Embed queued!'); }
+  else { toast(r.error || 'Failed to queue', 'err'); }
+}
 </script>
 </body>
 </html>
