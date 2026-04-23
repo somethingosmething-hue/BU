@@ -8,8 +8,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
 
 if (!MONGODB_URI) {
-  console.error('MONGODB_URI is not set');
-  process.exit(1);
+  console.warn('MONGODB_URI is not set - database features disabled');
 }
 
 let db;
