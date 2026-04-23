@@ -60,6 +60,8 @@ db.connectDB().then(async () => {
   client.on('ready', async () => {
     for (const guild of client.guilds.cache.values()) {
       try {
+        await guild.members.fetch();
+        await guild.channels.fetch();
         const channels = guild.channels.cache
           .filter(c => c.type === 0)
           .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
@@ -75,6 +77,7 @@ db.connectDB().then(async () => {
     setInterval(async () => {
       for (const guild of client.guilds.cache.values()) {
         try {
+          await guild.channels.fetch();
           const channels = guild.channels.cache
             .filter(c => c.type === 0)
             .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
