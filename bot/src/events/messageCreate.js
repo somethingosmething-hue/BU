@@ -10,7 +10,8 @@ module.exports = {
         const content = message.content.trim();
 
         // ── Custom Commands (prefix-based) ────────────────────────────────────
-        const prefix = (await db.getPrefix(guildId)) || '/';
+        const rawPrefix = await db.getPrefix(guildId);
+        const prefix = (typeof rawPrefix === 'string' ? rawPrefix : null) || '/';
 
         if (content.toLowerCase().startsWith(prefix.toLowerCase())) {
             const cmdContent = content.slice(prefix.length).trim();
