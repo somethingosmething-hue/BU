@@ -334,6 +334,12 @@ async function deletePendingSend(guildId, name) {
   await getCollection('pending_sends').deleteOne({ guildId, name });
 }
 
+// Channels
+async function getChannels(guildId) {
+  const doc = await getCollection('channels').findOne({ guildId });
+  return doc?.channels || [];
+}
+
 module.exports = {
   connectDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -354,4 +360,5 @@ module.exports = {
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,
+  getChannels,
 };

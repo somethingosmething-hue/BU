@@ -456,13 +456,14 @@ button{cursor:pointer}
 
 <!-- SEND EMBED MODAL -->
 <div class="overlay" id="mo-send">
-<div class="modal" style="max-width:420px">
+<div class="modal" style="max-width:460px">
   <div class="mhdr"><h3>Send Embed</h3><span class="cbtn" onclick="cm('mo-send')">✕</span></div>
   <div class="mbody">
     <div class="card" style="margin-bottom:14px"><div class="card-body">
-      <div class="field"><label>Embed Name</label><input id="send-name" readonly style="opacity:.6"></div>
-      <div class="field"><label>Channel ID</label><input id="send-ch" placeholder="e.g. 123456789012345678"></div>
-      <div style="font-size:12px;color:var(--text3);margin-top:8px">Right-click a channel in Discord → Copy Channel ID</div>
+      <div class="field"><label>Embed Name</label><input id="send-name" readonly style="opacity:.6;cursor:not-allowed"></div>
+      <div class="field"><label>Channel</label>
+        <select id="send-ch"><option value="">Select a channel...</option></select>
+      </div>
     </div></div>
     <div id="send-preview" class="dprev" style="max-height:200px"></div>
   </div>

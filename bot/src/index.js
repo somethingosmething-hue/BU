@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, Partials } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -42,6 +42,53 @@ for (const file of eventFiles) {
 db.connectDB().then(async () => {
   console.log('Bot starting...');
   await client.login(process.env.BOT_TOKEN);
+
+  client.on('guildCreate', async (guild) => {
+    try {
+      const channels = guild.channels.cache
+        .filter(c => c.type === 0)
+        .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      await db.collection('channels').updateOne(
+        { guildId: guild.id },
+        { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
+        { upsert: true }
+      );
+    } catch (e) { console.error('Channel sync error:', e.message); }
+  });
+
+  client.on('ready', async () => {
+    for (const guild of client.guilds.cache.values()) {
+      try {
+        const channels = guild.channels.cache
+          .filter(c => c.type === 0)
+          .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+        await db.collection('channels').updateOne(
+          { guildId: guild.id },
+          { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
+          { upsert: true }
+        );
+      } catch (e) { console.error('Channel sync error:', e.message); }
+    }
+    console.log(`Synced channels for ${client.guilds.cache.size} guilds`);
+    setInterval(async () => {
+      for (const guild of client.guilds.cache.values()) {
+        try {
+          const channels = guild.channels.cache
+            .filter(c => c.type === 0)
+            .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+          await db.collection('channels').updateOne(
+            { guildId: guild.id },
+            { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
+            { upsert: true }
+          );
+        } catch (e) {}
+      }
+    }, 60000);
+  });
+
   setInterval(async () => {
     try {
       const pending = await db.getPendingSends();

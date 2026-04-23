@@ -244,6 +244,11 @@ app.post('/api/send-embed/:guildId', requireAuth, async (req, res) => {
   res.json({ success: true, message: 'Embed queued to send' });
 });
 
+app.get('/api/channels/:guildId', requireAuth, async (req, res) => {
+  const doc = await db.collection('channels').findOne({ guildId: req.params.guildId });
+  res.json(doc?.channels || []);
+});
+
 app.get('/api/pending-sends/:guildId', requireAuth, async (req, res) => {
   const sends = await db.collection('pending_sends').find({ guildId: req.params.guildId }).toArray();
   res.json(sends);
