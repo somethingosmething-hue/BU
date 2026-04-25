@@ -11,9 +11,12 @@ module.exports = {
 
         // ── Custom Commands (prefix-based) ────────────────────────────────────
         const rawPrefix = await db.getPrefix(guildId);
-        const prefix = String(rawPrefix || '/');
+        if (rawPrefix && typeof rawPrefix !== 'string') {
+          console.error('Invalid prefix type:', typeof rawPrefix, rawPrefix);
+        }
+        const prefix = (typeof rawPrefix === 'string' ? rawPrefix : '/') || '/';
 
-        if (content.toLowerCase().startsWith(prefix.toLowerCase())) {
+        if (prefix && typeof prefix === 'string' && content.toLowerCase().startsWith(prefix.toLowerCase())) {
             const cmdContent = content.slice(prefix.length).trim();
             const cmdName    = cmdContent.split(' ')[0].toLowerCase();
             const args       = cmdContent.slice(cmdName.length).trim();
