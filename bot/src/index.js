@@ -50,6 +50,17 @@ db.connectDB().then(async () => {
 client.once('ready', async () => {
   const commands = client.commands.map(cmd => cmd.data.toJSON());
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+
+  // Clear guild-specific commands first to avoid duplicates
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: [] });
+    } catch (e) {
+      console.error(`Failed to clear guild commands for ${guild.id}:`, e.message);
+    }
+  }
+
+  // Register commands globally
   try {
     await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
     console.log('Slash commands registered globally.');
