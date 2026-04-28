@@ -30,10 +30,22 @@ if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   console.log('📦 Installing dependencies...');
   run('npm install');
 } else {
-  console.log('📦 Updating from GitHub...');
-  try { run('git fetch origin main'); } catch {}
-  try { run('git stash'); } catch {}
-  try { run('git reset --hard origin/main'); } catch {}
+  // Check if we're in a git repo before trying git operations
+  const { execSync: exec } = require('child_process');
+  let isGitRepo = false;
+  try {
+    exec('git rev-parse --git-dir', { stdio: 'pipe' });
+    isGitRepo = true;
+  } catch {}
+
+  if (isGitRepo) {
+    console.log('📦 Updating from GitHub...');
+    try { run('git fetch origin main'); } catch {}
+    try { run('git stash'); } catch {}
+    try { run('git reset --hard origin/main'); } catch {}
+  } else {
+    console.log('📦 Not a git repo, skipping update...');
+  }
 }
 
 // Restore .env
