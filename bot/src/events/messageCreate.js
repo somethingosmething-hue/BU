@@ -9,6 +9,27 @@ module.exports = {
         const guildId = message.guild.id;
         const content = message.content.trim();
 
+        // ── CurList Channel Processing ────────────────────────────────────────
+        const settings = await db.getServerSettings(guildId);
+        const curlistChannelId = settings?.curlistChannel;
+
+        if (curlistChannelId && message.channel.id === curlistChannelId) {
+            const addMatch = content.match(/^\[ADD:\s*([^\]]+)\]\s*\n?/i);
+            if (addMatch) {
+                const listName = addMatch[1].trim();
+                const body = content.slice(addMatch[0].length).trim();
+                const elements = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+                if (elements.length > 0) {
+                    await db.addCurListElements(guildId, listName, elements);
+                    await message.reply({ content: `✅ Added ${elements.length} element(s) to list "${listName}".`, ephemeral: true }).catch(() => {});
+                } else {
+                    await message.reply({ content: `No elements found to add to "${listName}".`, ephemeral: true }).catch(() => {});
+                }
+                return;
+            }
+        }
+
         // ── Custom Commands (prefix-based) ────────────────────────────────────
         const rawPrefix = await db.getPrefix(guildId);
         if (rawPrefix && typeof rawPrefix !== 'string') {

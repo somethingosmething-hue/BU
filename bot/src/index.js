@@ -42,9 +42,25 @@ for (const file of eventFiles) {
 db.connectDB().then(async () => {
   console.log('Bot starting...');
   await client.login(process.env.BOT_TOKEN);
+}).catch(err => {
+  console.error('Failed to connect to MongoDB:', err);
+  process.exit(1);
+});
 
-  client.on('guildCreate', async (guild) => {
+client.once('ready', async () => {
+  const commands = client.commands.map(cmd => cmd.data.toJSON());
+  const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+  try {
+    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+    console.log('Slash commands registered globally.');
+  } catch (e) {
+    console.error('Slash command registration failed:', e.message);
+  }
+
+  for (const guild of client.guilds.cache.values()) {
     try {
+      await guild.members.fetch();
+      await guild.channels.fetch();
       const channels = guild.channels.cache
         .filter(c => c.type === 0)
         .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
@@ -55,12 +71,12 @@ db.connectDB().then(async () => {
         { upsert: true }
       );
     } catch (e) { console.error('Channel sync error:', e.message); }
-  });
+  }
+  console.log(`Synced channels for ${client.guilds.cache.size} guilds`);
 
-  client.on('ready', async () => {
+  setInterval(async () => {
     for (const guild of client.guilds.cache.values()) {
       try {
-        await guild.members.fetch();
         await guild.channels.fetch();
         const channels = guild.channels.cache
           .filter(c => c.type === 0)
@@ -71,45 +87,39 @@ db.connectDB().then(async () => {
           { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
           { upsert: true }
         );
-      } catch (e) { console.error('Channel sync error:', e.message); }
+      } catch (e) {}
     }
-    console.log(`Synced channels for ${client.guilds.cache.size} guilds`);
-    setInterval(async () => {
-      for (const guild of client.guilds.cache.values()) {
-        try {
-          await guild.channels.fetch();
-          const channels = guild.channels.cache
-            .filter(c => c.type === 0)
-            .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
-            .sort((a, b) => a.name.localeCompare(b.name));
-          await db.collection('channels').updateOne(
-            { guildId: guild.id },
-            { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
-            { upsert: true }
-          );
-        } catch (e) {}
-      }
-    }, 60000);
-  });
-
-  setInterval(async () => {
-    try {
-      const pending = await db.getPendingSends();
-      for (const send of pending) {
-        const channel = client.channels.cache.get(send.channelId);
-        if (!channel) continue;
-        const embedData = await db.getEmbed(send.guildId, send.name);
-        if (!embedData) continue;
-        const embed = buildEmbed(embedData);
-        await channel.send(embed).catch(console.error);
-        await db.deletePendingSend(send.guildId, send.name);
-      }
-    } catch (e) { console.error('Send loop error:', e.message); }
-  }, 5000);
-}).catch(err => {
-  console.error('Failed to connect to MongoDB:', err);
-  process.exit(1);
+  }, 60000);
 });
+
+client.on('guildCreate', async (guild) => {
+  try {
+    const channels = guild.channels.cache
+      .filter(c => c.type === 0)
+      .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    await db.collection('channels').updateOne(
+      { guildId: guild.id },
+      { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
+      { upsert: true }
+    );
+  } catch (e) { console.error('Channel sync error:', e.message); }
+});
+
+setInterval(async () => {
+  try {
+    const pending = await db.getPendingSends();
+    for (const send of pending) {
+      const channel = client.channels.cache.get(send.channelId);
+      if (!channel) continue;
+      const embedData = await db.getEmbed(send.guildId, send.name);
+      if (!embedData) continue;
+      const embed = buildEmbed(embedData);
+      await channel.send(embed).catch(console.error);
+      await db.deletePendingSend(send.guildId, send.name);
+    }
+  } catch (e) { console.error('Send loop error:', e.message); }
+}, 5000);
 
 function buildEmbed(data) {
   const embed = {};

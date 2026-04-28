@@ -40,6 +40,7 @@ async function connectDB() {
   await db.collection('levelsettings').createIndex({ guildId: 1 });
   await db.collection('trusted').createIndex({ guildId: 1 });
   await db.collection('serversettings').createIndex({ guildId: 1 });
+  await db.collection('curlists').createIndex({ guildId: 1, name: 1 });
   
   return db;
 }
@@ -324,6 +325,28 @@ async function setTrusted(guildId, userId, value) {
   await getCollection('trusted').updateOne({ guildId }, { $set: { [`data.${userId}`]: value } }, { upsert: true });
 }
 
+// CurLists
+async function getCurList(guildId, name) {
+  const doc = await getCollection('curlists').findOne({ guildId, name });
+  return doc ? { name: doc.name, elements: doc.elements || [] } : null;
+}
+
+async function saveCurList(guildId, name, elements) {
+  await getCollection('curlists').updateOne(
+    { guildId, name },
+    { $set: { elements, updatedAt: Date.now() } },
+    { upsert: true }
+  );
+}
+
+async function addCurListElements(guildId, name, newElements) {
+  await getCollection('curlists').updateOne(
+    { guildId, name },
+    { $push: { elements: { $each: newElements } } },
+    { upsert: true }
+  );
+}
+
 // Pending Sends
 async function getPendingSends() {
   const docs = await getCollection('pending_sends').find({}).toArray();
@@ -361,4 +384,5 @@ module.exports = {
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,
   getChannels,
+  getCurList, saveCurList, addCurListElements,
 };
