@@ -23,8 +23,8 @@ if (!fs.existsSync('./bot') || !fs.existsSync('./package.json')) {
   // Copy normal files
   run('cp -r _tmp_clone/* .');
 
-  // Copy hidden files/folders EXCEPT .git
-  run('find _tmp_clone -maxdepth 1 -name ".*" ! -name ".git" ! -name "." -exec cp -r {} . \\;');
+  // Copy hidden files/folders INCLUDING .git
+  run('find _tmp_clone -maxdepth 1 -name ".*" ! -name "." -exec cp -r {} . \\;');
 
   run('rm -rf _tmp_clone');
   console.log('📦 Installing dependencies...');
