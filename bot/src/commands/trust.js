@@ -2,7 +2,7 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const db = require('../database/db');
 const { botEmbed } = require('../utils/parser');
 
-const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
+const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392', '594911859254100029'];
 
 module.exports = {
     // Only admins can manage trust; trusted users get it via ALMIGHTY_PERMS in interactionCreate
