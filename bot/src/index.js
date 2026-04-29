@@ -48,25 +48,34 @@ db.connectDB().then(async () => {
 });
 
 client.once('ready', async () => {
-  const commands = client.commands.map(cmd => cmd.data.toJSON());
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
 
-  // Clear guild-specific commands first to avoid duplicates
-  for (const guild of client.guilds.cache.values()) {
-    try {
-      await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: [] });
-    } catch (e) {
-      console.error(`Failed to clear guild commands for ${guild.id}:`, e.message);
-    }
+  // Separate global commands (user app) from guild commands (server bot)
+  const globalCommands = client.commands.filter(cmd =>
+    ['eshowcurlist', 'enumcurlist'].includes(cmd.data.name)
+  ).map(cmd => cmd.data.toJSON());
+
+  const guildCommands = client.commands.filter(cmd =>
+    !['eshowcurlist', 'enumcurlist'].includes(cmd.data.name)
+  ).map(cmd => cmd.data.toJSON());
+
+  // Register global commands (available everywhere as user app)
+  try {
+    await rest.put(Routes.applicationCommands(client.user.id), { body: globalCommands });
+    console.log('Global (user app) commands registered.');
+  } catch (e) {
+    console.error('Global command registration failed:', e.message);
   }
 
-  // Register commands globally
-  try {
-    await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
-    console.log('Slash commands registered globally.');
-  } catch (e) {
-    console.error('Slash command registration failed:', e.message);
+  // Clear and register guild commands for each server
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: guildCommands });
+    } catch (e) {
+      console.error(`Failed to register guild commands for ${guild.id}:`, e.message);
+    }
   }
+  console.log('Guild commands registered.');
 
   for (const guild of client.guilds.cache.values()) {
     try {
