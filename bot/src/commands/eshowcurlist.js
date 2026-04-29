@@ -4,7 +4,7 @@ const db = require('../database/db');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('eshowcurlist')
-    .setDescription('Show and remove first N elements from a global curlist (ephemeral, DM only)')
+    .setDescription('Show and remove first N elements from a global curlist (ephemeral)')
     .addStringOption(opt =>
       opt.setName('name')
         .setDescription('Name of the global curlist')
