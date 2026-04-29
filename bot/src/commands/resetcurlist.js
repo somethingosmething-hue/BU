@@ -11,8 +11,12 @@ module.exports = {
         .setRequired(true)
     ),
   async execute(interaction) {
-    const guildId = interaction.guild.id;
+    const guildId = interaction.guild?.id;
     const member = interaction.member;
+
+    if (!guildId) {
+      return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+    }
 
     const trusted = await db.isTrusted(guildId, member.id);
     if (!trusted && !member.permissions.has('Administrator')) {
