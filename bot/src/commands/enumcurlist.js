@@ -1,10 +1,11 @@
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, InteractionContextType } = require('discord.js');
 const db = require('../database/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('enumcurlist')
     .setDescription('Show how many elements are in a global curlist')
+    .setContexts(InteractionContextType.Guild, InteractionContextType.BotDM, InteractionContextType.PrivateChannel)
     .addStringOption(opt =>
       opt.setName('name')
         .setDescription('Name of the global curlist')
