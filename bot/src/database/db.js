@@ -41,6 +41,7 @@ async function connectDB() {
   await db.collection('trusted').createIndex({ guildId: 1 });
   await db.collection('serversettings').createIndex({ guildId: 1 });
   await db.collection('curlists').createIndex({ guildId: 1, name: 1 });
+  await db.collection('global_curlists').createIndex({ name: 1 });
   
   return db;
 }
@@ -347,6 +348,34 @@ async function addCurListElements(guildId, name, newElements) {
   );
 }
 
+// Global CurLists (for GADD)
+const GLOBAL_TRUSTED_IDS = ['', '']; // Add the two globally trusted user IDs here
+
+function isGloballyTrusted(userId) {
+  return GLOBAL_TRUSTED_IDS.includes(userId);
+}
+
+async function getGlobalCurList(name) {
+  const doc = await getCollection('global_curlists').findOne({ name });
+  return doc ? { name: doc.name, elements: doc.elements || [] } : null;
+}
+
+async function saveGlobalCurList(name, elements) {
+  await getCollection('global_curlists').updateOne(
+    { name },
+    { $set: { elements, updatedAt: Date.now() } },
+    { upsert: true }
+  );
+}
+
+async function addGlobalCurListElements(name, newElements) {
+  await getCollection('global_curlists').updateOne(
+    { name },
+    { $push: { elements: { $each: newElements } } },
+    { upsert: true }
+  );
+}
+
 // Pending Sends
 async function getPendingSends() {
   const docs = await getCollection('pending_sends').find({}).toArray();
@@ -385,4 +414,5 @@ module.exports = {
   getPendingSends, deletePendingSend,
   getChannels,
   getCurList, saveCurList, addCurListElements,
+  isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements,
 };

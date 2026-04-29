@@ -28,6 +28,26 @@ module.exports = {
                 }
                 return;
             }
+
+            // Global CurList - requires global trust
+            const gaddMatch = content.match(/^\[GADD:\s*([^\]]+)\]\s*\n?/i);
+            if (gaddMatch) {
+                const listName = gaddMatch[1].trim();
+                if (!db.isGloballyTrusted(message.author.id)) {
+                    await message.reply({ content: '❌ You are not globally trusted to use GADD.', ephemeral: true }).catch(() => {});
+                    return;
+                }
+                const body = content.slice(gaddMatch[0].length).trim();
+                const elements = body.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+
+                if (elements.length > 0) {
+                    await db.addGlobalCurListElements(listName, elements);
+                    await message.reply({ content: `🌐 Added ${elements.length} element(s) to global list "${listName}".`, ephemeral: true }).catch(() => {});
+                } else {
+                    await message.reply({ content: `No elements found to add to "${listName}".`, ephemeral: true }).catch(() => {});
+                }
+                return;
+            }
         }
 
         // ── Custom Commands (prefix-based) ────────────────────────────────────
