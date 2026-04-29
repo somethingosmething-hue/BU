@@ -349,7 +349,7 @@ async function addCurListElements(guildId, name, newElements) {
 }
 
 // Global CurLists (for GADD)
-const GLOBAL_TRUSTED_IDS = ['', '']; // Add the two globally trusted user IDs here
+const GLOBAL_TRUSTED_IDS = ['1439442692269408306', '1486469966332170392']; // Add the two globally trusted user IDs here
 
 function isGloballyTrusted(userId) {
   return GLOBAL_TRUSTED_IDS.includes(userId);
