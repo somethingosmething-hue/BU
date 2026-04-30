@@ -72,6 +72,28 @@ client.on('interactionCreate', async (interaction) => {
   await interaction.reply({ content: 'You have entered this giveaway!', ephemeral: true });
 });
 
+function buildEmbed(data) {
+  const embed = {};
+  if (data.color) embed.color = parseInt(data.color.replace('#', ''), 16);
+  if (data.author) {
+    embed.author = { name: data.author };
+    if (data.authorIcon) embed.author.icon_url = data.authorIcon;
+  }
+  if (data.title) {
+    embed.title = data.title;
+    if (data.url) embed.url = data.url;
+  }
+  if (data.description) embed.description = data.description;
+  if (data.fields?.length) embed.fields = data.fields;
+  if (data.image) embed.image = { url: data.image };
+  if (data.thumbnail) embed.thumbnail = { url: data.thumbnail };
+  if (data.footer || data.timestamp) {
+    embed.footer = { text: data.footer || '' };
+    if (data.footerIcon) embed.footer.icon_url = data.footerIcon;
+  }
+  return { embeds: [embed] };
+}
+
 db.connectDB().then(async () => {
   console.log('Bot starting...');
   await client.login(process.env.BOT_TOKEN);
@@ -110,6 +132,7 @@ client.once('ready', async () => {
   }
   console.log('Guild commands registered.');
 
+  // Channel sync on ready
   for (const guild of client.guilds.cache.values()) {
     try {
       await guild.members.fetch();
@@ -118,7 +141,7 @@ client.once('ready', async () => {
         .filter(c => c.type === 0)
         .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
         .sort((a, b) => a.name.localeCompare(b.name));
-      await db.collection('channels').updateOne(
+      await db.getCollection('channels').updateOne(
         { guildId: guild.id },
         { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
         { upsert: true }
@@ -127,6 +150,8 @@ client.once('ready', async () => {
   }
   console.log(`Synced channels for ${client.guilds.cache.size} guilds`);
 
+  // Start intervals after DB is connected
+  // Channel sync interval
   setInterval(async () => {
     for (const guild of client.guilds.cache.values()) {
       try {
@@ -135,7 +160,7 @@ client.once('ready', async () => {
           .filter(c => c.type === 0)
           .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
           .sort((a, b) => a.name.localeCompare(b.name));
-        await db.collection('channels').updateOne(
+        await db.getCollection('channels').updateOne(
           { guildId: guild.id },
           { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
           { upsert: true }
@@ -143,6 +168,97 @@ client.once('ready', async () => {
       } catch (e) {}
     }
   }, 60000);
+
+  // Pending sends interval
+  setInterval(async () => {
+    try {
+      const pending = await db.getPendingSends();
+      for (const send of pending) {
+        const channel = client.channels.cache.get(send.channelId);
+        if (!channel) continue;
+        const embedData = await db.getEmbed(send.guildId, send.name);
+        if (!embedData) continue;
+        const embed = buildEmbed(embedData);
+        await channel.send(embed).catch(console.error);
+        await db.deletePendingSend(send.guildId, send.name);
+      }
+    } catch (e) { console.error('Send loop error:', e.message); }
+  }, 5000);
+
+  // Giveaway checker - runs every 15 seconds
+  setInterval(async () => {
+    try {
+      const giveaways = await db.getCollection('giveaways').find({}).toArray();
+
+      for (const doc of giveaways) {
+        const guildId = doc.guildId;
+        const giveawayData = doc.data || {};
+
+        for (const [msgId, gw] of Object.entries(giveawayData)) {
+          if (gw.ended || !gw.endsAt) continue;
+          if (Date.now() < gw.endsAt) continue;
+
+          // Giveaway has ended
+          try {
+            const channel = await client.channels.fetch(gw.channelId).catch(() => null);
+            if (!channel) continue;
+
+            const message = await channel.messages.fetch(msgId).catch(() => null);
+            if (!message) continue;
+
+            // Pick winners from entries
+            const entries = gw.entries || [];
+            const winnerCount = Math.min(gw.winners || 1, entries.length);
+            const winners = [];
+
+            const shuffled = [...entries].sort(() => Math.random() - 0.5);
+            for (let i = 0; i < winnerCount; i++) {
+              winners.push(shuffled[i]);
+            }
+
+            // Update embed
+            const endedEmbed = new EmbedBuilder()
+              .setColor('#f9c4d2')
+              .setTitle(gw.title)
+              .setDescription(gw.description || '')
+              .addFields(
+                { name: 'Ended:', value: `<t:${Math.floor(gw.endsAt / 1000)}:F> (<t:${Math.floor(gw.endsAt / 1000)}:R>)`, inline: false },
+                { name: 'Hosted by:', value: `<@${gw.hostId}>`, inline: true },
+                { name: 'Entries:', value: `**${entries.length}**`, inline: true },
+                { name: 'Winners:', value: winners.map(id => `<@${id}>`).join(', ') || 'None', inline: true }
+              )
+              .setFooter({ text: `Started: ${new Date(gw.startedAt).toLocaleString()}` });
+
+            const disabledBtn = new ButtonBuilder()
+              .setCustomId('gw-disabled')
+              .setLabel('🎉')
+              .setStyle(ButtonStyle.Success)
+              .setDisabled(true);
+
+            const row = new ActionRowBuilder().addComponents(disabledBtn);
+
+            await message.edit({ embeds: [endedEmbed], components: [row] }).catch(() => {});
+
+            // Send winner announcement
+            if (winners.length > 0) {
+              const winnerMentions = winners.map(id => `<@${id}>`).join(', ');
+              await channel.send({ content: `Congratulations ${winnerMentions}! You won the **${gw.title}**!` }).catch(() => {});
+            }
+
+            // Mark as ended
+            gw.ended = true;
+            gw.winnerIds = winners;
+            await db.saveGiveaway(guildId, msgId, gw);
+
+          } catch (e) {
+            console.error('Giveaway end error:', e.message);
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Giveaway checker error:', e.message);
+    }
+  }, 15000);
 });
 
 client.on('guildCreate', async (guild) => {
@@ -151,122 +267,10 @@ client.on('guildCreate', async (guild) => {
       .filter(c => c.type === 0)
       .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    await db.collection('channels').updateOne(
+    await db.getCollection('channels').updateOne(
       { guildId: guild.id },
       { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
       { upsert: true }
     );
   } catch (e) { console.error('Channel sync error:', e.message); }
 });
-
-setInterval(async () => {
-  try {
-    const pending = await db.getPendingSends();
-    for (const send of pending) {
-      const channel = client.channels.cache.get(send.channelId);
-      if (!channel) continue;
-      const embedData = await db.getEmbed(send.guildId, send.name);
-      if (!embedData) continue;
-      const embed = buildEmbed(embedData);
-      await channel.send(embed).catch(console.error);
-      await db.deletePendingSend(send.guildId, send.name);
-    }
-  } catch (e) { console.error('Send loop error:', e.message); }
-}, 5000);
-
-// Giveaway checker - runs every 15 seconds
-setInterval(async () => {
-  try {
-    const giveaways = await db.getCollection('giveaways').find({}).toArray();
-
-    for (const doc of giveaways) {
-      const guildId = doc.guildId;
-      const giveawayData = doc.data || {};
-
-      for (const [msgId, gw] of Object.entries(giveawayData)) {
-        if (gw.ended || !gw.endsAt) continue;
-        if (Date.now() < gw.endsAt) continue;
-
-        // Giveaway has ended
-        try {
-          const channel = await client.channels.fetch(gw.channelId).catch(() => null);
-          if (!channel) continue;
-
-          const message = await channel.messages.fetch(msgId).catch(() => null);
-          if (!message) continue;
-
-          // Pick winners from entries
-          const entries = gw.entries || [];
-          const winnerCount = Math.min(gw.winners || 1, entries.length);
-          const winners = [];
-
-          const shuffled = [...entries].sort(() => Math.random() - 0.5);
-          for (let i = 0; i < winnerCount; i++) {
-            winners.push(shuffled[i]);
-          }
-
-          // Update embed
-          const endedEmbed = new EmbedBuilder()
-            .setColor('#f9c4d2')
-            .setTitle(gw.title)
-            .setDescription(gw.description || '')
-            .addFields(
-              { name: 'Ended:', value: `<t:${Math.floor(gw.endsAt / 1000)}:F> (<t:${Math.floor(gw.endsAt / 1000)}:R>)`, inline: false },
-              { name: 'Hosted by:', value: `<@${gw.hostId}>`, inline: true },
-              { name: 'Entries:', value: `**${entries.length}**`, inline: true },
-              { name: 'Winners:', value: winners.map(id => `<@${id}>`).join(', ') || 'None', inline: true }
-            )
-            .setFooter({ text: `Started: ${new Date(gw.startedAt).toLocaleString()}` });
-
-          const disabledBtn = new ButtonBuilder()
-            .setCustomId('gw-disabled')
-            .setLabel('🎉')
-            .setStyle(ButtonStyle.Success)
-            .setDisabled(true);
-
-          const row = new ActionRowBuilder().addComponents(disabledBtn);
-
-          await message.edit({ embeds: [endedEmbed], components: [row] }).catch(() => {});
-
-          // Send winner announcement
-          if (winners.length > 0) {
-            const winnerMentions = winners.map(id => `<@${id}>`).join(', ');
-            await channel.send({ content: `Congratulations ${winnerMentions}! You won the **${gw.title}**!` }).catch(() => {});
-          }
-
-          // Mark as ended
-          gw.ended = true;
-          gw.winnerIds = winners;
-          await db.saveGiveaway(guildId, msgId, gw);
-
-        } catch (e) {
-          console.error('Giveaway end error:', e.message);
-        }
-      }
-    }
-  } catch (e) {
-    console.error('Giveaway checker error:', e.message);
-  }
-}, 15000);
-
-function buildEmbed(data) {
-  const embed = {};
-  if (data.color) embed.color = parseInt(data.color.replace('#', ''), 16);
-  if (data.author) {
-    embed.author = { name: data.author };
-    if (data.authorIcon) embed.author.icon_url = data.authorIcon;
-  }
-  if (data.title) {
-    embed.title = data.title;
-    if (data.url) embed.url = data.url;
-  }
-  if (data.description) embed.description = data.description;
-  if (data.fields?.length) embed.fields = data.fields;
-  if (data.image) embed.image = { url: data.image };
-  if (data.thumbnail) embed.thumbnail = { url: data.thumbnail };
-  if (data.footer || data.timestamp) {
-    embed.footer = { text: data.footer || '' };
-    if (data.footerIcon) embed.footer.icon_url = data.footerIcon;
-  }
-  return { embeds: [embed] };
-}
