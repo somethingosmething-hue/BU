@@ -52,6 +52,8 @@ module.exports = {
         try {
           await member.roles.add(role);
           addedCount++;
+          // Add delay to avoid rate limits
+          await new Promise(r => setTimeout(r, 300));
         } catch (error) {
           failedCount++;
           console.error(`Failed to add role to ${member.user.tag}:`, error.message);

@@ -64,7 +64,8 @@ client.on('interactionCreate', async (interaction) => {
 
   // Update embed with new entry count
   try {
-    const embed = EmbedBuilder.from(interaction.message.embeds[0])
+    const oldEmbed = interaction.message.embeds[0];
+    const embed = EmbedBuilder.from(oldEmbed)
       .spliceFields(2, 1, { name: 'Entries:', value: `**${gw.entries.length}**`, inline: true });
     await interaction.message.edit({ embeds: [embed] });
   } catch (e) {}
@@ -147,10 +148,12 @@ client.once('ready', async () => {
         { upsert: true }
       );
     } catch (e) { console.error('Channel sync error:', e.message); }
+    // Delay between guilds to avoid rate limits
+    await new Promise(r => setTimeout(r, 2000));
   }
   console.log(`Synced channels for ${client.guilds.cache.size} guilds`);
 
-  // Start intervals after DB is connected
+  // Start intervals only after DB is connected
   // Channel sync interval
   setInterval(async () => {
     for (const guild of client.guilds.cache.values()) {
@@ -165,6 +168,8 @@ client.once('ready', async () => {
           { $set: { guildId: guild.id, channels, updatedAt: Date.now() } },
           { upsert: true }
         );
+        // Delay to avoid rate limits
+        await new Promise(r => setTimeout(r, 2000));
       } catch (e) {}
     }
   }, 60000);
