@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, Partials, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, REST, Routes, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -38,6 +38,39 @@ for (const file of eventFiles) {
     client.on(event.name, (...args) => event.execute(...args, client));
   }
 }
+
+// Handle giveaway button interactions
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+  if (!interaction.customId.startsWith('gw-enter-')) return;
+
+  const msgId = interaction.message.id;
+  const guildId = interaction.guild.id;
+  const userId = interaction.user.id;
+
+  const gw = db.getGiveaway(guildId, msgId);
+  if (!gw || gw.ended) {
+    return interaction.reply({ content: '❌ This giveaway has ended.', ephemeral: true });
+  }
+
+  if (!gw.entries) gw.entries = [];
+
+  if (gw.entries.includes(userId)) {
+    return interaction.reply({ content: 'You have already entered this giveaway.', ephemeral: true });
+  }
+
+  gw.entries.push(userId);
+  db.saveGiveaway(guildId, msgId, gw);
+
+  // Update embed with new entry count
+  try {
+    const embed = EmbedBuilder.from(interaction.message.embeds[0])
+      .spliceFields(2, 1, { name: 'Entries:', value: `**${gw.entries.length}**`, inline: true });
+    await interaction.message.edit({ embeds: [embed] });
+  } catch (e) {}
+
+  await interaction.reply({ content: 'You have entered this giveaway!', ephemeral: true });
+});
 
 db.connectDB().then(async () => {
   console.log('Bot starting...');
@@ -140,6 +173,81 @@ setInterval(async () => {
     }
   } catch (e) { console.error('Send loop error:', e.message); }
 }, 5000);
+
+// Giveaway checker - runs every 15 seconds
+setInterval(async () => {
+  try {
+    const giveaways = await db.getCollection('giveaways').find({}).toArray();
+
+    for (const doc of giveaways) {
+      const guildId = doc.guildId;
+      const giveawayData = doc.data || {};
+
+      for (const [msgId, gw] of Object.entries(giveawayData)) {
+        if (gw.ended || !gw.endsAt) continue;
+        if (Date.now() < gw.endsAt) continue;
+
+        // Giveaway has ended
+        try {
+          const channel = await client.channels.fetch(gw.channelId).catch(() => null);
+          if (!channel) continue;
+
+          const message = await channel.messages.fetch(msgId).catch(() => null);
+          if (!message) continue;
+
+          // Pick winners from entries
+          const entries = gw.entries || [];
+          const winnerCount = Math.min(gw.winners || 1, entries.length);
+          const winners = [];
+
+          const shuffled = [...entries].sort(() => Math.random() - 0.5);
+          for (let i = 0; i < winnerCount; i++) {
+            winners.push(shuffled[i]);
+          }
+
+          // Update embed
+          const endedEmbed = new EmbedBuilder()
+            .setColor('#f9c4d2')
+            .setTitle(gw.title)
+            .setDescription(gw.description || '')
+            .addFields(
+              { name: 'Ended:', value: `<t:${Math.floor(gw.endsAt / 1000)}:F> (<t:${Math.floor(gw.endsAt / 1000)}:R>)`, inline: false },
+              { name: 'Hosted by:', value: `<@${gw.hostId}>`, inline: true },
+              { name: 'Entries:', value: `**${entries.length}**`, inline: true },
+              { name: 'Winners:', value: winners.map(id => `<@${id}>`).join(', ') || 'None', inline: true }
+            )
+            .setFooter({ text: `Started: ${new Date(gw.startedAt).toLocaleString()}` });
+
+          const disabledBtn = new ButtonBuilder()
+            .setCustomId('gw-disabled')
+            .setLabel('🎉')
+            .setStyle(ButtonStyle.Success)
+            .setDisabled(true);
+
+          const row = new ActionRowBuilder().addComponents(disabledBtn);
+
+          await message.edit({ embeds: [endedEmbed], components: [row] }).catch(() => {});
+
+          // Send winner announcement
+          if (winners.length > 0) {
+            const winnerMentions = winners.map(id => `<@${id}>`).join(', ');
+            await channel.send({ content: `Congratulations ${winnerMentions}! You won the **${gw.title}**!` }).catch(() => {});
+          }
+
+          // Mark as ended
+          gw.ended = true;
+          gw.winnerIds = winners;
+          await db.saveGiveaway(guildId, msgId, gw);
+
+        } catch (e) {
+          console.error('Giveaway end error:', e.message);
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Giveaway checker error:', e.message);
+  }
+}, 15000);
 
 function buildEmbed(data) {
   const embed = {};
