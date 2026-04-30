@@ -413,6 +413,7 @@ module.exports = {
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,
   getChannels,
+  getCollection,
   getCurList, saveCurList, addCurListElements,
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements,
 };
