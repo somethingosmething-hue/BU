@@ -3,35 +3,33 @@ const {
     ActionRowBuilder,
     ButtonBuilder,
     ButtonStyle,
-    ContainerBuilder,
-    SectionBuilder,
-    SeparatorBuilder,
-    SeparatorSpacingSize,
-    TextDisplayBuilder,
-    MessageFlags,
+    ModalBuilder,
+    TextInputBuilder,
+    TextInputStyle,
 } = require('discord.js');
 const db = require('../database/db');
 const { buildEmbedFromData, botEmbed } = require('../utils/parser');
 
 const EDIT_FIELDS = [
-    { id: 'title',       label: 'Title'       },
-    { id: 'description', label: 'Description' },
-    { id: 'color',       label: 'Color'       },
-    { id: 'footer',      label: 'Footer'      },
-    { id: 'image',       label: 'Image'       },
-    { id: 'thumbnail',   label: 'Thumbnail'   },
-    { id: 'author',      label: 'Author'      },
-    { id: 'url',         label: 'URL'         },
+    { id: 'title',       label: 'Title',       max: 256,  style: 'short'    },
+    { id: 'description', label: 'Description', max: 4096, style: 'paragraph' },
+    { id: 'color',       label: 'Color (#hex)',max: 7,    style: 'short'    },
+    { id: 'footer',      label: 'Footer',      max: 2048, style: 'short'    },
+    { id: 'image',       label: 'Image URL',   max: 2000, style: 'short'    },
+    { id: 'thumbnail',   label: 'Thumbnail',   max: 2000, style: 'short'    },
+    { id: 'author',      label: 'Author',      max: 256,  style: 'short'    },
+    { id: 'url',         label: 'URL',         max: 2000, style: 'short'    },
 ];
 
-/** Build the edit button rows for an embed by name */
-function buildEditRows(name) {
-    const editButtons = EDIT_FIELDS.map(f =>
-        new ButtonBuilder()
+function buildEditRows(name, saved) {
+    const editButtons = EDIT_FIELDS.map(f => {
+        const val = saved?.[f.id];
+        const display = val ? String(val).slice(0, 18) + (String(val).length > 18 ? '…' : '') : '∅';
+        return new ButtonBuilder()
             .setCustomId(`embed-edit:${name}:${f.id}`)
-            .setLabel(f.label)
-            .setStyle(ButtonStyle.Secondary)
-    );
+            .setLabel(`${f.label}: ${display}`)
+            .setStyle(ButtonStyle.Secondary);
+    });
 
     const rows = [];
     for (let i = 0; i < editButtons.length; i += 4) {
@@ -46,10 +44,6 @@ function buildEditRows(name) {
     return rows;
 }
 
-/**
- * Validate that an embed data object has at least one visible field.
- * Discord requires embeds to have content — an all-null embed is rejected.
- */
 function validateEmbedData(data) {
     const hasContent = data.title || data.description || data.footer ||
                        data.image || data.thumbnail || data.author || data.url;
@@ -59,50 +53,7 @@ function validateEmbedData(data) {
     if (data.color && !/^#[0-9a-fA-F]{6}$/.test(data.color)) {
         return '❌ Color must be a valid hex code like `#5865F2`.';
     }
-    return null; // valid
-}
-
-/** Try to use Component V2 separators; falls back gracefully if unavailable */
-function tryBuildV2Components(name, saved) {
-    try {
-        const container = new ContainerBuilder();
-
-        container.addTextDisplayComponents(
-            new TextDisplayBuilder().setContent(`### Embed: \`${name}\``)
-        );
-        container.addSeparatorComponents(
-            new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
-        );
-
-        const editButtons = EDIT_FIELDS.map(f =>
-            new ButtonBuilder()
-                .setCustomId(`embed-edit:${name}:${f.id}`)
-                .setLabel(f.label)
-                .setStyle(ButtonStyle.Secondary)
-        );
-        for (let i = 0; i < editButtons.length; i += 4) {
-            container.addActionRowComponents(
-                new ActionRowBuilder().addComponents(editButtons.slice(i, i + 4))
-            );
-        }
-
-        container.addSeparatorComponents(
-            new SeparatorBuilder().setSpacing(SeparatorSpacingSize.Small).setDivider(true)
-        );
-        container.addActionRowComponents(
-            new ActionRowBuilder().addComponents(
-                new ButtonBuilder()
-                    .setCustomId(`embed-delete:${name}`)
-                    .setLabel('🗑️ Delete')
-                    .setStyle(ButtonStyle.Danger)
-            )
-        );
-
-        return { components: [container], flags: MessageFlags.IsComponentsV2 };
-    } catch {
-        // discord.js version doesn't support Component V2 builders — use classic layout
-        return null;
-    }
+    return null;
 }
 
 module.exports = {
@@ -121,22 +72,36 @@ module.exports = {
             .addStringOption(o => o.setName('thumbnail').setDescription('Thumbnail URL'))
             .addStringOption(o => o.setName('author').setDescription('Author name'))
             .addStringOption(o => o.setName('url').setDescription('URL for title')))
-        .addSubcommand(s => s.setName('send').setDescription('Send an embed')
+        .addSubcommand(s => s.setName('send').setDescription('Send an embed to a channel')
             .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true))
-            .addChannelOption(o => o.setName('channel').setDescription('Channel')))
+            .addChannelOption(o => o.setName('channel').setDescription('Channel (defaults to current)')))
         .addSubcommand(s => s.setName('delete').setDescription('Delete a saved embed')
             .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true)))
         .addSubcommand(s => s.setName('list').setDescription('List all saved embeds'))
         .addSubcommand(s => s.setName('preview').setDescription('Preview an embed')
             .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true)))
         .addSubcommand(s => s.setName('edit').setDescription('Edit an embed interactively')
-            .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true))),
+            .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true)))
+        .addSubcommand(s => s.setName('quickedit').setDescription('Quickly update a single field')
+            .addStringOption(o => o.setName('name').setDescription('Embed name').setRequired(true).setAutocomplete(true))
+            .addStringOption(o => o.setName('field').setDescription('Field to edit').setRequired(true)
+                .addChoices(
+                    { name: 'Title', value: 'title' },
+                    { name: 'Description', value: 'description' },
+                    { name: 'Color', value: 'color' },
+                    { name: 'Footer', value: 'footer' },
+                    { name: 'Image URL', value: 'image' },
+                    { name: 'Thumbnail URL', value: 'thumbnail' },
+                    { name: 'Author', value: 'author' },
+                    { name: 'URL', value: 'url' },
+                ))
+            .addStringOption(o => o.setName('value').setDescription('New value').setRequired(true))),
 
     async autocomplete(interaction) {
         const guildId = interaction.guildId;
         if (!guildId) return;
         const focused = interaction.options.getFocused(true);
-        const embeds = db.getEmbeds(guildId);
+        const embeds = await db.getEmbeds(guildId);
         const choices = Object.keys(embeds)
             .filter(c => c.toLowerCase().includes(focused.value.toLowerCase()))
             .slice(0, 25);
@@ -165,25 +130,18 @@ module.exports = {
             const validationError = validateEmbedData(data);
             if (validationError) return interaction.reply({ content: validationError, ephemeral: true });
 
-            if (db.getEmbed(guildId, name)) {
+            const existing = await db.getEmbed(guildId, name);
+            if (existing) {
                 return interaction.reply({ content: `❌ An embed named **${name}** already exists. Use \`/embed edit\` to modify it.`, ephemeral: true });
             }
 
-            db.saveEmbed(guildId, name, data);
+            await db.saveEmbed(guildId, name, data);
 
-            const v2 = tryBuildV2Components(name, data);
-            if (v2) {
-                return interaction.reply({
-                    content: `✅ Embed **${name}** created!`,
-                    embeds: [buildEmbedFromData(data)],
-                    ...v2,
-                });
-            }
-
+            const embed = buildEmbedFromData(data);
             return interaction.reply({
                 content: `✅ Embed **${name}** created!`,
-                embeds: [buildEmbedFromData(data)],
-                components: buildEditRows(name),
+                embeds: [embed],
+                components: buildEditRows(name, data),
             });
         }
 
@@ -191,11 +149,11 @@ module.exports = {
         if (sub === 'send') {
             const name = interaction.options.getString('name').toLowerCase();
             const channel = interaction.options.getChannel('channel') || interaction.channel;
-            const saved = db.getEmbed(guildId, name);
+            const saved = await db.getEmbed(guildId, name);
             if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
 
             const validationError = validateEmbedData(saved);
-            if (validationError) return interaction.reply({ content: `❌ This embed has invalid data and cannot be sent: ${validationError}`, ephemeral: true });
+            if (validationError) return interaction.reply({ content: `❌ ${validationError}`, ephemeral: true });
 
             await channel.send({ embeds: [buildEmbedFromData(saved)] });
             return interaction.reply({ content: `✅ Sent embed **${name}** to ${channel}.`, ephemeral: true });
@@ -204,14 +162,15 @@ module.exports = {
         // ── Delete ────────────────────────────────────────────────────────────
         if (sub === 'delete') {
             const name = interaction.options.getString('name').toLowerCase();
-            if (!db.getEmbed(guildId, name)) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
-            db.deleteEmbed(guildId, name);
+            const existing = await db.getEmbed(guildId, name);
+            if (!existing) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            await db.deleteEmbed(guildId, name);
             return interaction.reply({ content: `✅ Embed **${name}** deleted.`, ephemeral: true });
         }
 
         // ── List ──────────────────────────────────────────────────────────────
         if (sub === 'list') {
-            const embeds = db.getEmbeds(guildId);
+            const embeds = await db.getEmbeds(guildId);
             const names = Object.keys(embeds);
             if (!names.length) return interaction.reply({ content: '📭 No embeds saved yet.', ephemeral: true });
             return interaction.reply({
@@ -223,11 +182,11 @@ module.exports = {
         // ── Preview ───────────────────────────────────────────────────────────
         if (sub === 'preview') {
             const name = interaction.options.getString('name').toLowerCase();
-            const saved = db.getEmbed(guildId, name);
+            const saved = await db.getEmbed(guildId, name);
             if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
 
             const validationError = validateEmbedData(saved);
-            if (validationError) return interaction.reply({ content: `⚠️ This embed has issues: ${validationError}`, ephemeral: true });
+            if (validationError) return interaction.reply({ content: `⚠️ ${validationError}`, ephemeral: true });
 
             return interaction.reply({ content: `Preview of **${name}**:`, embeds: [buildEmbedFromData(saved)], ephemeral: true });
         }
@@ -235,26 +194,36 @@ module.exports = {
         // ── Edit ──────────────────────────────────────────────────────────────
         if (sub === 'edit') {
             const name = interaction.options.getString('name').toLowerCase();
-            const saved = db.getEmbed(guildId, name);
+            const saved = await db.getEmbed(guildId, name);
             if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
 
-            const embedContent = validateEmbedData(saved) ? [] : [buildEmbedFromData(saved)];
+            const embed = buildEmbedFromData(saved);
 
-            const v2 = tryBuildV2Components(name, saved);
-            if (v2) {
-                return interaction.reply({
-                    content: `Editing **${name}**:`,
-                    embeds: embedContent,
-                    ephemeral: true,
-                    ...v2,
-                });
-            }
+            await interaction.reply({
+                content: `✏️ Editing **${name}** — click a button to edit that field:`,
+                embeds: [embed],
+                components: buildEditRows(name, saved),
+            });
+        }
+
+        // ── Quick Edit ─────────────────────────────────────────────────────────
+        if (sub === 'quickedit') {
+            const name = interaction.options.getString('name').toLowerCase();
+            const field = interaction.options.getString('field');
+            const value = interaction.options.getString('value');
+
+            const saved = await db.getEmbed(guildId, name);
+            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+
+            saved[field] = value || null;
+            await db.saveEmbed(guildId, name, saved);
+
+            const embed = buildEmbedFromData(saved);
 
             return interaction.reply({
-                content: `Editing **${name}**:`,
-                embeds: embedContent,
-                components: buildEditRows(name),
-                ephemeral: true,
+                content: `✅ Updated **${field}** for embed \`${name}\``,
+                embeds: [embed],
+                components: buildEditRows(name, saved),
             });
         }
     },

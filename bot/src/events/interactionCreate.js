@@ -15,22 +15,20 @@ const ALMIGHTY_PERMS = new Proxy({}, {
     }
 });
 
-function isUserTrusted(guildId, userId) {
+async function isUserTrusted(guildId, userId) {
     if (SPECIAL_USERS.includes(userId)) return true;
     try {
-        return !!db.isTrusted(guildId, userId);
+        return !!(await db.isTrusted(guildId, userId));
     } catch (e) {
         console.error('[trust] db.isTrusted threw:', e);
         return false;
     }
 }
 
-// Builds a message payload from a parsed result, handling both normal and
-// Components V2 mode (when {separator} is used).
 function buildPayload(parsed) {
     const payload = {};
     if (parsed.hasSeparators) {
-        payload.flags = 1 << 15; // IS_COMPONENTS_V2 = 32768
+        payload.flags = 1 << 15;
         payload.components = parsed.rows;
     } else {
         if (parsed.text)        payload.content    = parsed.text;
@@ -39,6 +37,17 @@ function buildPayload(parsed) {
     }
     return payload;
 }
+
+const EDIT_FIELDS = [
+    { id: 'title',       label: 'Title'       },
+    { id: 'description', label: 'Description' },
+    { id: 'color',       label: 'Color (#hex)'},
+    { id: 'footer',      label: 'Footer'      },
+    { id: 'image',       label: 'Image URL'   },
+    { id: 'thumbnail',   label: 'Thumbnail'   },
+    { id: 'author',      label: 'Author'      },
+    { id: 'url',         label: 'URL'         },
+];
 
 module.exports = {
     name: 'interactionCreate',
@@ -64,7 +73,7 @@ module.exports = {
             try {
                 const userId = interaction.user.id;
                 const guildId = interaction.guildId;
-                const trusted = isUserTrusted(guildId, userId);
+                const trusted = await isUserTrusted(guildId, userId);
 
                 if (interaction.member) {
                     if (trusted) {
@@ -109,9 +118,9 @@ module.exports = {
                 const [, name, field] = customId.split(':');
                 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
-                const saved = db.getEmbed(interaction.guildId, name);
+                const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.' });
+                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
                     return;
                 }
 
@@ -147,13 +156,13 @@ module.exports = {
 
             if (customId.startsWith('embed-delete:')) {
                 const [, name] = customId.split(':');
-                const saved = db.getEmbed(interaction.guildId, name);
+                const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.' });
+                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
                     return;
                 }
-                db.deleteEmbed(interaction.guildId, name);
-                await interaction.update({ content: 'Embed ' + name + ' deleted.', embeds: [], components: [] });
+                await db.deleteEmbed(interaction.guildId, name);
+                await interaction.update({ content: '🗑️ Embed **' + name + '** deleted.', embeds: [], components: [] });
                 return;
             }
 
@@ -162,20 +171,20 @@ module.exports = {
                 const guildId = interaction.guild?.id;
                 if (!guildId) return;
 
-                const btnData = db.getButtonResponder(guildId, btnName);
+                const btnData = await db.getButtonResponder(guildId, btnName);
                 if (!btnData) {
                     await interaction.reply({ content: 'This button no longer exists.' });
                     return;
                 }
 
                 if (btnData.cooldown) {
-                    const last = db.getCooldown(guildId, interaction.user.id, 'btn:' + btnName);
+                    const last = await db.getCooldown(guildId, interaction.user.id, 'btn:' + btnName);
                     if (last && Date.now() - last < btnData.cooldown * 1000) {
                         const remaining = Math.ceil((btnData.cooldown * 1000 - (Date.now() - last)) / 1000);
                         await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
                         return;
                     }
-                    db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
+                    await db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
                 }
 
                 const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user };
@@ -213,37 +222,27 @@ module.exports = {
         // ── Modal Submits ─────────────────────────────────────────────────────
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
+            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
             if (customId.startsWith('embed-save:')) {
                 const [, name, field] = customId.split(':');
                 const value = interaction.fields.getTextInputValue('value') || null;
 
-                const saved = db.getEmbed(interaction.guildId, name);
+                const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: 'Embed not found.' });
+                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
                     return;
                 }
 
                 saved[field] = value;
-                db.saveEmbed(interaction.guildId, name, saved);
+                await db.saveEmbed(interaction.guildId, name, saved);
 
-                const { ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
-
-                const editButtons = [
-                    { id: 'title',       label: 'Title'       },
-                    { id: 'description', label: 'Description' },
-                    { id: 'color',       label: 'Color'       },
-                    { id: 'footer',      label: 'Footer'      },
-                    { id: 'image',       label: 'Image'       },
-                    { id: 'thumbnail',   label: 'Thumbnail'   },
-                    { id: 'author',      label: 'Author'      },
-                    { id: 'url',         label: 'URL'         },
-                ].map(f => {
-                    const val = saved[f.id] || '(empty)';
-                    const label = f.label + ': ' + String(val).slice(0, 18) + (String(val).length > 18 ? '…' : '');
+                const editButtons = EDIT_FIELDS.map(f => {
+                    const val = saved[f.id];
+                    const display = val ? String(val).slice(0, 18) + (String(val).length > 18 ? '…' : '') : '∅';
                     return new ButtonBuilder()
                         .setCustomId('embed-edit:' + name + ':' + f.id)
-                        .setLabel(label)
+                        .setLabel(f.label + ': ' + display)
                         .setStyle(ButtonStyle.Secondary);
                 });
 
@@ -254,7 +253,7 @@ module.exports = {
                 rows.push(new ActionRowBuilder().addComponents(
                     new ButtonBuilder()
                         .setCustomId('embed-delete:' + name)
-                        .setLabel('🗑️ Delete Embed')
+                        .setLabel('🗑️ Delete')
                         .setStyle(ButtonStyle.Danger)
                 ));
 
@@ -262,7 +261,7 @@ module.exports = {
                                    saved.image || saved.thumbnail || saved.author || saved.url;
 
                 await interaction.update({
-                    content: `Updated **${field}** for embed \`${name}\``,
+                    content: `✏️ Editing **${name}** — updated **${field}**.`,
                     embeds: hasContent ? [buildEmbedFromData(saved)] : [],
                     components: rows,
                 });
@@ -280,7 +279,7 @@ module.exports = {
             const guildId = interaction.guild?.id;
             if (!guildId) return;
 
-            const selData = db.getButtonResponder(guildId, selName);
+            const selData = await db.getButtonResponder(guildId, selName);
             if (!selData) {
                 await interaction.reply({ content: 'This select menu no longer exists.' });
                 return;
@@ -289,13 +288,13 @@ module.exports = {
             const selectedValue = interaction.values[0];
 
             if (selData.cooldown) {
-                const last = db.getCooldown(guildId, interaction.user.id, 'sel:' + selName);
+                const last = await db.getCooldown(guildId, interaction.user.id, 'sel:' + selName);
                 if (last && Date.now() - last < selData.cooldown * 1000) {
                     const remaining = Math.ceil((selData.cooldown * 1000 - (Date.now() - last)) / 1000);
                     await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
                     return;
                 }
-                db.setCooldown(guildId, interaction.user.id, 'sel:' + selName, Date.now());
+                await db.setCooldown(guildId, interaction.user.id, 'sel:' + selName, Date.now());
             }
 
             const replyText = selData.reply.replace(/\{value\}/gi, selectedValue);

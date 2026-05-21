@@ -36,6 +36,94 @@ function buildEmbedFromData(data) {
   return buildDivembFromData(data);
 }
 
+async function processCvarPatterns(text, context) {
+  const { member, guildId } = context;
+
+  // {cvar:set:global::name:value}
+  text = text.replace(/\{cvar:set:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, value) => {
+    if (scope === 'global') {
+      db.setGlobalVar(name, value).catch(() => {});
+    } else if (member) {
+      db.setUserVar(guildId, member.id, name, value).catch(() => {});
+    }
+    return '';
+  });
+
+  // {cvar:add:global::name:amount}
+  const addMatches = [];
+  let addMatch;
+  const addRe = /\{cvar:add:(global|user)::(\w+):(\S+)\}/gi;
+  while ((addMatch = addRe.exec(text)) !== null) {
+    addMatches.push({ full: addMatch[0], scope: addMatch[1], name: addMatch[2], amount: addMatch[3], index: addMatch.index });
+  }
+  for (const m of addMatches) {
+    let addAmount = m.amount;
+    if (m.amount.startsWith('{range:')) {
+      const rangeMatch = m.amount.match(/\{range:(-?\d+):(-?\d+)\}/);
+      if (rangeMatch) {
+        const min = parseInt(rangeMatch[1]);
+        const max = parseInt(rangeMatch[2]);
+        addAmount = Math.floor(Math.random() * (max - min + 1)) + min;
+      }
+    }
+    const num = parseInt(addAmount) || 0;
+    if (m.scope === 'global') {
+      const current = parseInt(await db.getGlobalVar(m.name)) || 0;
+      await db.setGlobalVar(m.name, String(current + num));
+    } else if (member) {
+      const current = parseInt(await db.getUserVar(guildId, member.id, m.name)) || 0;
+      await db.setUserVar(guildId, member.id, m.name, String(current + num));
+    }
+    text = text.replace(m.full, '');
+  }
+
+  // {cvar:get:global::name} or {cvar:get:user::name}
+  const getMatches = [];
+  let getMatch;
+  const getRe = /\{cvar:get:(global|user)::(\w+)\}/gi;
+  while ((getMatch = getRe.exec(text)) !== null) {
+    getMatches.push({ full: getMatch[0], scope: getMatch[1], name: getMatch[2], index: getMatch.index });
+  }
+  for (const m of getMatches) {
+    let val = '';
+    if (m.scope === 'global') {
+      val = await db.getGlobalVar(m.name) || '';
+    } else if (member) {
+      val = await db.getUserVar(guildId, member.id, m.name) || '';
+    }
+    text = text.replace(m.full, val);
+  }
+
+  // Legacy {cvar:set:name:value} -> user
+  const legacySetMatches = [];
+  let legacySetMatch;
+  const legacySetRe = /\{cvar:set:(\w+):(\S+)\}/gi;
+  while ((legacySetMatch = legacySetRe.exec(text)) !== null) {
+    legacySetMatches.push({ full: legacySetMatch[0], name: legacySetMatch[1], value: legacySetMatch[2] });
+  }
+  for (const m of legacySetMatches) {
+    if (member) await db.setUserVar(guildId, member.id, m.name, m.value);
+    text = text.replace(m.full, '');
+  }
+
+  // Legacy {cvar:add:name:amount} -> user
+  const legacyAddMatches = [];
+  let legacyAddMatch;
+  const legacyAddRe = /\{cvar:add:(\w+):(-?\d+)\}/gi;
+  while ((legacyAddMatch = legacyAddRe.exec(text)) !== null) {
+    legacyAddMatches.push({ full: legacyAddMatch[0], name: legacyAddMatch[1], amount: legacyAddMatch[2] });
+  }
+  for (const m of legacyAddMatches) {
+    if (member) {
+      const current = parseInt(await db.getUserVar(guildId, member.id, m.name)) || 0;
+      await db.setUserVar(guildId, member.id, m.name, String(current + parseInt(m.amount)));
+    }
+    text = text.replace(m.full, '');
+  }
+
+  return text;
+}
+
 async function parseReply(replyStr, context) {
   const { member, guild, guildId, message, user } = context;
 
@@ -59,215 +147,60 @@ async function parseReply(replyStr, context) {
   let dmMode = false;
   let sendToChannel = null;
 
-  // ── Extract {divemb:name} ─────────────────────────────────────────────────
-  text = text.replace(/\{divemb:\s*([^}]+)\}/gi, (_, name) => {
-    divembName = name.trim();
-    return '';
-  });
+  // ── Sync placeholder extraction (no db calls) ──────────────────────────────
+  text = text.replace(/\{divemb:\s*([^}]+)\}/gi, (_, name) => { divembName = name.trim(); return ''; });
+  text = text.replace(/\{requirerole:\s*([^}]+)\}/gi, (_, role) => { requireRole = role.trim(); return ''; });
+  text = text.replace(/\{requireuser:\s*([^}]+)\}/gi, (_, u) => { requireUser = u.trim(); return ''; });
+  text = text.replace(/\{requirechannel:\s*([^}]+)\}/gi, (_, chan) => { requireChannel = chan.trim(); return ''; });
+  text = text.replace(/\{denychannel:\s*([^}]+)\}/gi, (_, chan) => { denyChannel = chan.trim(); return ''; });
+  text = text.replace(/\{denyrole:\s*([^}]+)\}/gi, (_, role) => { denyRole = role.trim(); return ''; });
+  text = text.replace(/\{setnick:\s*([^}]+)\}/gi, (_, nick) => { setNick = nick.trim(); actions.push({ type: 'setnick', value: setNick }); return ''; });
+  text = text.replace(/\{reactreply:\s*([^}]+)\}/gi, (_, emoji) => { reactReplyEmoji = emoji.trim(); return ''; });
+  text = text.replace(/\{dm\}/gi, () => { dmMode = true; return ''; });
+  text = text.replace(/\{sendto:\s*([^}]+)\}/gi, (_, chan) => { sendToChannel = chan.trim(); return ''; });
+  text = text.replace(/\{cooldown:\s*(\d+)\}/gi, (_, secs) => { cooldownSeconds = parseInt(secs); return ''; });
 
-  // ── Extract {requirerole:} ─────────────────────────────────────────────────
-  text = text.replace(/\{requirerole:\s*([^}]+)\}/gi, (_, role) => {
-    requireRole = role.trim();
-    return '';
-  });
-
-  // ── Extract {requireuser:} ────────────────────────────────────────────────
-  text = text.replace(/\{requireuser:\s*([^}]+)\}/gi, (_, user) => {
-    requireUser = user.trim();
-    return '';
-  });
-
-  // ── Extract {requirechannel:} ────────────────────────────────────────────────
-  text = text.replace(/\{requirechannel:\s*([^}]+)\}/gi, (_, chan) => {
-    requireChannel = chan.trim();
-    return '';
-  });
-
-  // ── Extract {denychannel:} ────────────────────────────────────────────────
-  text = text.replace(/\{denychannel:\s*([^}]+)\}/gi, (_, chan) => {
-    denyChannel = chan.trim();
-    return '';
-  });
-
-  // ── Extract {denyrole:} ────────────────────────────────────────────────────
-  text = text.replace(/\{denyrole:\s*([^}]+)\}/gi, (_, role) => {
-    denyRole = role.trim();
-    return '';
-  });
-
-  // ── Extract {setnick:} ────────────────────────────────────────────────────
-  text = text.replace(/\{setnick:\s*([^}]+)\}/gi, (_, nick) => {
-    setNick = nick.trim();
-    actions.push({ type: 'setnick', value: setNick });
-    return '';
-  });
-
-  // ── Extract {reactreply:} ───────────────────────────────────────────────────
-  text = text.replace(/\{reactreply:\s*([^}]+)\}/gi, (_, emoji) => {
-    reactReplyEmoji = emoji.trim();
-    return '';
-  });
-
-  // ── Extract {dm} ───────────────────────────────────────────────────────────
-  text = text.replace(/\{dm\}/gi, () => {
-    dmMode = true;
-    return '';
-  });
-
-  // ── Extract {sendto:} ─────────────────────────────────────────────────────
-  text = text.replace(/\{sendto:\s*([^}]+)\}/gi, (_, chan) => {
-    sendToChannel = chan.trim();
-    return '';
-  });
-
-  // ── Extract {cooldown:seconds} ────────────────────────────────────────────
-  text = text.replace(/\{cooldown:\s*(\d+)\}/gi, (_, secs) => {
-    cooldownSeconds = parseInt(secs);
-    return '';
-  });
-
-  // ── Extract {embed:name_or_color} ──────────────────────────────────────────
   text = text.replace(/\{embed(?::([^}]*))?\}/gi, (_, val) => {
-    if (!val) {
-      embedColor = '#ffffff';
-    } else if (val.startsWith('#')) {
-      embedColor = val.trim();
-    } else {
-      embedName = val.trim();
-    }
+    if (!val) { embedColor = '#ffffff'; }
+    else if (val.startsWith('#')) { embedColor = val.trim(); }
+    else { embedName = val.trim(); }
     return '';
   });
 
-  // ── Extract {addrole:} ─────────────────────────────────────────────────────
-  text = text.replace(/\{addrole:\s*([^}]+)\}/gi, (_, role) => {
-    actions.push({ type: 'addrole', value: role.trim() });
-    return '';
-  });
+  text = text.replace(/\{addrole:\s*([^}]+)\}/gi, (_, role) => { actions.push({ type: 'addrole', value: role.trim() }); return ''; });
+  text = text.replace(/\{removerole:\s*([^}]+)\}/gi, (_, role) => { actions.push({ type: 'removerole', value: role.trim() }); return ''; });
+  text = text.replace(/\{addbutton:\s*([^}]+)\}/gi, (_, name) => { buttons.push(name.trim()); return ''; });
+  text = text.replace(/\{addselect:\s*([^}]+)\}/gi, (_, name) => { selectMenus.push(name.trim()); return ''; });
+  text = text.replace(/\{addlinkbutton:\s*([^|]+)\|\s*([^}]+)\}/gi, (_, label, url) => { linkButtons.push({ label: label.trim(), url: url.trim() }); return ''; });
+  text = text.replace(/\{react:\s*([^}]+)\}/gi, (_, emoji) => { reactEmojis.push(emoji.trim()); return ''; });
+  text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => { const opts = choices.split('|').map(s => s.trim()).filter(s => s); return opts.length ? opts[Math.floor(Math.random() * opts.length)] : ''; });
+  text = text.replace(/\{choose:([^}]+)\}/gi, (_, choices) => { const opts = choices.split('|').map(s => s.trim()).filter(s => s); return opts.length ? opts[Math.floor(Math.random() * opts.length)] : ''; });
+  text = text.replace(/\{range:(-?\d+):(-?\d+)\}/gi, (_, min, max) => { return String(Math.floor(Math.random() * (parseInt(max) - parseInt(min) + 1)) + parseInt(min)); });
 
-  // ── Extract {removerole:} ─────────────────────────────────────────────────
-  text = text.replace(/\{removerole:\s*([^}]+)\}/gi, (_, role) => {
-    actions.push({ type: 'removerole', value: role.trim() });
-    return '';
-  });
+  // ── Process async cvar patterns ───────────────────────────────────────────
+  text = await processCvarPatterns(text, context);
 
-  // ── Extract {addbutton:name} ──────────────────────────────────────────────
-  text = text.replace(/\{addbutton:\s*([^}]+)\}/gi, (_, name) => {
-    buttons.push(name.trim());
-    return '';
-  });
-
-  // ── Extract {addselect:name} ─────────────────────────────────────────────
-  text = text.replace(/\{addselect:\s*([^}]+)\}/gi, (_, name) => {
-    selectMenus.push(name.trim());
-    return '';
-  });
-
-  // ── Extract {addlinkbutton: label | url} ───────────────────────────────────
-  text = text.replace(/\{addlinkbutton:\s*([^|]+)\|\s*([^}]+)\}/gi, (_, label, url) => {
-    linkButtons.push({ label: label.trim(), url: url.trim() });
-    return '';
-  });
-
-  // ── Extract {react:} ──────────────────────────────────────────────────────
-  text = text.replace(/\{react:\s*([^}]+)\}/gi, (_, emoji) => {
-    reactEmojis.push(emoji.trim());
-    return '';
-  });
-
-  // ── Extract {random:choice1|choice2|...} ─────────────────────────────────
-  text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => {
-    const options = choices.split('|').map(s => s.trim()).filter(s => s);
-    if (options.length === 0) return '';
-    return options[Math.floor(Math.random() * options.length)];
-  });
-
-  // ── Extract {choose:choice1|choice2|...} ────────────────────────────────────
-  text = text.replace(/\{choose:([^}]+)\}/gi, (_, choices) => {
-    const options = choices.split('|').map(s => s.trim()).filter(s => s);
-    if (options.length === 0) return '';
-    return options[Math.floor(Math.random() * options.length)];
-  });
-
-  // ── Extract {range:min:max} ───────────────────────────────────────────────
-  text = text.replace(/\{range:(-?\d+):(-?\d+)\}/gi, (_, min, max) => {
-    const minNum = parseInt(min);
-    const maxNum = parseInt(max);
-    const result = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
-    return String(result);
-  });
-
-  // ── Extract {cvar:set:global::name:value} or {cvar:set:user::name:value} ─────────
-  text = text.replace(/\{cvar:set:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, value) => {
-    if (scope === 'global') {
-      db.setGlobalVar(name, value);
-    } else if (member) {
-      db.setUserVar(guildId, member.id, name, value);
-    }
-    return '';
-  });
-
-  // ── Extract {cvar:add:global::name:amount} or {cvar:add:user::name:amount} ─────
-  text = text.replace(/\{cvar:add:(global|user)::(\w+):(\S+)\}/gi, (_, scope, name, amount) => {
-    let addAmount = amount;
-    if (amount.startsWith('{range:')) {
-      const match = amount.match(/\{range:(-?\d+):(-?\d+)\}/);
-      if (match) {
-        const min = parseInt(match[1]);
-        const max = parseInt(match[2]);
-        addAmount = Math.floor(Math.random() * (max - min + 1)) + min;
-      }
-    }
-    const num = parseInt(addAmount) || 0;
-    if (scope === 'global') {
-      const current = parseInt(db.getGlobalVar(name)) || 0;
-      db.setGlobalVar(name, String(current + num));
-    } else if (member) {
-      const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
-      db.setUserVar(guildId, member.id, name, String(current + num));
-    }
-    return '';
-  });
-
-  // ── Extract {cvar:get:global::name} or {cvar:get:user::name} ─────────────────
-  text = text.replace(/\{cvar:get:(global|user)::(\w+)\}/gi, (_, scope, name) => {
-    if (scope === 'global') {
-      return db.getGlobalVar(name) || '';
-    } else if (member) {
-      return db.getUserVar(guildId, member.id, name) || '';
-    }
-    return '';
-  });
-
-  // Legacy support {cvar:set:name:value} -> user
-  text = text.replace(/\{cvar:set:(\w+):(\S+)\}/gi, (_, name, value) => {
-    if (member) db.setUserVar(guildId, member.id, name, value);
-    return '';
-  });
-
-  // Legacy support {cvar:add:name:amount} -> user
-  text = text.replace(/\{cvar:add:(\w+):(-?\d+)\}/gi, (_, name, amount) => {
-    if (member) {
-      const current = parseInt(db.getUserVar(guildId, member.id, name)) || 0;
-      db.setUserVar(guildId, member.id, name, String(current + parseInt(amount)));
-    }
-    return '';
-  });
-
-  // ── Extract {separator} ──────────────────────────────────────────────────
-  // Separators are collected with their position in text so we can interleave
-  // text segments and separators correctly in the final Components V2 layout.
-  const separatorPositions = []; // { index: charIndex, size: 'small'|'large' }
+  // ── Separator extraction (before variable processing) ──────────────────────
+  const separatorPositions = [];
   text = text.replace(/\{separator(?::(\w+))?\}/gi, (match, size, offset) => {
     separatorPositions.push({ index: offset, size: size || 'small' });
-    return '\x00'; // temp placeholder — split on this below
+    return '\x00';
   });
 
   // ── Process custom variables (%%variable%%) ────────────────────────────────
-  text = text.replace(/%%([^%]+)%%/g, (_, expr) => {
-    return evaluateExpression(expr.trim(), context);
-  });
+  const varRegex = /%%([^%]+)%%/g;
+  const varMatches = [];
+  let varMatch;
+  while ((varMatch = varRegex.exec(text)) !== null) {
+    varMatches.push({ full: varMatch[0], expr: varMatch[1].trim(), index: varMatch.index, length: varMatch[0].length });
+  }
+  for (let i = varMatches.length - 1; i >= 0; i--) {
+    const m = varMatches[i];
+    const resolved = await evaluateExpression(m.expr, context);
+    text = text.slice(0, m.index) + resolved + text.slice(m.index + m.length);
+  }
 
-  // ── Placeholders ───────────────────────────────────────────────────────────
+  // ── Placeholders (all sync) ───────────────────────────────────────────────
   text = text.replace(/\{newline\}/gi, '\n');
   text = text.replace(/\{user\}/gi, member ? `<@${member.id}>` : 'unknown');
   text = text.replace(/\{user_name\}/gi, member?.user?.username || 'unknown');
@@ -302,17 +235,12 @@ async function parseReply(replyStr, context) {
   // ── Build divemb or embed ──────────────────────────────────────────────────
   let embed = null;
   const hasSeparators = separatorPositions.length > 0;
-
-  // Split text on separator placeholders (\x00)
   const textSegments = text.split('\x00').map(s => s.trim()).filter(s => s);
 
-  if (!hasSeparators) {
-    // No separators — trim normally
-    text = text.trim();
-  }
+  if (!hasSeparators) text = text.trim();
 
   if (divembName) {
-    const savedDivemb = db.getDivemb(guildId, divembName);
+    const savedDivemb = await db.getDivemb(guildId, divembName).catch(() => null);
     if (savedDivemb) {
       embed = buildDivembFromData(savedDivemb);
       const combined = [savedDivemb.description, textSegments.join('\n')].filter(Boolean).join('\n');
@@ -321,7 +249,7 @@ async function parseReply(replyStr, context) {
       text = '';
     }
   } else if (embedName) {
-    const savedEmbed = db.getEmbed(guildId, embedName);
+    const savedEmbed = await db.getEmbed(guildId, embedName).catch(() => null);
     if (savedEmbed) {
       embed = buildEmbedFromData(savedEmbed);
       const combined = [savedEmbed.description, textSegments.join('\n')].filter(Boolean).join('\n');
@@ -342,7 +270,7 @@ async function parseReply(replyStr, context) {
   const allButtons = [];
 
   for (const btnName of buttons) {
-    const btnData = db.getButtonResponder(guildId, btnName);
+    const btnData = await db.getButtonResponder(guildId, btnName).catch(() => null);
     if (btnData) {
       const btn = new ButtonBuilder()
         .setCustomId(`br:${btnName}`)
@@ -367,7 +295,7 @@ async function parseReply(replyStr, context) {
 
   // ── Build select menus ─────────────────────────────────────────────────────
   for (const selName of selectMenus) {
-    const selData = db.getButtonResponder(guildId, selName);
+    const selData = await db.getButtonResponder(guildId, selName).catch(() => null);
     if (selData && selData.selectOptions) {
       const menu = new StringSelectMenuBuilder()
         .setCustomId(`sel:${selName}`)
@@ -383,28 +311,17 @@ async function parseReply(replyStr, context) {
     }
   }
 
-  // ── Build separators (discord.js v14.19+ supports Components V2) ────────────
+  // ── Build separators (Components V2) ───────────────────────────────────────
   const componentRows = [];
   if (hasSeparators) {
     for (let i = 0; i < separatorPositions.length; i++) {
       const { size } = separatorPositions[i];
-      
-      // Text segment before separator
       const segmentBefore = textSegments[i];
-      if (segmentBefore) {
-        componentRows.push({ type: 10, content: segmentBefore });
-      }
-      
-      // Separator (divider)
-      const spacing = size === 'large' ? 2 : 1;
-      componentRows.push({ type: 14, divider: true, spacing });
+      if (segmentBefore) componentRows.push({ type: 10, content: segmentBefore });
+      componentRows.push({ type: 14, divider: true, spacing: size === 'large' ? 2 : 1 });
     }
-    
-    // Last text segment after separator
     const lastSegment = textSegments[separatorPositions.length];
-    if (lastSegment) {
-      componentRows.push({ type: 10, content: lastSegment });
-    }
+    if (lastSegment) componentRows.push({ type: 10, content: lastSegment });
   }
 
   return {
@@ -428,13 +345,13 @@ async function parseReply(replyStr, context) {
   };
 }
 
-function evaluateExpression(expr, context) {
+async function evaluateExpression(expr, context) {
   const { member, guild, guildId, user } = context;
 
   if (expr.startsWith('var:')) {
     const varName = expr.slice(4);
     if (member) {
-      const val = db.getUserVar(guildId, member.id, varName);
+      const val = await db.getUserVar(guildId, member.id, varName).catch(() => null);
       return val !== null ? String(val) : '';
     }
     return '';
@@ -443,13 +360,23 @@ function evaluateExpression(expr, context) {
   if (expr.includes('+') || expr.includes('-') || expr.includes('*') || expr.includes('/')) {
     try {
       let processed = expr;
-      processed = processed.replace(/\{user_var:([^}]+)\}/gi, (_, name) => {
+
+      const uvMatches = [];
+      let uvMatch;
+      const uvRe = /\{user_var:([^}]+)\}/gi;
+      while ((uvMatch = uvRe.exec(processed)) !== null) {
+        uvMatches.push({ full: uvMatch[0], name: uvMatch[1].trim(), index: uvMatch.index });
+      }
+      for (let i = uvMatches.length - 1; i >= 0; i--) {
+        const m = uvMatches[i];
+        let val = '0';
         if (member) {
-          const val = db.getUserVar(guildId, member.id, name.trim());
-          return val !== null ? String(val) : '0';
+          const v = await db.getUserVar(guildId, member.id, m.name).catch(() => null);
+          val = v !== null ? String(v) : '0';
         }
-        return '0';
-      });
+        processed = processed.slice(0, m.index) + val + processed.slice(m.index + m.full.length);
+      }
+
       processed = processed.replace(/user_var:([^%]+)/gi, (_, name) => {
         if (member) {
           const val = db.getUserVar(guildId, member.id, name.trim());

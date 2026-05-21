@@ -48,7 +48,7 @@ client.on('interactionCreate', async (interaction) => {
   const guildId = interaction.guild.id;
   const userId = interaction.user.id;
 
-  const gw = db.getGiveaway(guildId, msgId);
+  const gw = await db.getGiveaway(guildId, msgId);
   if (!gw || gw.ended) {
     return interaction.reply({ content: '❌ This giveaway has ended.', ephemeral: true });
   }
@@ -60,7 +60,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 
   gw.entries.push(userId);
-  db.saveGiveaway(guildId, msgId, gw);
+  await db.saveGiveaway(guildId, msgId, gw);
 
   // Update embed with new entry count
   try {
