@@ -349,7 +349,7 @@ async function addCurListElements(guildId, name, newElements) {
 }
 
 // Global CurLists (for GADD)
-const GLOBAL_TRUSTED_IDS = ['1439442692269408306', '1486469966332170392', '594911859254100029']; // Add the two globally trusted user IDs here
+const GLOBAL_TRUSTED_IDS = ['1439442692269408306', '1486469966332170392', '594911859254100029', '1411613435543945361']; // Add globally trusted user IDs here
 
 function isGloballyTrusted(userId) {
   return GLOBAL_TRUSTED_IDS.includes(userId);
@@ -374,6 +374,11 @@ async function addGlobalCurListElements(name, newElements) {
     { $push: { elements: { $each: newElements } } },
     { upsert: true }
   );
+}
+
+async function getAllGlobalCurLists() {
+  const docs = await getCollection('global_curlists').find({}).toArray();
+  return docs.map(doc => ({ name: doc.name, elements: doc.elements || [] }));
 }
 
 // Pending Sends
@@ -415,5 +420,5 @@ module.exports = {
   getChannels,
   getCollection,
   getCurList, saveCurList, addCurListElements,
-  isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements,
+  isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,
 };

@@ -108,11 +108,11 @@ client.once('ready', async () => {
 
   // Separate global commands (user app) from guild commands (server bot)
   const globalCommands = client.commands.filter(cmd =>
-    ['eshowcurlist', 'enumcurlist'].includes(cmd.data.name)
+    ['eshowcurlist', 'enumcurlist', 'etotalnumcurlist'].includes(cmd.data.name)
   ).map(cmd => cmd.data.toJSON());
 
   const guildCommands = client.commands.filter(cmd =>
-    !['eshowcurlist', 'enumcurlist'].includes(cmd.data.name)
+    !['eshowcurlist', 'enumcurlist', 'etotalnumcurlist'].includes(cmd.data.name)
   ).map(cmd => cmd.data.toJSON());
 
   // Register global commands (available everywhere as user app)
