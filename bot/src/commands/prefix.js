@@ -15,11 +15,11 @@ module.exports = {
     const prefix = interaction.options.getString('prefix');
 
     if (!prefix) {
-      const current = db.getPrefix(guildId);
+      const current = await db.getPrefix(guildId);
       return interaction.reply({ content: `Current prefix: \`${current || '/'}\``, ephemeral: true });
     }
 
-    db.setPrefix(guildId, prefix);
+    await db.setPrefix(guildId, prefix);
     return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Prefix set to \`${prefix}\``)] });
   },
 };

@@ -244,19 +244,21 @@ async function deleteReactionRole(guildId, msgId, emoji) {
 }
 
 // Reminders
-async function getReminders(guildId) {
-  const doc = await getCollection('reminders').findOne({ guildId });
-  return doc?.data || [];
+async function getReminders() {
+  const doc = await getCollection('reminders').findOne({ guildId: 'global' });
+  return doc?.data || {};
 }
 
-async function saveReminders(guildId, reminders) {
-  await getCollection('reminders').updateOne({ guildId }, { $set: { data: reminders } }, { upsert: true });
+async function saveReminders(reminders) {
+  await getCollection('reminders').updateOne({ guildId: 'global' }, { $set: { data: reminders } }, { upsert: true });
 }
 
 // Mod Logs
 async function addModLog(guildId, entry) {
   const coll = getCollection('modlogs');
-  const id = ((await coll.find({ guildId }).sort({ id: -1 }).limit(1).toArray())[0]?.id || 0) + 1;
+  const doc = await coll.findOne({ guildId });
+  const ids = (doc?.data || []).map(l => l.id);
+  const id = (ids.length ? Math.max(...ids) : 0) + 1;
   await coll.updateOne({ guildId }, { $push: { data: { id, timestamp: Date.now(), ...entry } } }, { upsert: true });
 }
 
@@ -397,6 +399,26 @@ async function getChannels(guildId) {
   return doc?.channels || [];
 }
 
+// Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
+async function loadDB(collectionName) {
+  const docs = await getCollection(collectionName).find({}).toArray();
+  const result = {};
+  for (const doc of docs) {
+    result[doc.guildId] = doc.data || {};
+  }
+  return result;
+}
+
+async function saveDB(collectionName, data) {
+  for (const [guildId, guildData] of Object.entries(data)) {
+    await getCollection(collectionName).updateOne(
+      { guildId },
+      { $set: { data: guildData } },
+      { upsert: true }
+    );
+  }
+}
+
 module.exports = {
   connectDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -417,7 +439,7 @@ module.exports = {
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,
-  getChannels,
+  getChannels, loadDB, saveDB,
   getCollection,
   getCurList, saveCurList, addCurListElements,
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,

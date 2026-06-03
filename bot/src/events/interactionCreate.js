@@ -187,7 +187,7 @@ module.exports = {
                     await db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
                 }
 
-                const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user };
+                const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user, message: interaction.message };
                 const parsed = await parseReply(btnData.reply, context);
 
                 if (parsed.requireRole) {
@@ -298,7 +298,7 @@ module.exports = {
             }
 
             const replyText = selData.reply.replace(/\{value\}/gi, selectedValue);
-            const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user };
+            const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user, message: interaction.message };
             const parsed = await parseReply(replyText, context);
 
             if (parsed.requireRole) {

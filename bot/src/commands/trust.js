@@ -28,7 +28,7 @@ module.exports = {
                 return interaction.reply({ content: `⭐ ${target} is a permanent special user and is already trusted.`, ephemeral: true });
             }
 
-            db.setTrusted(guildId, target.id, true);
+            await db.setTrusted(guildId, target.id, true);
             return interaction.reply({
                 embeds: [botEmbed('#77dd77').setDescription(`✅ ${target} is now trusted and can run any bot command without needing server permissions.`)],
                 ephemeral: true,
@@ -42,7 +42,7 @@ module.exports = {
                 return interaction.reply({ content: `❌ ${target} is a permanent special user and cannot be untrusted.`, ephemeral: true });
             }
 
-            db.setTrusted(guildId, target.id, false);
+            await db.setTrusted(guildId, target.id, false);
             return interaction.reply({
                 embeds: [botEmbed('#ff6b6b').setDescription(`✅ Removed trusted status from ${target}.`)],
                 ephemeral: true,

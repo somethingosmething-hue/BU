@@ -57,7 +57,7 @@ module.exports = {
       await interaction.deferReply();
       const msg = await channel.send({ embeds: [embed], components: [row] });
 
-      db.saveGiveaway(guildId, msg.id, {
+      await db.saveGiveaway(guildId, msg.id, {
         title,
         description,
         endsAt,
@@ -75,18 +75,18 @@ module.exports = {
 
     if (sub === 'end') {
       const messageId = interaction.options.getString('message_id');
-      const gw = db.getGiveaway(guildId, messageId);
+      const gw = await db.getGiveaway(guildId, messageId);
       if (!gw) return interaction.reply({ content: '❌ Giveaway not found.' });
       if (gw.ended) return interaction.reply({ content: '❌ That giveaway already ended.' });
 
       gw.endsAt = Date.now() - 1;
-      db.saveGiveaway(guildId, messageId, gw);
+      await db.saveGiveaway(guildId, messageId, gw);
       return interaction.reply({ content: '✅ Giveaway will be ended on the next check cycle (up to 15 seconds).' });
     }
 
     if (sub === 'reroll') {
       const messageId = interaction.options.getString('message_id');
-      const gw = db.getGiveaway(guildId, messageId);
+      const gw = await db.getGiveaway(guildId, messageId);
       if (!gw || !gw.ended) return interaction.reply({ content: '❌ Giveaway not found or not yet ended.' });
       if (!interaction.member.permissions.has('ManageGuild') && interaction.user.id !== gw.hostId) {
         return interaction.reply({ content: '❌ Only the host or a manager can reroll.' });
@@ -109,7 +109,7 @@ module.exports = {
     }
 
     if (sub === 'list') {
-      const all = db.getGiveaways(guildId);
+      const all = await db.getGiveaways(guildId);
       const active = Object.entries(all).filter(([, gw]) => !gw.ended);
       if (!active.length) return interaction.reply({ content: '📭 No active giveaways.' });
 

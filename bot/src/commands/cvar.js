@@ -39,26 +39,26 @@ module.exports = {
     if (type === 'global') {
       if (sub === 'set') {
         const value = interaction.options.getString('value') || '0';
-        db.setGlobalVar(varName, value);
+        await db.setGlobalVar(varName, value);
         return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Set global **${varName}** = \`${value}\``)] });
       }
       if (sub === 'get') {
-        const value = db.getGlobalVar(varName);
+        const value = await db.getGlobalVar(varName);
         if (value === null) return interaction.reply({ content: `❌ No global variable **${varName}**` });
         return interaction.reply({ embeds: [botEmbed().setTitle(`📊 global::${varName}`).setDescription(`**${value}**`)] });
       }
       if (sub === 'add') {
         const amount = interaction.options.getInteger('amount');
-        const current = parseInt(db.getGlobalVar(varName)) || 0;
-        db.setGlobalVar(varName, String(current + amount));
+        const current = parseInt(await db.getGlobalVar(varName)) || 0;
+        await db.setGlobalVar(varName, String(current + amount));
         return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Added **${amount}** to global **${varName}**. New: **${current + amount}**`)] });
       }
       if (sub === 'delete') {
-        db.deleteGlobalVar(varName);
+        await db.deleteGlobalVar(varName);
         return interaction.reply({ embeds: [botEmbed().setDescription(`✅ Deleted global **${varName}**`)] });
       }
       if (sub === 'list') {
-        const vars = db.getGlobalVars();
+        const vars = await db.getGlobalVars();
         const entries = Object.entries(vars);
         if (!entries.length) return interaction.reply({ content: '📭 No global variables.' });
         const lines = entries.map(([k, v]) => `• **${k}**: \`${v}\``);
@@ -69,26 +69,26 @@ module.exports = {
     if (type === 'user') {
       if (sub === 'set') {
         const value = interaction.options.getString('value') || '0';
-        db.setUserVar(guildId, targetUser.id, varName, value);
+        await db.setUserVar(guildId, targetUser.id, varName, value);
         return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Set **${varName}** = \`${value}\` for ${targetUser}`)] });
       }
       if (sub === 'get') {
-        const value = db.getUserVar(guildId, targetUser.id, varName);
+        const value = await db.getUserVar(guildId, targetUser.id, varName);
         if (value === null) return interaction.reply({ content: `❌ No variable **${varName}** for ${targetUser}` });
         return interaction.reply({ embeds: [botEmbed().setTitle(`📊 user::${varName}`).setDescription(`**${value}**`)] });
       }
       if (sub === 'add') {
         const amount = interaction.options.getInteger('amount');
-        const current = parseInt(db.getUserVar(guildId, targetUser.id, varName)) || 0;
-        db.setUserVar(guildId, targetUser.id, varName, String(current + amount));
+        const current = parseInt(await db.getUserVar(guildId, targetUser.id, varName)) || 0;
+        await db.setUserVar(guildId, targetUser.id, varName, String(current + amount));
         return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Added **${amount}** to **${varName}** for ${targetUser}. New: **${current + amount}**`)] });
       }
       if (sub === 'delete') {
-        db.deleteUserVar(guildId, targetUser.id, varName);
+        await db.deleteUserVar(guildId, targetUser.id, varName);
         return interaction.reply({ embeds: [botEmbed().setDescription(`✅ Deleted **${varName}** for ${targetUser}`)] });
       }
       if (sub === 'list') {
-        const vars = db.getAllUserVars(guildId, targetUser.id);
+        const vars = await db.getAllUserVars(guildId, targetUser.id);
         const entries = Object.entries(vars);
         if (!entries.length) return interaction.reply({ content: `📭 No variables for ${targetUser}` });
         const lines = entries.map(([k, v]) => `• **${k}**: \`${v}\``);

@@ -22,8 +22,8 @@ module.exports = {
 
         // ── Reaction Roles ────────────────────────────────────────────────────
         // Check both the resolved emoji string and the raw name (unicode fallback)
-        const roleId = db.getReactionRole(guildId, messageId, emojiStr)
-                    || db.getReactionRole(guildId, messageId, reaction.emoji.name);
+        const roleId = await db.getReactionRole(guildId, messageId, emojiStr)
+                    || await db.getReactionRole(guildId, messageId, reaction.emoji.name);
 
         if (roleId) {
             const member = await guild.members.fetch(user.id).catch(() => null);
@@ -39,15 +39,15 @@ module.exports = {
         }
 
         // ── Reaction Event Triggers ───────────────────────────────────────────
-        const trigger = db.getReactionTrigger(guildId, messageId, emojiStr)
-                     || db.getReactionTrigger(guildId, messageId, reaction.emoji.name);
+        const trigger = await db.getReactionTrigger(guildId, messageId, emojiStr)
+                     || await db.getReactionTrigger(guildId, messageId, reaction.emoji.name);
 
         if (!trigger) return;
 
         const member = await guild.members.fetch(user.id).catch(() => null);
         if (!member) return;
 
-        const context = { member, guild, guildId, user };
+        const context = { member, guild, guildId, user, message: reaction.message };
         const parsed = await parseReply(trigger.response, context);
 
         if (parsed.requireRole) {

@@ -34,7 +34,7 @@ module.exports = {
         const guildId = interaction.guildId;
         if (!guildId) return;
         const focused = interaction.options.getFocused(true);
-        const ars = db.getAutoresponders(guildId);
+        const ars = await db.getAutoresponders(guildId);
         const choices = Object.keys(ars)
             .filter(c => c.toLowerCase().includes(focused.value.toLowerCase()))
             .slice(0, 25);
@@ -59,12 +59,12 @@ module.exports = {
                 }
             }
 
-            const existing = db.getAutoresponders(guildId);
+            const existing = await db.getAutoresponders(guildId);
             if (Object.keys(existing).length >= 100) {
                 return interaction.reply({ content: '❌ You have reached the limit of 100 autoresponders.' });
             }
 
-            db.saveAutoresponder(guildId, trigger, {
+            await db.saveAutoresponder(guildId, trigger, {
                 reply,
                 matchType,
                 sendType,
@@ -88,14 +88,14 @@ module.exports = {
 
         if (sub === 'remove') {
             const trigger = interaction.options.getString('trigger');
-            const all = db.getAutoresponders(guildId);
+            const all = await db.getAutoresponders(guildId);
             if (!all[trigger]) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.` });
-            db.deleteAutoresponder(guildId, trigger);
+            await db.deleteAutoresponder(guildId, trigger);
             return interaction.reply({ content: `✅ Autoresponder \`${trigger}\` removed.` });
         }
 
         if (sub === 'list') {
-            const all  = db.getAutoresponders(guildId);
+            const all  = await db.getAutoresponders(guildId);
             const keys = Object.keys(all);
             if (!keys.length) return interaction.reply({ content: '📭 No autoresponders yet. Add one with `/ar add`.' });
 
@@ -116,7 +116,7 @@ module.exports = {
 
         if (sub === 'info') {
             const trigger = interaction.options.getString('trigger');
-            const all  = db.getAutoresponders(guildId);
+            const all  = await db.getAutoresponders(guildId);
             const data = all[trigger];
             if (!data) return interaction.reply({ content: `❌ No autoresponder with trigger \`${trigger}\`.` });
 

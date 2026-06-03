@@ -71,8 +71,8 @@ module.exports = {
         const guildId = interaction.guildId;
         const mod = interaction.member;
 
-        const logAction = (type, userId, reason) => {
-            db.addModLog(guildId, { type, userId, moderatorId: interaction.user.id, reason });
+        const logAction = async (type, userId, reason) => {
+            await db.addModLog(guildId, { type, userId, moderatorId: interaction.user.id, reason });
         };
 
         // Helper: check a specific permission and reply if missing.
@@ -98,7 +98,7 @@ module.exports = {
             try {
                 await target.send({ embeds: [botEmbed('#ff6b6b').setTitle(`You were banned from **${interaction.guild.name}**`).setDescription(`**Reason:** ${reason}`)] }).catch(() => {});
                 await interaction.guild.members.ban(target, { reason, deleteMessageDays: delDays });
-                logAction('ban', target.id, reason);
+                await logAction('ban', target.id, reason);
                 return interaction.reply({ embeds: [botEmbed('#ff6b6b').setTitle('🔨 Member Banned').addFields({ name: 'User', value: `${target} (${target.id})`, inline: true }, { name: 'Reason', value: reason })] });
             } catch (e) {
                 return interaction.reply({ content: `❌ Failed to ban: ${e.message}` });
@@ -112,7 +112,7 @@ module.exports = {
             const reason = interaction.options.getString('reason') || 'No reason provided';
             try {
                 await interaction.guild.members.unban(userId, reason);
-                logAction('unban', userId, reason);
+                await logAction('unban', userId, reason);
                 return interaction.reply({ embeds: [botEmbed('#77dd77').setDescription(`✅ Unbanned user ID \`${userId}\`.`)] });
             } catch {
                 return interaction.reply({ content: '❌ Could not unban that user. Are they actually banned?' });
@@ -130,7 +130,7 @@ module.exports = {
             try {
                 await target.send({ embeds: [botEmbed('#ffa07a').setTitle(`You were kicked from **${interaction.guild.name}**`).setDescription(`**Reason:** ${reason}`)] }).catch(() => {});
                 await member.kick(reason);
-                logAction('kick', target.id, reason);
+                await logAction('kick', target.id, reason);
                 return interaction.reply({ embeds: [botEmbed('#ffa07a').setTitle('👢 Member Kicked').addFields({ name: 'User', value: `${target}`, inline: true }, { name: 'Reason', value: reason })] });
             } catch (e) {
                 return interaction.reply({ content: `❌ Failed to kick: ${e.message}` });
@@ -149,7 +149,7 @@ module.exports = {
             if (!member) return interaction.reply({ content: '❌ User not in server.' });
             if (!member.moderatable) return interaction.reply({ content: '❌ I cannot moderate this member.' });
             await member.timeout(durMs, reason);
-            logAction('timeout', target.id, `${durStr} — ${reason}`);
+            await logAction('timeout', target.id, `${durStr} — ${reason}`);
             return interaction.reply({ embeds: [botEmbed('#ffcc00').setTitle('⏱️ Member Timed Out').addFields({ name: 'User', value: `${target}`, inline: true }, { name: 'Duration', value: fmtDuration(durMs), inline: true }, { name: 'Reason', value: reason })] });
         }
 
@@ -169,16 +169,16 @@ module.exports = {
             if (!requirePerm('ModerateMembers')) return;
             const target = interaction.options.getUser('user');
             const reason = interaction.options.getString('reason');
-            logAction('warn', target.id, reason);
+            await logAction('warn', target.id, reason);
             try { await target.send({ embeds: [botEmbed('#ffd700').setTitle(`⚠️ Warning in **${interaction.guild.name}**`).setDescription(`**Reason:** ${reason}`)] }); } catch {}
-            const logs = db.getUserModLogs(guildId, target.id).filter(l => l.type === 'warn');
+            const logs = (await db.getUserModLogs(guildId, target.id)).filter(l => l.type === 'warn');
             return interaction.reply({ embeds: [botEmbed('#ffd700').setTitle('⚠️ Member Warned').addFields({ name: 'User', value: `${target}`, inline: true }, { name: 'Total Warnings', value: String(logs.length), inline: true }, { name: 'Reason', value: reason })] });
         }
 
         // ── Warnings ──────────────────────────────────────────────────────────
         if (sub === 'warnings') {
             const target = interaction.options.getUser('user');
-            const logs = db.getUserModLogs(guildId, target.id);
+            const logs = await db.getUserModLogs(guildId, target.id);
             if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has no moderation history.` });
             const lines = logs.slice(-10).reverse().map(l => {
                 const date = new Date(l.timestamp).toLocaleDateString('en-US');
@@ -260,7 +260,7 @@ module.exports = {
         // ── Modlogs ───────────────────────────────────────────────────────────
         if (sub === 'modlogs') {
             const target = interaction.options.getUser('user');
-            const logs = db.getUserModLogs(guildId, target.id);
+            const logs = await db.getUserModLogs(guildId, target.id);
             if (!logs.length) return interaction.reply({ content: `✅ ${target.username} has a clean record.` });
             const lines = logs.slice(-15).reverse().map(l => {
                 const date = new Date(l.timestamp).toLocaleDateString('en-US');

@@ -21,7 +21,7 @@ module.exports = {
     const guildId = interaction.guildId;
     if (!guildId) return;
     const focused = interaction.options.getFocused(true);
-    const cmds = db.getCustomCommands(guildId);
+    const cmds = await db.getCustomCommands(guildId);
     const choices = Object.keys(cmds).filter(c => c.toLowerCase().includes(focused.value.toLowerCase())).slice(0, 25);
     await interaction.respond(choices.map(c => ({ name: c, value: c })));
   },
@@ -34,12 +34,12 @@ module.exports = {
       const name = interaction.options.getString('name').toLowerCase().replace(/\s+/g, '-');
       const response = interaction.options.getString('response');
 
-      const cmds = db.getCustomCommands(guildId);
+      const cmds = await db.getCustomCommands(guildId);
       if (Object.keys(cmds).length >= 100) {
         return interaction.reply({ content: '❌ You have reached the limit of 100 custom commands.' });
       }
 
-      db.saveCustomCommand(guildId, name, { response, createdAt: Date.now() });
+      await db.saveCustomCommand(guildId, name, { response, createdAt: Date.now() });
 
       return interaction.reply({
         embeds: [botEmbed('#77dd77').setTitle('✅ Custom Command Added')
@@ -52,15 +52,15 @@ module.exports = {
 
     if (sub === 'remove') {
       const name = interaction.options.getString('name').toLowerCase();
-      const cmds = db.getCustomCommands(guildId);
+      const cmds = await db.getCustomCommands(guildId);
       if (!cmds[name]) return interaction.reply({ content: `❌ No custom command named **${name}**.` });
 
-      db.deleteCustomCommand(guildId, name);
+      await db.deleteCustomCommand(guildId, name);
       return interaction.reply({ content: `✅ Custom command **${name}** removed.` });
     }
 
     if (sub === 'list') {
-      const cmds = db.getCustomCommands(guildId);
+      const cmds = await db.getCustomCommands(guildId);
       const keys = Object.keys(cmds);
       if (!keys.length) return interaction.reply({ content: '📭 No custom commands yet. Add one with `/cc add`.' });
 
@@ -72,7 +72,7 @@ module.exports = {
 
     if (sub === 'info') {
       const name = interaction.options.getString('name').toLowerCase();
-      const cmds = db.getCustomCommands(guildId);
+      const cmds = await db.getCustomCommands(guildId);
       const data = cmds[name];
       if (!data) return interaction.reply({ content: `❌ No custom command named **${name}**.` });
 

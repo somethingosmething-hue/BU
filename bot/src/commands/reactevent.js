@@ -49,7 +49,7 @@ module.exports = {
       }
 
       const data = { response, action, role: roleStr, channelId: channel.id };
-      db.saveReactionTrigger(guildId, messageId, emojiStr, data);
+      await db.saveReactionTrigger(guildId, messageId, emojiStr, data);
 
       return interaction.reply({
         embeds: [botEmbed('#77dd77').setTitle('✅ Reaction Trigger Added')
@@ -65,15 +65,15 @@ module.exports = {
       const messageId = interaction.options.getString('message_id');
       const emojiStr = interaction.options.getString('emoji').trim();
 
-      const existing = db.getReactionTrigger(guildId, messageId, emojiStr);
+      const existing = await db.getReactionTrigger(guildId, messageId, emojiStr);
       if (!existing) return interaction.reply({ content: '❌ No trigger found for that message + emoji.' });
 
-      db.deleteReactionTrigger(guildId, messageId, emojiStr);
+      await db.deleteReactionTrigger(guildId, messageId, emojiStr);
       return interaction.reply({ content: `✅ Removed trigger for ${emojiStr} on message \`${messageId}\`.` });
     }
 
     if (sub === 'list') {
-      const all = db.getReactionTriggers(guildId);
+      const all = await db.getReactionTriggers(guildId);
       const entries = Object.entries(all);
 
       if (!entries.length) return interaction.reply({ content: '📭 No reaction triggers set up.' });
@@ -94,11 +94,11 @@ module.exports = {
       const emojiStr = interaction.options.getString('emoji').trim();
       const newResponse = interaction.options.getString('response');
 
-      const existing = db.getReactionTrigger(guildId, messageId, emojiStr);
+      const existing = await db.getReactionTrigger(guildId, messageId, emojiStr);
       if (!existing) return interaction.reply({ content: '❌ No trigger found.' });
 
       existing.response = newResponse;
-      db.saveReactionTrigger(guildId, messageId, emojiStr, existing);
+      await db.saveReactionTrigger(guildId, messageId, emojiStr, existing);
       return interaction.reply({ content: `✅ Updated response for ${emojiStr} on message \`${messageId}\`.` });
     }
   },

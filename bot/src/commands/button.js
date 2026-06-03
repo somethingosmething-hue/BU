@@ -48,7 +48,7 @@ module.exports = {
     const guildId = interaction.guildId;
     if (!guildId) return;
     const focused = interaction.options.getFocused(true);
-    const btns = db.getButtonResponders(guildId);
+    const btns = await db.getButtonResponders(guildId);
     const choices = Object.keys(btns).filter(c => c.toLowerCase().includes(focused.value.toLowerCase())).slice(0, 25);
     await interaction.respond(choices.map(c => ({ name: c, value: c })));
   },
@@ -64,7 +64,7 @@ module.exports = {
       const color = interaction.options.getString('color') || 'blue';
       const emoji = interaction.options.getString('emoji') || null;
       const cooldown = interaction.options.getInteger('cooldown') ?? 0;
-      db.saveButtonResponder(guildId, name, { type: 'button', label, reply, color, emoji, cooldown: cooldown || null });
+      await db.saveButtonResponder(guildId, name, { type: 'button', label, reply, color, emoji, cooldown: cooldown || null });
 
       const preview = new ButtonBuilder()
         .setCustomId(`br:${name}`)
@@ -99,7 +99,7 @@ module.exports = {
         };
       });
 
-      db.saveButtonResponder(guildId, name, {
+      await db.saveButtonResponder(guildId, name, {
         type: 'select',
         placeholder,
         selectOptions,
@@ -118,15 +118,16 @@ module.exports = {
 
     if (sub === 'remove') {
       const name = interaction.options.getString('name').toLowerCase();
-      if (!db.getButtonResponder(guildId, name)) {
+      const existing = await db.getButtonResponder(guildId, name);
+      if (!existing) {
         return interaction.reply({ content: `❌ No responder named **${name}**.` });
       }
-      db.deleteButtonResponder(guildId, name);
+      await db.deleteButtonResponder(guildId, name);
       return interaction.reply({ content: `✅ Responder **${name}** deleted.` });
     }
 
     if (sub === 'list') {
-      const all = db.getButtonResponders(guildId);
+      const all = await db.getButtonResponders(guildId);
       const keys = Object.keys(all);
       if (!keys.length) return interaction.reply({ content: '📭 No responders yet.' });
 
@@ -153,7 +154,7 @@ module.exports = {
       const selects = [];
 
       for (const name of names) {
-        const data = db.getButtonResponder(guildId, name);
+        const data = await db.getButtonResponder(guildId, name);
         if (!data) continue;
 
         if (data.type === 'select') {

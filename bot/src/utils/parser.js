@@ -377,13 +377,21 @@ async function evaluateExpression(expr, context) {
         processed = processed.slice(0, m.index) + val + processed.slice(m.index + m.full.length);
       }
 
-      processed = processed.replace(/user_var:([^%]+)/gi, (_, name) => {
+      const uvDirectMatches = [];
+      let uvDirectMatch;
+      const uvDirectRe = /user_var:([^%]+)/gi;
+      while ((uvDirectMatch = uvDirectRe.exec(processed)) !== null) {
+        uvDirectMatches.push({ full: uvDirectMatch[0], name: uvDirectMatch[1].trim(), index: uvDirectMatch.index });
+      }
+      for (let i = uvDirectMatches.length - 1; i >= 0; i--) {
+        const m = uvDirectMatches[i];
+        let val = '0';
         if (member) {
-          const val = db.getUserVar(guildId, member.id, name.trim());
-          return val !== null ? String(val) : '0';
+          const v = await db.getUserVar(guildId, member.id, m.name).catch(() => null);
+          val = v !== null ? String(v) : '0';
         }
-        return '0';
-      });
+        processed = processed.slice(0, m.index) + val + processed.slice(m.index + m.full.length);
+      }
 
       if (/^[\d\s+\-*/().]+$/.test(processed)) {
         const result = Function('"use strict"; return (' + processed + ')')();

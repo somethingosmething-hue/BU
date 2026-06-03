@@ -43,12 +43,12 @@ module.exports = {
 
         if (sub === 'rank') {
             const target    = interaction.options.getUser('user') || interaction.user;
-            const data      = db.getLevelUser(guildId, target.id);
+            const data      = await db.getLevelUser(guildId, target.id);
             const level     = data.level || 0;
             const xp        = data.xp    || 0;
             const needed    = db.xpForLevel(level + 1);
             const currentXP = xp - Array.from({ length: level }, (_, i) => db.xpForLevel(i + 1)).reduce((a, b) => a + b, 0);
-            const lb        = db.getLevelLeaderboard(guildId);
+            const lb        = await db.getLevelLeaderboard(guildId);
             const rank      = lb.findIndex(e => e.userId === target.id) + 1;
 
             return interaction.reply({
@@ -67,7 +67,7 @@ module.exports = {
 
         if (sub === 'leaderboard') {
             await interaction.deferReply();
-            const lb = db.getLevelLeaderboard(guildId);
+            const lb = await db.getLevelLeaderboard(guildId);
             if (!lb.length) return interaction.editReply({ content: '📭 No level data yet!' });
 
             const lines = await Promise.all(lb.map(async (e, i) => {
@@ -95,7 +95,7 @@ module.exports = {
             if (disableLevelUp !== null) update.levelUpChannel = disableLevelUp ? false : undefined;
 
             if (!Object.keys(update).length) {
-                const cur = db.getLevelSettings(guildId);
+                const cur = await db.getLevelSettings(guildId);
                 return interaction.reply({
                     embeds: [botEmbed().setTitle('⚙️ Level Settings')
                         .addFields(
@@ -107,14 +107,14 @@ module.exports = {
                 });
             }
 
-            db.setLevelSettings(guildId, update);
+            await db.setLevelSettings(guildId, update);
             return interaction.reply({ content: '✅ Level settings updated.' });
         }
 
         if (sub === 'setlevel') {
             const target = interaction.options.getUser('user');
             const level  = interaction.options.getInteger('level');
-            const dbData = db.getLevelUser(guildId, target.id);
+            const dbData = await db.getLevelUser(guildId, target.id);
             let totalXP = 0;
             for (let i = 1; i <= level; i++) totalXP += db.xpForLevel(i);
             const raw = db.loadDB('levels');
