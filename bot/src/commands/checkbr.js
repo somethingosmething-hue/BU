@@ -40,12 +40,17 @@ module.exports = {
     ),
 
   async autocomplete(interaction) {
-    const focused = interaction.options.getFocused().toLowerCase();
-    const choices = SERVICES
-      .filter(s => s.name.toLowerCase().includes(focused))
-      .slice(0, 25)
-      .map(s => ({ name: s.name, value: s.key }));
-    await interaction.respond(choices).catch(() => {});
+    try {
+      const focused = interaction.options.getFocused(true);
+      const value = focused.value.toLowerCase();
+      const choices = SERVICES
+        .filter(s => s.name.toLowerCase().includes(value))
+        .slice(0, 25)
+        .map(s => ({ name: s.name, value: s.key }));
+      await interaction.respond(choices);
+    } catch (e) {
+      console.error('Autocomplete error in /checkbr:', e);
+    }
   },
 
   async execute(interaction) {
