@@ -20,12 +20,32 @@ const SERVICES = [
   { botId: '1379527568671113226', command: '/heart', name: 'GuildSeek', cooldown: '24 hours', type: 'heart' },
   { botId: '315926021457051650', command: '/bump', name: 'Server Monitoring', cooldown: '4 hours', type: 'bump' },
   { botId: '826100334534328340', command: '/bump', name: 'DH Bump', cooldown: '2 hours', type: 'bump' },
+  { botId: '476259371912003597', command: '/bump', name: 'Discord.Me', cooldown: '6 hours', type: 'bump', website: true, url: 'https://discord.me/dashboard' },
   { botId: '1208555826340565074', command: '/vote', name: 'Listcord', cooldown: '12 hours', type: 'vote' },
   { botId: '813077581749288990', command: '/vote', name: 'Disurl', cooldown: '12 hours', type: 'vote', website: true, url: 'https://disurl.me/server/1490408248560324648' },
   { botId: '115385224119975941', command: '/bump', name: 'DiscordServers', cooldown: '12 hours', type: 'bump', website: true, url: 'https://discordservers.com/server/1490408248560324648/bump' },
   { botId: '493224032167002123', command: '/bump', name: 'DS.ME', cooldown: '6 hours', type: 'bump', website: true, url: 'https://discords.com/servers/1490408248560324648/upvote' },
-  { botId: '476259371912003597', command: '/bump', name: 'Discord.Me', cooldown: '6 hours', type: 'bump', website: true, url: 'https://discord.me/dashboard' },
   { botId: '422087909634736160', command: '/vote', name: 'Top.gg', cooldown: '12 hours', type: 'vote', website: true, url: 'https://top.gg/discord/servers/858744075740475392' },
+];
+
+const CHAIN_BOTS = [
+  { key: '302050872383242240:/bump', name: 'Disboard', text: '*/bump*' },
+  { key: '341738423134060544:/bump', name: 'DiscordServers.io', text: '*/bump*' },
+  { key: '1159147139960676422:/bump', name: 'Discordus', text: '*/bump*' },
+  { key: '813077581749288990:/bump', name: 'Disurl', text: '*/bump*' },
+  { key: '1379527568671113226:/bump', name: 'GuildSeek', text: '*/bump*' },
+  { key: '1379527568671113226:/heart', name: 'GuildSeek', text: '*/heart*' },
+  { key: '315926021457051650:/bump', name: 'Server Monitoring', text: '*/bump*' },
+  { key: '826100334534328340:/bump', name: 'DH Bump', text: '*/bump*' },
+  { key: '476259371912003597:/bump', name: 'Discord.Me', text: '[bump here](https://discord.me/dashboard)' },
+  { key: '1208555826340565074:/vote', name: 'Listcord', text: '*/vote*' },
+];
+
+const CHAIN_SITES = [
+  { key: '813077581749288990:/vote', name: 'Disurl', text: '[vote here](https://disurl.me/server/1490408248560324648)' },
+  { key: '115385224119975941:/bump', name: 'DiscordServers', text: '[bump here](https://discordservers.com/server/1490408248560324648/bump)' },
+  { key: '493224032167002123:/bump', name: 'DS.ME', text: '[vote here](https://discords.com/servers/1490408248560324648/upvote)' },
+  { key: '422087909634736160:/vote', name: 'Top.gg', text: '[vote here](https://top.gg/discord/servers/858744075740475392)' },
 ];
 
 const PING_USER_KEYS = [
@@ -95,6 +115,27 @@ async function findService(message) {
   return services[0];
 }
 
+function serviceKey(svc) {
+  return `${svc.botId}:${svc.command}`;
+}
+
+async function findNext(guildId, currentKey) {
+  const chain = CHAIN_BOTS.find(s => s.key === currentKey) ? CHAIN_BOTS : CHAIN_SITES;
+  const idx = chain.findIndex(s => s.key === currentKey);
+  if (idx === -1) return null;
+  for (let i = idx + 1; i < chain.length; i++) {
+    const entry = chain[i];
+    const svc = SERVICES.find(s => serviceKey(s) === entry.key);
+    if (!svc) continue;
+    const cdMs = parseMs(svc.cooldown);
+    const existing = await db.getBumpCooldown(guildId, entry.key);
+    if (!existing || Date.now() - existing >= cdMs) {
+      return entry;
+    }
+  }
+  return null;
+}
+
 async function resolveBumpChannel(guildId, client) {
   const settings = await db.getServerSettings(guildId);
   const brChannelId = settings.bumpReminderChannel;
@@ -150,9 +191,15 @@ module.exports = {
       await db.setBumpUser(guildId, serviceKey, userId);
     }
 
+    let desc = `Thank you for ${verb(matchedService.type)} on __${matchedService.name}__! We'll send a reminder again in **(${matchedService.cooldown})**.`;
+    const next = await findNext(guildId, serviceKey);
+    if (next) {
+      desc += `\n\n**Next →** __${next.name}__ ${next.text}`;
+    }
+
     const thankEmbed = new EmbedBuilder()
       .setColor('#BE74E3')
-      .setDescription(`Thank you for ${verb(matchedService.type)} on __${matchedService.name}__! We'll send a reminder again in **(${matchedService.cooldown})**.`);
+      .setDescription(desc);
 
     await brChannel.send({ embeds: [thankEmbed] }).catch(() => {});
     console.log(`[BumpHandler] Sent acknowledgment for ${matchedService.name}`);
