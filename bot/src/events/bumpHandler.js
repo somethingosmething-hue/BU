@@ -101,6 +101,22 @@ async function sendReminder(client, data) {
   await db.deleteBumpUser(data.guildId, data.serviceKey);
 }
 
+function getMessageText(message) {
+  let text = message.content || '';
+  if (message.embeds?.length) {
+    for (const e of message.embeds) {
+      if (e.description) text += ' ' + e.description;
+      if (e.title) text += ' ' + e.title;
+      if (e.fields?.length) {
+        for (const f of e.fields) {
+          text += ' ' + (f.name || '') + ' ' + (f.value || '');
+        }
+      }
+    }
+  }
+  return text.toLowerCase();
+}
+
 async function findService(message) {
   const authorId = message.author.id;
   const services = SERVICES.filter(s => s.botId === authorId);
@@ -108,11 +124,24 @@ async function findService(message) {
 
   if (services.length === 1) return services[0];
 
-  const content = message.content.toLowerCase();
+  const text = getMessageText(message);
+
+  let best = null;
+  let bestLen = 0;
   for (const svc of services) {
-    if (content.includes(svc.type)) return svc;
+    const cmd = svc.command.replace('/', '');
+    if (text.includes(cmd) && cmd.length > bestLen) {
+      best = svc;
+      bestLen = cmd.length;
+    }
   }
-  return services[0];
+  if (best) return best;
+
+  for (const svc of services) {
+    if (text.includes(svc.type)) return svc;
+  }
+
+  return null;
 }
 
 function serviceKey(svc) {
