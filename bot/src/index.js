@@ -190,6 +190,35 @@ client.once('ready', async () => {
     } catch (e) { console.error('Send loop error:', e.message); }
   }, 5000);
 
+  // Bump reminder recovery (catch missed reminders after restart)
+  const bumpHandler = require('./events/bumpHandler');
+  try {
+    const pendingReminders = await db.getPendingBumpReminders();
+    for (const r of pendingReminders) {
+      const remaining = r.remindAt - Date.now();
+      if (remaining <= 0) {
+        bumpHandler.sendReminder(client, r);
+      } else {
+        setTimeout(() => {
+          bumpHandler.sendReminder(client, r);
+        }, remaining);
+      }
+    }
+    console.log(`Recovered ${pendingReminders.length} pending bump reminders`);
+  } catch (e) { console.error('Bump reminder recovery error:', e.message); }
+
+  // Bump reminder checker - runs every 30 seconds
+  setInterval(async () => {
+    try {
+      const reminders = await db.getPendingBumpReminders();
+      for (const r of reminders) {
+        if (Date.now() >= r.remindAt) {
+          await bumpHandler.sendReminder(client, r);
+        }
+      }
+    } catch (e) { console.error('Bump reminder check error:', e.message); }
+  }, 30000);
+
   // Giveaway checker - runs every 15 seconds
   setInterval(async () => {
     try {

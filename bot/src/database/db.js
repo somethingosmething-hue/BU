@@ -42,6 +42,8 @@ async function connectDB() {
   await db.collection('serversettings').createIndex({ guildId: 1 });
   await db.collection('curlists').createIndex({ guildId: 1, name: 1 });
   await db.collection('global_curlists').createIndex({ name: 1 });
+  await db.collection('bumpcooldowns').createIndex({ key: 1 });
+  await db.collection('bumpreminders').createIndex({ guildId: 1, serviceKey: 1 });
   
   return db;
 }
@@ -399,6 +401,56 @@ async function getChannels(guildId) {
   return doc?.channels || [];
 }
 
+// Bump Reminder System
+async function getBumpCooldown(guildId, serviceKey) {
+  const doc = await getCollection('bumpcooldowns').findOne({ key: `${guildId}:${serviceKey}` });
+  return doc?.timestamp || null;
+}
+
+async function setBumpCooldown(guildId, serviceKey, timestamp) {
+  await getCollection('bumpcooldowns').updateOne(
+    { key: `${guildId}:${serviceKey}` },
+    { $set: { timestamp } },
+    { upsert: true }
+  );
+}
+
+async function setBumpUser(guildId, serviceKey, userId) {
+  await getCollection('bumpcooldowns').updateOne(
+    { key: `${guildId}:${serviceKey}` },
+    { $set: { userId } },
+    { upsert: true }
+  );
+}
+
+async function getBumpUser(guildId, serviceKey) {
+  const doc = await getCollection('bumpcooldowns').findOne({ key: `${guildId}:${serviceKey}` });
+  return doc?.userId || null;
+}
+
+async function deleteBumpUser(guildId, serviceKey) {
+  await getCollection('bumpcooldowns').updateOne(
+    { key: `${guildId}:${serviceKey}` },
+    { $unset: { userId: 1 } }
+  );
+}
+
+async function saveBumpReminder(data) {
+  await getCollection('bumpreminders').updateOne(
+    { guildId: data.guildId, serviceKey: data.serviceKey },
+    { $set: data },
+    { upsert: true }
+  );
+}
+
+async function getPendingBumpReminders() {
+  return await getCollection('bumpreminders').find({}).toArray();
+}
+
+async function deleteBumpReminder(guildId, serviceKey) {
+  await getCollection('bumpreminders').deleteOne({ guildId, serviceKey });
+}
+
 // Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
 async function loadDB(collectionName) {
   const docs = await getCollection(collectionName).find({}).toArray();
@@ -439,6 +491,9 @@ module.exports = {
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,
+  getBumpCooldown, setBumpCooldown,
+  setBumpUser, getBumpUser, deleteBumpUser,
+  saveBumpReminder, getPendingBumpReminders, deleteBumpReminder,
   getChannels, loadDB, saveDB,
   getCollection,
   getCurList, saveCurList, addCurListElements,
