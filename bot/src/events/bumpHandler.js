@@ -81,40 +81,59 @@ async function sendReminder(client, data) {
   await db.deleteBumpUser(data.guildId, data.serviceKey);
 }
 
+async function findService(message) {
+  const authorId = message.author.id;
+  const services = SERVICES.filter(s => s.botId === authorId);
+  if (!services.length) return null;
+
+  if (services.length === 1) return services[0];
+
+  const content = message.content.toLowerCase();
+  for (const svc of services) {
+    if (content.includes(svc.type)) return svc;
+  }
+  return services[0];
+}
+
+async function resolveBumpChannel(guildId, client) {
+  const settings = await db.getServerSettings(guildId);
+  const brChannelId = settings.bumpReminderChannel;
+  if (!brChannelId) return null;
+  let channel = client.channels.cache.get(brChannelId);
+  if (!channel) {
+    try { channel = await client.channels.fetch(brChannelId); } catch {}
+  }
+  return channel;
+}
+
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
     if (!message.guild || !message.author.bot) return;
 
-    const services = SERVICES.filter(s => s.botId === message.author.id);
-    if (!services.length) return;
-
-    const guildId = message.guild.id;
-    const content = message.content.toLowerCase();
-
-    let matchedService = null;
-    for (const svc of services) {
-      if (content.includes(svc.type)) {
-        matchedService = svc;
-        break;
-      }
-    }
+    const matchedService = await findService(message);
     if (!matchedService) return;
 
-    const settings = await db.getServerSettings(guildId);
-    const brChannelId = settings.bumpReminderChannel;
-    if (!brChannelId) return;
+    const guildId = message.guild.id;
+    console.log(`[BumpHandler] Detected message from ${matchedService.name} (${matchedService.command}) in guild ${guildId}`);
 
-    const brChannel = client.channels.cache.get(brChannelId);
-    if (!brChannel) return;
+    const brChannel = await resolveBumpChannel(guildId, client);
+    if (!brChannel) {
+      console.log(`[BumpHandler] No bump reminder channel set for guild ${guildId}`);
+      return;
+    }
 
     const serviceKey = `${matchedService.botId}:${matchedService.command}`;
     const cdMs = parseMs(matchedService.cooldown);
 
     const existing = await db.getBumpCooldown(guildId, serviceKey);
-    if (existing && Date.now() - existing < cdMs) return;
+    if (existing && Date.now() - existing < cdMs) {
+      console.log(`[BumpHandler] Cooldown still active for ${matchedService.name}`);
+      return;
+    }
 
     await db.setBumpCooldown(guildId, serviceKey, Date.now());
+    console.log(`[BumpHandler] Set cooldown for ${matchedService.name}`);
 
     let userId = null;
     if (message.reference) {
@@ -124,8 +143,8 @@ module.exports = {
       } catch {}
     }
     if (!userId) {
-      const mention = message.content.match(/<@!?(\d+)>/);
-      if (mention) userId = mention[1];
+      const m = message.content.match(/<@!?(\d+)>/);
+      if (m) userId = m[1];
     }
     if (userId) {
       await db.setBumpUser(guildId, serviceKey, userId);
@@ -136,6 +155,7 @@ module.exports = {
       .setDescription(`Thank you for ${verb(matchedService.type)} on __${matchedService.name}__! We'll send a reminder again in **(${matchedService.cooldown})**.`);
 
     await brChannel.send({ embeds: [thankEmbed] }).catch(() => {});
+    console.log(`[BumpHandler] Sent acknowledgment for ${matchedService.name}`);
 
     const reminderData = {
       guildId,
