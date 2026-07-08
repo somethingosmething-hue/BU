@@ -28,6 +28,7 @@ const SERVICES = [
 ];
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('checkbr')
     .setDescription('Check remaining cooldown for a bump/vote service')
