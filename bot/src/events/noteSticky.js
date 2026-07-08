@@ -35,7 +35,6 @@ module.exports = {
   async execute(message, client) {
     if (message.author.bot) return;
     if (!message.guild) return;
-    if (message.type !== 0) return;
 
     const note = await db.getNote(message.guild.id, message.channel.id);
     if (!note) return;
