@@ -219,6 +219,24 @@ client.once('ready', async () => {
     } catch (e) { console.error('Bump reminder check error:', e.message); }
   }, 30000);
 
+  // Note sticky recovery - refresh notes that went missing after restart
+  const noteSticky = require('./events/noteSticky');
+  try {
+    const guilds = client.guilds.cache.values();
+    for (const guild of guilds) {
+      const notes = await db.getAllNotes(guild.id);
+      for (const note of notes) {
+        const channel = client.channels.cache.get(note.channelId);
+        if (!channel) continue;
+        const msg = await channel.messages.fetch(note.messageId).catch(() => null);
+        if (!msg) {
+          await noteSticky.refreshNote(guild.id, channel, note);
+        }
+      }
+    }
+    console.log('Recovered sticky notes after restart');
+  } catch (e) { console.error('Note recovery error:', e.message); }
+
   // Giveaway checker - runs every 15 seconds
   setInterval(async () => {
     try {

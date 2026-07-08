@@ -222,7 +222,159 @@ module.exports = {
         // ── Modal Submits ─────────────────────────────────────────────────────
         if (interaction.isModalSubmit()) {
             const customId = interaction.customId;
-            const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+            const { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+            const noteSticky = require('./noteSticky');
+
+            // ── Note para ──────────────────────────────────────────────────────
+            if (customId === 'notepara:submit') {
+                const content = interaction.fields.getTextInputValue('content');
+                const suppressText = interaction.fields.getTextInputValue('suppress')?.toLowerCase();
+                const suppress = suppressText === 'yes';
+                const guildId = interaction.guildId;
+                const channelId = interaction.channelId;
+
+                const existing = await db.getNote(guildId, channelId);
+                if (existing?.messageId) {
+                    try {
+                        const old = await interaction.channel.messages.fetch(existing.messageId).catch(() => null);
+                        if (old) await old.delete().catch(() => {});
+                    } catch {}
+                }
+
+                const msg = await interaction.channel.send({
+                    content,
+                    flags: suppress ? 1 << 2 : undefined,
+                });
+
+                await db.saveNote(guildId, channelId, {
+                    type: 'text',
+                    content,
+                    messageId: msg.id,
+                    suppress,
+                    gluedBy: interaction.user.id,
+                    gluedAt: Date.now(),
+                });
+
+                await interaction.reply({ content: '✅ Note set.', ephemeral: true });
+                return;
+            }
+
+            // ── Note Embed ─────────────────────────────────────────────────────
+            if (customId === 'noteembed:submit') {
+                const title = interaction.fields.getTextInputValue('title') || null;
+                const description = interaction.fields.getTextInputValue('description') || null;
+                const color = interaction.fields.getTextInputValue('color') || '#66C2FF';
+                const thumbnail = interaction.fields.getTextInputValue('thumbnail') || null;
+                const image = interaction.fields.getTextInputValue('image') || null;
+
+                if (!title && !description && !thumbnail && !image) {
+                    return interaction.reply({ content: '❌ At least one of title, description, thumbnail, or image is required.', ephemeral: true });
+                }
+
+                const guildId = interaction.guildId;
+                const channelId = interaction.channelId;
+
+                const existing = await db.getNote(guildId, channelId);
+                if (existing?.messageId) {
+                    try {
+                        const old = await interaction.channel.messages.fetch(existing.messageId).catch(() => null);
+                        if (old) await old.delete().catch(() => {});
+                    } catch {}
+                }
+
+                const embed = new EmbedBuilder().setColor(color);
+                if (title) embed.setTitle(title);
+                if (description) embed.setDescription(description);
+                if (thumbnail) embed.setThumbnail(thumbnail);
+                if (image) embed.setImage(image);
+
+                const msg = await interaction.channel.send({ embeds: [embed] });
+
+                await db.saveNote(guildId, channelId, {
+                    type: 'embed',
+                    title,
+                    description,
+                    color,
+                    thumbnail,
+                    image,
+                    messageId: msg.id,
+                    gluedBy: interaction.user.id,
+                    gluedAt: Date.now(),
+                });
+
+                await interaction.reply({ content: '✅ Embed note set.', ephemeral: true });
+                return;
+            }
+
+            // ── Edit Note Text ─────────────────────────────────────────────────────────
+            if (customId === 'editnotetext:submit') {
+                const content = interaction.fields.getTextInputValue('content');
+                const guildId = interaction.guildId;
+                const channelId = interaction.channelId;
+
+                const note = await db.getNote(guildId, channelId);
+                if (!note) return interaction.reply({ content: '❌ Note not found.', ephemeral: true });
+
+                try {
+                    const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
+                    if (old) await old.delete().catch(() => {});
+                } catch {}
+
+                const msg = await interaction.channel.send({
+                    content,
+                    flags: note.suppress ? 1 << 2 : undefined,
+                });
+
+                note.content = content;
+                note.messageId = msg.id;
+                note.gluedAt = Date.now();
+                await db.saveNote(guildId, channelId, note);
+
+                await interaction.reply({ content: '✅ Note updated.', ephemeral: true });
+                return;
+            }
+
+            // ── Edit Note Embed ────────────────────────────────────────────────
+            if (customId === 'editnoteembed:submit') {
+                const title = interaction.fields.getTextInputValue('title') || null;
+                const description = interaction.fields.getTextInputValue('description') || null;
+                const color = interaction.fields.getTextInputValue('color') || '#66C2FF';
+                const thumbnail = interaction.fields.getTextInputValue('thumbnail') || null;
+                const image = interaction.fields.getTextInputValue('image') || null;
+
+                const guildId = interaction.guildId;
+                const channelId = interaction.channelId;
+
+                const note = await db.getNote(guildId, channelId);
+                if (!note) return interaction.reply({ content: '❌ Note not found.', ephemeral: true });
+
+                try {
+                    const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
+                    if (old) await old.delete().catch(() => {});
+                } catch {}
+
+                const embed = new EmbedBuilder().setColor(color);
+                if (title) embed.setTitle(title);
+                if (description) embed.setDescription(description);
+                const useThumbnail = thumbnail || note.thumbnail;
+                const useImage = image || note.image;
+                if (useThumbnail) embed.setThumbnail(useThumbnail);
+                if (useImage) embed.setImage(useImage);
+
+                const msg = await interaction.channel.send({ embeds: [embed] });
+
+                note.title = title;
+                note.description = description;
+                note.color = color;
+                note.thumbnail = useThumbnail;
+                note.image = useImage;
+                note.messageId = msg.id;
+                note.gluedAt = Date.now();
+                await db.saveNote(guildId, channelId, note);
+
+                await interaction.reply({ content: '✅ Embed note updated.', ephemeral: true });
+                return;
+            }
 
             if (customId.startsWith('embed-save:')) {
                 const [, name, field] = customId.split(':');

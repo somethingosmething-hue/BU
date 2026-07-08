@@ -45,6 +45,7 @@ async function connectDB() {
   await db.collection('bumpcooldowns').createIndex({ key: 1 });
   await db.collection('bumpreminders').createIndex({ guildId: 1, serviceKey: 1 });
   await db.collection('bumplinks').createIndex({ guildId: 1, serviceKey: 1 });
+  await db.collection('notes').createIndex({ guildId: 1, channelId: 1 });
   
   return db;
 }
@@ -476,6 +477,27 @@ async function getAllBumpLinks(guildId) {
   return result;
 }
 
+// Notes (sticky message system)
+async function saveNote(guildId, channelId, data) {
+  await getCollection('notes').updateOne(
+    { guildId, channelId },
+    { $set: { ...data, guildId, channelId } },
+    { upsert: true }
+  );
+}
+
+async function getNote(guildId, channelId) {
+  return await getCollection('notes').findOne({ guildId, channelId });
+}
+
+async function getAllNotes(guildId) {
+  return await getCollection('notes').find({ guildId }).toArray();
+}
+
+async function deleteNote(guildId, channelId) {
+  await getCollection('notes').deleteOne({ guildId, channelId });
+}
+
 // Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
 async function loadDB(collectionName) {
   const docs = await getCollection(collectionName).find({}).toArray();
@@ -520,6 +542,7 @@ module.exports = {
   setBumpUser, getBumpUser, deleteBumpUser,
   saveBumpReminder, getPendingBumpReminders, deleteBumpReminder,
   setBumpLink, deleteBumpLink, getBumpLink, getAllBumpLinks,
+  saveNote, getNote, getAllNotes, deleteNote,
   getChannels, loadDB, saveDB,
   getCollection,
   getCurList, saveCurList, addCurListElements,
