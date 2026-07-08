@@ -13,7 +13,6 @@ function parseMs(str) {
 
 const SERVICES = [
   { key: '302050872383242240:/bump', name: 'Disboard', cooldown: '2 hours' },
-  { key: '341738423134060544:/bump', name: 'DiscordServers.io', cooldown: '2 hours' },
   { key: '1159147139960676422:/bump', name: 'Discordus', cooldown: '2 hours' },
   { key: '813077581749288990:/bump', name: 'Disurl (bot)', cooldown: '30 minutes' },
   { key: '1379527568671113226:/bump', name: 'GuildSeek (bump)', cooldown: '2 hours' },

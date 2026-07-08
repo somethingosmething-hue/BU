@@ -13,7 +13,6 @@ function parseMs(str) {
 
 const SERVICES = [
   { botId: '302050872383242240', command: '/bump', name: 'Disboard', cooldown: '2 hours', type: 'bump' },
-  { botId: '341738423134060544', command: '/bump', name: 'DiscordServers.io', cooldown: '2 hours', type: 'bump' },
   { botId: '1159147139960676422', command: '/bump', name: 'Discordus', cooldown: '2 hours', type: 'bump' },
   { botId: '813077581749288990', command: '/bump', name: 'Disurl', cooldown: '30 minutes', type: 'bump' },
   { botId: '1379527568671113226', command: '/bump', name: 'GuildSeek', cooldown: '2 hours', type: 'bump' },
@@ -30,7 +29,6 @@ const SERVICES = [
 
 const CHAIN_BOTS = [
   { key: '302050872383242240:/bump', name: 'Disboard', text: '*/bump*' },
-  { key: '341738423134060544:/bump', name: 'DiscordServers.io', text: '*/bump*' },
   { key: '1159147139960676422:/bump', name: 'Discordus', text: '*/bump*' },
   { key: '813077581749288990:/bump', name: 'Disurl', text: '*/bump*' },
   { key: '1379527568671113226:/bump', name: 'GuildSeek', text: '*/bump*' },
@@ -185,7 +183,13 @@ module.exports = {
     if (!matchedService) return;
 
     const guildId = message.guild.id;
-    console.log(`[BumpHandler] Detected message from ${matchedService.name} (${matchedService.command}) in guild ${guildId}`);
+    const text = getMessageText(message);
+    console.log(`[BumpHandler] Detected message from ${matchedService.name} (${matchedService.command}) in guild ${guildId} | text: ${text.slice(0, 100)}`);
+
+    if (/(cooldown|wait|already|cannot|can't|unable|failed|error|invalid)/i.test(text)) {
+      console.log(`[BumpHandler] Ignoring ${matchedService.name} message - looks like a cooldown/error message`);
+      return;
+    }
 
     const brChannel = await resolveBumpChannel(guildId, client);
     if (!brChannel) {
