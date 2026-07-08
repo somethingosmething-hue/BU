@@ -243,7 +243,7 @@ module.exports = {
 
                 const msg = await interaction.channel.send({
                     content,
-                    flags: suppress ? 1 << 2 : undefined,
+                    flags: (suppress ? 1 << 2 : 0) | (1 << 12),
                 });
 
                 await db.saveNote(guildId, channelId, {
@@ -288,7 +288,7 @@ module.exports = {
                 if (thumbnail) embed.setThumbnail(thumbnail);
                 if (image) embed.setImage(image);
 
-                const msg = await interaction.channel.send({ embeds: [embed] });
+                const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
 
                 await db.saveNote(guildId, channelId, {
                     type: 'embed',
@@ -322,7 +322,7 @@ module.exports = {
 
                 const msg = await interaction.channel.send({
                     content,
-                    flags: note.suppress ? 1 << 2 : undefined,
+                    flags: (note.suppress ? 1 << 2 : 0) | (1 << 12),
                 });
 
                 note.content = content;
@@ -361,7 +361,7 @@ module.exports = {
                 if (useThumbnail) embed.setThumbnail(useThumbnail);
                 if (useImage) embed.setImage(useImage);
 
-                const msg = await interaction.channel.send({ embeds: [embed] });
+                const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
 
                 note.title = title;
                 note.description = description;

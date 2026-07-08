@@ -17,11 +17,11 @@ async function refreshNote(guildId, channel, note) {
     if (note.description) embed.setDescription(note.description);
     if (note.thumbnail) embed.setThumbnail(note.thumbnail);
     if (note.image) embed.setImage(note.image);
-    msg = await channel.send({ embeds: [embed] });
+    msg = await channel.send({ embeds: [embed], flags: 1 << 12 });
   } else {
     msg = await channel.send({
       content: note.content || '',
-      flags: note.suppress ? 1 << 2 : undefined,
+      flags: (note.suppress ? 1 << 2 : 0) | (1 << 12),
     });
   }
 

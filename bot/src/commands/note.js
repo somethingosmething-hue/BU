@@ -31,10 +31,8 @@ module.exports = {
       } catch {}
     }
 
-    const msg = await interaction.channel.send({
-      content,
-      flags: suppress ? 1 << 2 : undefined,
-    });
+    const flags = (suppress ? 1 << 2 : 0) | (1 << 12);
+    const msg = await interaction.channel.send({ content, flags });
 
     await db.saveNote(guildId, channelId, {
       type: 'text',
