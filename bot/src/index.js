@@ -297,6 +297,17 @@ client.once('ready', async () => {
 
 client.on('guildCreate', async (guild) => {
   try {
+    const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+    const guildCommands = client.commands.filter(cmd =>
+      !['eshowcurlist', 'enumcurlist', 'etotalnumcurlist'].includes(cmd.data.name)
+    ).map(cmd => cmd.data.toJSON());
+    await rest.put(Routes.applicationGuildCommands(client.user.id, guild.id), { body: guildCommands });
+    console.log(`Registered guild commands for new guild ${guild.id}`);
+  } catch (e) {
+    console.error(`Failed to register guild commands for ${guild.id}:`, e.message);
+  }
+
+  try {
     const channels = guild.channels.cache
       .filter(c => c.type === 0)
       .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))
