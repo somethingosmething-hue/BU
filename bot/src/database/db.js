@@ -44,6 +44,7 @@ async function connectDB() {
   await db.collection('global_curlists').createIndex({ name: 1 });
   await db.collection('bumpcooldowns').createIndex({ key: 1 });
   await db.collection('bumpreminders').createIndex({ guildId: 1, serviceKey: 1 });
+  await db.collection('bumplinks').createIndex({ guildId: 1, serviceKey: 1 });
   
   return db;
 }
@@ -451,6 +452,30 @@ async function deleteBumpReminder(guildId, serviceKey) {
   await getCollection('bumpreminders').deleteOne({ guildId, serviceKey });
 }
 
+async function setBumpLink(guildId, serviceKey, url) {
+  await getCollection('bumplinks').updateOne(
+    { guildId, serviceKey },
+    { $set: { url } },
+    { upsert: true }
+  );
+}
+
+async function deleteBumpLink(guildId, serviceKey) {
+  await getCollection('bumplinks').deleteOne({ guildId, serviceKey });
+}
+
+async function getBumpLink(guildId, serviceKey) {
+  const doc = await getCollection('bumplinks').findOne({ guildId, serviceKey });
+  return doc?.url || null;
+}
+
+async function getAllBumpLinks(guildId) {
+  const docs = await getCollection('bumplinks').find({ guildId }).toArray();
+  const result = {};
+  for (const doc of docs) result[doc.serviceKey] = doc.url;
+  return result;
+}
+
 // Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
 async function loadDB(collectionName) {
   const docs = await getCollection(collectionName).find({}).toArray();
@@ -494,6 +519,7 @@ module.exports = {
   getBumpCooldown, setBumpCooldown,
   setBumpUser, getBumpUser, deleteBumpUser,
   saveBumpReminder, getPendingBumpReminders, deleteBumpReminder,
+  setBumpLink, deleteBumpLink, getBumpLink, getAllBumpLinks,
   getChannels, loadDB, saveDB,
   getCollection,
   getCurList, saveCurList, addCurListElements,

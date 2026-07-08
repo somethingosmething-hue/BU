@@ -28,23 +28,33 @@ const SERVICES = [
 ];
 
 const CHAIN_BOTS = [
-  { key: '302050872383242240:/bump', name: 'Disboard', text: '*/bump*' },
-  { key: '1159147139960676422:/bump', name: 'Discordus', text: '*/bump*' },
-  { key: '813077581749288990:/bump', name: 'Disurl', text: '*/bump*' },
-  { key: '1379527568671113226:/bump', name: 'GuildSeek', text: '*/bump*' },
-  { key: '1379527568671113226:/heart', name: 'GuildSeek', text: '*/heart*' },
-  { key: '315926021457051650:/bump', name: 'Server Monitoring', text: '*/bump*' },
-  { key: '826100334534328340:/bump', name: 'DH Bump', text: '*/bump*' },
-  { key: '476259371912003597:/bump', name: 'Discord.Me', text: '[bump here](https://discord.me/dashboard)' },
-  { key: '1208555826340565074:/vote', name: 'Listcord', text: '*/vote*' },
+  { key: '302050872383242240:/bump', name: 'Disboard', type: 'bump' },
+  { key: '1159147139960676422:/bump', name: 'Discordus', type: 'bump' },
+  { key: '813077581749288990:/bump', name: 'Disurl', type: 'bump' },
+  { key: '1379527568671113226:/bump', name: 'GuildSeek', type: 'bump' },
+  { key: '1379527568671113226:/heart', name: 'GuildSeek', type: 'heart' },
+  { key: '315926021457051650:/bump', name: 'Server Monitoring', type: 'bump' },
+  { key: '826100334534328340:/bump', name: 'DH Bump', type: 'bump' },
+  { key: '476259371912003597:/bump', name: 'Discord.Me', type: 'bump', defaultUrl: 'https://discord.me/dashboard' },
+  { key: '1208555826340565074:/vote', name: 'Listcord', type: 'vote' },
 ];
 
 const CHAIN_SITES = [
-  { key: '813077581749288990:/vote', name: 'Disurl', text: '[vote here](https://disurl.me/server/1490408248560324648)' },
-  { key: '115385224119975941:/bump', name: 'DiscordServers', text: '[bump here](https://discordservers.com/server/1490408248560324648/bump)' },
-  { key: '493224032167002123:/bump', name: 'DS.ME', text: '[vote here](https://discords.com/servers/1490408248560324648/upvote)' },
-  { key: '422087909634736160:/vote', name: 'Top.gg', text: '[vote here](https://top.gg/discord/servers/858744075740475392)' },
+  { key: '813077581749288990:/vote', name: 'Disurl', type: 'vote', defaultUrl: 'https://disurl.me/server/1490408248560324648' },
+  { key: '115385224119975941:/bump', name: 'DiscordServers', type: 'bump', defaultUrl: 'https://discordservers.com/server/1490408248560324648/bump' },
+  { key: '493224032167002123:/bump', name: 'DS.ME', type: 'vote', defaultUrl: 'https://discords.com/servers/1490408248560324648/upvote' },
+  { key: '422087909634736160:/vote', name: 'Top.gg', type: 'vote', defaultUrl: 'https://top.gg/discord/servers/858744075740475392' },
 ];
+
+const DEFAULT_BUMP_ROLE = '1524129755278868570';
+
+function chainText(entry, links) {
+  if (entry.defaultUrl) {
+    const url = (links && links[entry.key]) || entry.defaultUrl;
+    return `[${entry.type} here](${url})`;
+  }
+  return `*${entry.type === 'heart' ? '/heart' : '/' + entry.type}*`;
+}
 
 const PING_USER_KEYS = [
   '813077581749288990:/vote',
@@ -78,7 +88,11 @@ async function sendReminder(client, data) {
   const cooldown = await db.getBumpCooldown(data.guildId, data.serviceKey);
   if (!cooldown || Date.now() - cooldown < cdMs) return;
 
-  let ping = '<@&1524129755278868570>';
+  const settings = await db.getServerSettings(data.guildId);
+  const bumpRole = settings.bumpRole || DEFAULT_BUMP_ROLE;
+  const links = await db.getAllBumpLinks(data.guildId);
+
+  let ping = `<@&${bumpRole}>`;
   if (data.pingUser) {
     const userId = await db.getBumpUser(data.guildId, data.serviceKey);
     if (userId) ping = `<@${userId}>`;
@@ -86,7 +100,8 @@ async function sendReminder(client, data) {
 
   let commandText = `*${data.command}*`;
   if (data.website && data.url) {
-    commandText = `[${actionWord(data.type)} here](${data.url})`;
+    const overrideUrl = links[data.serviceKey] || data.url;
+    commandText = `[${actionWord(data.type)} here](${overrideUrl})`;
   }
 
   const embed = new EmbedBuilder()
@@ -225,9 +240,10 @@ module.exports = {
     }
 
     let desc = `Thank you for ${verb(matchedService.type)} on __${matchedService.name}__! We'll send a reminder again in **(${matchedService.cooldown})**.`;
+    const links = await db.getAllBumpLinks(guildId);
     const next = await findNext(guildId, serviceKey);
     if (next) {
-      desc += `\n\n**Next →** __${next.name}__ ${next.text}`;
+      desc += `\n\n**Next →** __${next.name}__ ${chainText(next, links)}`;
     }
 
     const thankEmbed = new EmbedBuilder()
