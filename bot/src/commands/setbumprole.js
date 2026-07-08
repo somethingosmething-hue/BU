@@ -22,6 +22,6 @@ module.exports = {
     const embed = botEmbed('#BE74E3')
       .setDescription(`✅ Bump reminders will now ping ${role}`);
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed] });
   },
 };

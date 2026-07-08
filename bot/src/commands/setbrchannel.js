@@ -23,6 +23,6 @@ module.exports = {
     const embed = botEmbed('#BE74E3')
       .setDescription(`✅ Bump/vote reminders will be sent to ${channel}`);
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed] });
   },
 };

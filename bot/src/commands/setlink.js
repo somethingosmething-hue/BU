@@ -55,7 +55,7 @@ module.exports = {
       const embed = new EmbedBuilder()
         .setColor('#BE74E3')
         .setDescription(`✅ Reset **${svc.name}** link to default.`);
-      return interaction.reply({ embeds: [embed], ephemeral: true });
+      return interaction.reply({ embeds: [embed] });
     }
 
     await db.setBumpLink(guildId, key, link);
@@ -64,6 +64,6 @@ module.exports = {
       .setColor('#BE74E3')
       .setDescription(`✅ Set **${svc.name}** link to:\n${link}`);
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed] });
   },
 };
