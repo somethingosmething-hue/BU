@@ -22,7 +22,7 @@ module.exports = {
   permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('testbr')
-    .setDescription('Send a test bump reminder acknowledgment embed (no cooldown)')
+    .setDescription('Send a test bump reminder embed with clickable buttons (no cooldown)')
     .addStringOption(option =>
       option.setName('bot')
         .setDescription('Which bot to simulate (optional)')
@@ -50,36 +50,36 @@ module.exports = {
     }
 
     const chosen = interaction.options.getString('bot');
+    let role = `<@&${settings.bumpRole || '1524129755278868570'}>`;
     let desc, components = [];
 
     if (chosen) {
       const svc = bh.getServiceByKey(chosen);
       if (svc) {
-        desc = `Thank you for ${svc.type === 'bump' ? 'bumping' : svc.type === 'vote' ? 'voting' : 'hearting'} on __${svc.name}__! We'll send a reminder again in **(${svc.cooldown})**.\n\n_This is a test message. No cooldown was set._`;
+        desc = `${role} You can bump again on __${svc.name}__!`;
+        components.push(new ActionRowBuilder().addComponents(
+          bh.buildLinkButton(chosen, `✿・${svc.type} here`, !!svc.website, false)
+        ));
 
         const next = bh.findNext ? await bh.findNext(guildId, chosen) : null;
         if (next) {
           components.push(new ActionRowBuilder().addComponents(
-            bh.buildLinkButton(next.key, `✿・${next.type} here`, !!next.defaultUrl, true)
+            bh.buildLinkButton(next.key, `✿・${next.type} here`, !!next.defaultUrl, false)
           ));
         }
-
-        components.push(new ActionRowBuilder().addComponents(
-          bh.buildLinkButton(chosen, `✿・${svc.type} here`, !!svc.website, true)
-        ));
       } else {
-        desc = `Thank you for bumping on __${chosen}__! We'll send a reminder again in **(2 hours)**.\n\n_This is a test message. No cooldown was set._`;
+        desc = `${role} You can bump again on __${chosen}__!\n_Note: unknown service, no button added._`;
       }
     } else {
-      desc = `Thank you for bumping on __Test Service__! We'll send a reminder again in **(2 hours)**.\n\n**Next →** __Disboard__ */bump*\n\n_This is a test message. No cooldown was set._`;
+      desc = `${role} You can bump again on __Test Service__!\n_Use the bot option to pick a specific service._`;
     }
 
     const embed = new EmbedBuilder()
       .setColor('#BE74E3')
       .setDescription(desc);
 
-    await channel.send({ embeds: [embed], components: components.length ? components : undefined });
+    await channel.send({ embeds: [embed], components });
 
-    await interaction.reply({ content: `✅ Test embed sent to ${channel}`, ephemeral: true });
+    await interaction.reply({ content: `✅ Test reminder sent to ${channel}`, ephemeral: true });
   },
 };
