@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const db = require('./database/db');
+const bh = require('./events/bumpHandler');
 
 const client = new Client({
   intents: [
@@ -71,6 +72,43 @@ client.on('interactionCreate', async (interaction) => {
   } catch (e) {}
 
   await interaction.reply({ content: 'You have entered this giveaway!', ephemeral: true });
+});
+
+// Handle bump reminder link buttons
+client.on('interactionCreate', async (interaction) => {
+  if (!interaction.isButton()) return;
+  if (!interaction.customId.startsWith('br-link:')) return;
+
+  const parts = interaction.customId.split(':');
+  const serviceKey = parts.slice(1, 3).join(':');
+  const mode = parts[3]; // 'url' or 'cmd'
+
+  const svc = bh.getServiceByKey(serviceKey);
+  if (!svc) {
+    return interaction.reply({ content: '❌ Unknown service.', ephemeral: true });
+  }
+
+  // Disable all br-link buttons in this message
+  const components = interaction.message.components.map(row => {
+    const newRow = ActionRowBuilder.from(row);
+    newRow.components = row.components.map(btn => {
+      if (btn.customId && btn.customId.startsWith('br-link:')) {
+        return ButtonBuilder.from(btn).setDisabled(true);
+      }
+      return btn;
+    });
+    return newRow;
+  });
+
+  await interaction.update({ components });
+
+  if (mode === 'url') {
+    const links = await db.getAllBumpLinks(interaction.guildId);
+    const url = (links && links[serviceKey]) || svc.url || svc.url;
+    await interaction.followUp({ content: url, ephemeral: true });
+  } else {
+    await interaction.followUp({ content: `</${svc.command.replace('/', '')}:${svc.botId}>`, ephemeral: true });
+  }
 });
 
 function buildEmbed(data) {

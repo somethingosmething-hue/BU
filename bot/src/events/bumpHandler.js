@@ -1,4 +1,4 @@
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../database/db');
 
 function parseMs(str) {
@@ -50,10 +50,17 @@ const DEFAULT_BUMP_ROLE = '1524129755278868570';
 
 function chainText(entry, links) {
   if (entry.defaultUrl) {
-    const url = (links && links[entry.key]) || entry.defaultUrl;
-    return `[${entry.type} here](${url})`;
+    return null;
   }
   return `*${entry.type === 'heart' ? '/heart' : '/' + entry.type}*`;
+}
+
+function buildLinkButton(serviceKey, label, isWebsite, disabled) {
+  return new ButtonBuilder()
+    .setCustomId(`br-link:${serviceKey}:${isWebsite ? 'url' : 'cmd'}`)
+    .setLabel(label)
+    .setStyle(ButtonStyle.Secondary)
+    .setDisabled(!!disabled);
 }
 
 const PING_USER_KEYS = [
@@ -98,17 +105,16 @@ async function sendReminder(client, data) {
     if (userId) ping = `<@${userId}>`;
   }
 
-  let commandText = `*${data.command}*`;
+  let desc = `${ping} You can ${actionWord(data.type)} again on __${data.name}__!`;
+  const components = [];
+  const label = `✿・${actionWord(data.type)} here`;
   if (data.website && data.url) {
-    const overrideUrl = links[data.serviceKey] || data.url;
-    commandText = `[${actionWord(data.type)} here](${overrideUrl})`;
+    components.push(new ActionRowBuilder().addComponents(buildLinkButton(data.serviceKey, label, true, false)));
+  } else {
+    components.push(new ActionRowBuilder().addComponents(buildLinkButton(data.serviceKey, label, false, false)));
   }
 
-  const embed = new EmbedBuilder()
-    .setColor('#BE74E3')
-    .setDescription(`${ping} You can ${actionWord(data.type)} again on __${data.name}__! ${commandText}`);
-
-  await channel.send({ embeds: [embed] }).catch(() => {});
+  await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)], components }).catch(() => {});
 
   await db.deleteBumpReminder(data.guildId, data.serviceKey);
   await db.deleteBumpUser(data.guildId, data.serviceKey);
@@ -189,6 +195,10 @@ async function resolveBumpChannel(guildId, client) {
   return channel;
 }
 
+function getServiceByKey(key) {
+  return SERVICES.find(s => serviceKey(s) === key) || null;
+}
+
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
@@ -242,15 +252,21 @@ module.exports = {
     let desc = `Thank you for ${verb(matchedService.type)} on __${matchedService.name}__! We'll send a reminder again in **(${matchedService.cooldown})**.`;
     const links = await db.getAllBumpLinks(guildId);
     const next = await findNext(guildId, serviceKey);
+    const ackComponents = [];
     if (next) {
-      desc += `\n\n**Next →** __${next.name}__ ${chainText(next, links)}`;
+      if (next.defaultUrl) {
+        desc += `\n\n**Next →** __${next.name}__`;
+        ackComponents.push(new ActionRowBuilder().addComponents(buildLinkButton(next.key, `✿・${next.type} here`, true, false)));
+      } else {
+        ackComponents.push(new ActionRowBuilder().addComponents(buildLinkButton(next.key, `✿・${next.type} here`, false, false)));
+      }
     }
 
     const thankEmbed = new EmbedBuilder()
       .setColor('#BE74E3')
       .setDescription(desc);
 
-    await brChannel.send({ embeds: [thankEmbed] }).catch(() => {});
+    await brChannel.send({ embeds: [thankEmbed], components: ackComponents.length ? ackComponents : undefined }).catch(() => {});
     console.log(`[BumpHandler] Sent acknowledgment for ${matchedService.name}`);
 
     const reminderData = {
@@ -274,4 +290,9 @@ module.exports = {
     }, cdMs);
   },
   sendReminder,
+  getServiceByKey,
+  buildLinkButton,
+  serviceKey,
+  findNext,
+  chainText,
 };
