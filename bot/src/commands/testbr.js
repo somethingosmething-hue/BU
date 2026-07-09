@@ -22,7 +22,7 @@ module.exports = {
   permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('testbr')
-    .setDescription('Send a test bump reminder embed with clickable buttons (no cooldown)')
+    .setDescription('Send a test bump reminder embed (no cooldown)')
     .addStringOption(option =>
       option.setName('bot')
         .setDescription('Which bot to simulate (optional)')
@@ -49,36 +49,44 @@ module.exports = {
       return interaction.reply({ content: '❌ The bump reminder channel no longer exists.', ephemeral: true });
     }
 
+    const role = `<@&${settings.bumpRole || '1524129755278868570'}>`;
     const chosen = interaction.options.getString('bot');
-    let role = `<@&${settings.bumpRole || '1524129755278868570'}>`;
-    let desc, components = [];
+    let desc, components;
 
     if (chosen) {
       const svc = bh.getServiceByKey(chosen);
       if (svc) {
-        desc = `${role} You can bump again on __${svc.name}__!`;
-        components.push(new ActionRowBuilder().addComponents(
-          bh.buildLinkButton(chosen, `✿・${svc.type} here`, !!svc.website, false)
-        ));
+        if (svc.website && svc.url) {
+          const links = await db.getAllBumpLinks(guildId);
+          const url = (links && links[chosen]) || svc.url;
+          desc = `${role} You can bump again on __${svc.name}__!`;
+          components = [new ActionRowBuilder().addComponents(bh.buildLinkButton(`✿・${svc.type} here`, url))];
+        } else {
+          desc = `${role} You can bump again on __${svc.name}__! *${svc.command}*`;
+          components = [];
+        }
 
         const next = bh.findNext ? await bh.findNext(guildId, chosen) : null;
         if (next) {
-          components.push(new ActionRowBuilder().addComponents(
-            bh.buildLinkButton(next.key, `✿・${next.type} here`, !!next.defaultUrl, false)
-          ));
+          const chainStr = bh.chainText ? bh.chainText(next, {}) : null;
+          if (chainStr) {
+            desc += `\n\n**Next →** __${next.name}__ ${chainStr}`;
+          }
         }
       } else {
-        desc = `${role} You can bump again on __${chosen}__!\n_Note: unknown service, no button added._`;
+        desc = `${role} You can bump again on __${chosen}__! */bump*`;
+        components = [];
       }
     } else {
-      desc = `${role} You can bump again on __Test Service__!\n_Use the bot option to pick a specific service._`;
+      desc = `${role} You can bump again on __Test Service__! */bump*\n\n**Next →** __Disboard__ */bump*`;
+      components = [];
     }
 
     const embed = new EmbedBuilder()
       .setColor('#BE74E3')
       .setDescription(desc);
 
-    await channel.send({ embeds: [embed], components });
+    await channel.send({ embeds: [embed], components: components?.length ? components : undefined });
 
     await interaction.reply({ content: `✅ Test reminder sent to ${channel}`, ephemeral: true });
   },

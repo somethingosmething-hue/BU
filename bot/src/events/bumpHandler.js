@@ -50,17 +50,17 @@ const DEFAULT_BUMP_ROLE = '1524129755278868570';
 
 function chainText(entry, links) {
   if (entry.defaultUrl) {
-    return null;
+    const url = (links && links[entry.key]) || entry.defaultUrl;
+    return `[${entry.type} here](${url})`;
   }
   return `*${entry.type === 'heart' ? '/heart' : '/' + entry.type}*`;
 }
 
-function buildLinkButton(serviceKey, label, isWebsite, disabled) {
+function buildLinkButton(label, url) {
   return new ButtonBuilder()
-    .setCustomId(`br-link:${serviceKey}:${isWebsite ? 'url' : 'cmd'}`)
     .setLabel(label)
-    .setStyle(ButtonStyle.Secondary)
-    .setDisabled(!!disabled);
+    .setStyle(ButtonStyle.Link)
+    .setURL(url);
 }
 
 const PING_USER_KEYS = [
@@ -106,15 +106,14 @@ async function sendReminder(client, data) {
   }
 
   let desc = `${ping} You can ${actionWord(data.type)} again on __${data.name}__!`;
-  const components = [];
-  const label = `✿・${actionWord(data.type)} here`;
   if (data.website && data.url) {
-    components.push(new ActionRowBuilder().addComponents(buildLinkButton(data.serviceKey, label, true, false)));
+    const overrideUrl = links[data.serviceKey] || data.url;
+    const components = [new ActionRowBuilder().addComponents(buildLinkButton(`✿・${actionWord(data.type)} here`, overrideUrl))];
+    await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)], components }).catch(() => {});
   } else {
-    components.push(new ActionRowBuilder().addComponents(buildLinkButton(data.serviceKey, label, false, false)));
+    desc += ` *${data.command}*`;
+    await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)] }).catch(() => {});
   }
-
-  await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)], components }).catch(() => {});
 
   await db.deleteBumpReminder(data.guildId, data.serviceKey);
   await db.deleteBumpUser(data.guildId, data.serviceKey);
@@ -254,10 +253,14 @@ module.exports = {
     const next = await findNext(guildId, serviceKey);
     const ackComponents = [];
     if (next) {
-      desc += `\n\n**Next →** __${next.name}__`;
-      ackComponents.push(new ActionRowBuilder().addComponents(
-        buildLinkButton(next.key, `✿・${next.type} here`, !!next.defaultUrl, false)
-      ));
+      const chainStr = chainText(next, links);
+      if (chainStr) {
+        desc += `\n\n**Next →** __${next.name}__ ${chainStr}`;
+      } else if (next.defaultUrl) {
+        desc += `\n\n**Next →** __${next.name}__`;
+        const url = (links && links[next.key]) || next.defaultUrl;
+        ackComponents.push(new ActionRowBuilder().addComponents(buildLinkButton(`✿・${next.type} here`, url)));
+      }
     }
 
     const thankEmbed = new EmbedBuilder()

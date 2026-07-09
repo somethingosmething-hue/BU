@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const db = require('./database/db');
-const bh = require('./events/bumpHandler');
 
 const client = new Client({
   intents: [
@@ -74,49 +73,7 @@ client.on('interactionCreate', async (interaction) => {
   await interaction.reply({ content: 'You have entered this giveaway!', ephemeral: true });
 });
 
-// Handle bump reminder link buttons
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
-  if (!interaction.customId.startsWith('br-link:')) return;
 
-  const parts = interaction.customId.split(':');
-  const serviceKey = parts.slice(1, 3).join(':');
-  const mode = parts[3]; // 'url' or 'cmd'
-
-  const svc = bh.getServiceByKey(serviceKey);
-  if (!svc) {
-    return interaction.reply({ content: '❌ Unknown service.', ephemeral: true });
-  }
-
-  // Disable all br-link buttons in this message
-  const components = interaction.message.components.map(row => {
-    const newRow = ActionRowBuilder.from(row);
-    newRow.components = row.components.map(btn => {
-      if (btn.customId && btn.customId.startsWith('br-link:')) {
-        return ButtonBuilder.from(btn).setDisabled(true);
-      }
-      return btn;
-    });
-    return newRow;
-  });
-
-  // Replace embed description with clickable link/mention
-  if (interaction.message.embeds?.[0]) {
-    const embed = EmbedBuilder.from(interaction.message.embeds[0]);
-    if (mode === 'url') {
-      const links = await db.getAllBumpLinks(interaction.guildId);
-      const url = (links && links[serviceKey]) || svc.url;
-      embed.setDescription(`${interaction.message.embeds[0].description}\n\n${url}`);
-      await interaction.update({ embeds: [embed], components });
-    } else {
-      const mention = `</${svc.command.replace('/', '')}:${svc.botId}>`;
-      embed.setDescription(`${interaction.message.embeds[0].description}\n\n${mention}`);
-      await interaction.update({ embeds: [embed], components });
-    }
-  } else {
-    await interaction.update({ components });
-  }
-});
 
 function buildEmbed(data) {
   const embed = {};
