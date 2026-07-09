@@ -100,14 +100,21 @@ client.on('interactionCreate', async (interaction) => {
     return newRow;
   });
 
-  await interaction.update({ components });
-
-  if (mode === 'url') {
-    const links = await db.getAllBumpLinks(interaction.guildId);
-    const url = (links && links[serviceKey]) || svc.url || svc.url;
-    await interaction.followUp({ content: url, ephemeral: true });
+  // Replace embed description with clickable link/mention
+  if (interaction.message.embeds?.[0]) {
+    const embed = EmbedBuilder.from(interaction.message.embeds[0]);
+    if (mode === 'url') {
+      const links = await db.getAllBumpLinks(interaction.guildId);
+      const url = (links && links[serviceKey]) || svc.url;
+      embed.setDescription(`${interaction.message.embeds[0].description}\n\n${url}`);
+      await interaction.update({ embeds: [embed], components });
+    } else {
+      const mention = `</${svc.command.replace('/', '')}:${svc.botId}>`;
+      embed.setDescription(`${interaction.message.embeds[0].description}\n\n${mention}`);
+      await interaction.update({ embeds: [embed], components });
+    }
   } else {
-    await interaction.followUp({ content: `</${svc.command.replace('/', '')}:${svc.botId}>`, ephemeral: true });
+    await interaction.update({ components });
   }
 });
 

@@ -254,12 +254,10 @@ module.exports = {
     const next = await findNext(guildId, serviceKey);
     const ackComponents = [];
     if (next) {
-      if (next.defaultUrl) {
-        desc += `\n\n**Next →** __${next.name}__`;
-        ackComponents.push(new ActionRowBuilder().addComponents(buildLinkButton(next.key, `✿・${next.type} here`, true, false)));
-      } else {
-        ackComponents.push(new ActionRowBuilder().addComponents(buildLinkButton(next.key, `✿・${next.type} here`, false, false)));
-      }
+      desc += `\n\n**Next →** __${next.name}__`;
+      ackComponents.push(new ActionRowBuilder().addComponents(
+        buildLinkButton(next.key, `✿・${next.type} here`, !!next.defaultUrl, false)
+      ));
     }
 
     const thankEmbed = new EmbedBuilder()
