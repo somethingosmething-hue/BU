@@ -137,7 +137,7 @@ function setupGracefulShutdown() {
           if (!channel) continue;
           console.log(`Sending shutdown message to #${channel.name} (${channel.id}) in ${guild.id}`);
           const shutdownEmbed = new EmbedBuilder()
-            .setColor('#FF9E9E')
+            .setColor('#9EFFCA')
             .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! It has been updated.\n-# <:smolheart:1490431051007525048> For any problems or bugs, contact <@1486469966332170392>.`);
           await channel.send({ embeds: [shutdownEmbed] });
           // Save where we sent it so startup can send "back up" there
@@ -441,7 +441,7 @@ client.once('clientReady', async () => {
       if (channel) {
         console.log(`Sending back-up message to #${channel.name} (${channel.id})`);
         const startupEmbed = new EmbedBuilder()
-          .setColor('#9EFFC0')
+          .setColor('#9EFFCA')
           .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! Thank you for your patience.`);
         await channel.send({ embeds: [startupEmbed] });
         console.log('Back-up message sent.');
