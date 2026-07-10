@@ -106,13 +106,17 @@ async function sendReminder(client, data) {
   }
 
   let desc = `${ping} You can ${actionWord(data.type)} again on __${data.name}__!`;
+  const embed = new EmbedBuilder().setColor('#BE74E3').setDescription(desc);
   if (data.website && data.url) {
+    if (!links[data.serviceKey] && data.serviceKey !== '476259371912003597:/bump') {
+      embed.setFooter({ text: 'No bump link has been set for this bot. Change this with /setlink!' });
+    }
     const overrideUrl = links[data.serviceKey] || data.url;
     const components = [new ActionRowBuilder().addComponents(buildLinkButton(`✿・${actionWord(data.type)} here`, overrideUrl))];
-    await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)], components }).catch(() => {});
+    await channel.send({ embeds: [embed], components }).catch(() => {});
   } else {
     desc += ` *${data.command}*`;
-    await channel.send({ embeds: [new EmbedBuilder().setColor('#BE74E3').setDescription(desc)] }).catch(() => {});
+    await channel.send({ embeds: [embed] }).catch(() => {});
   }
 
   await db.deleteBumpReminder(data.guildId, data.serviceKey);
@@ -263,9 +267,13 @@ module.exports = {
       }
     }
 
+    const settings = await db.getServerSettings(guildId);
     const thankEmbed = new EmbedBuilder()
       .setColor('#BE74E3')
       .setDescription(desc);
+    if (!settings.bumpRole) {
+      thankEmbed.setFooter({ text: 'No bump role has been set to be pinged. Change this with /setbumprole!' });
+    }
 
     await brChannel.send({ embeds: [thankEmbed], components: ackComponents.length ? ackComponents : undefined }).catch(() => {});
     console.log(`[BumpHandler] Sent acknowledgment for ${matchedService.name}`);
