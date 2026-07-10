@@ -50,8 +50,8 @@ module.exports = {
         }
 
         if (sub === 'list') {
-            const raw = db.loadDB('trusted');
-            const guildTrust = raw[guildId] || {};
+            const doc = await db.getCollection('trusted').findOne({ guildId });
+            const guildTrust = doc?.data || {};
             const trusted = Object.entries(guildTrust)
                 .filter(([, v]) => !!v)
                 .map(([userId]) => userId);

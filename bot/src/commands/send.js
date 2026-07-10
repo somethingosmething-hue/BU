@@ -56,12 +56,11 @@ module.exports = {
       }
     }
 
-    await channel.send(payload);
+    const sentMsg = await channel.send(payload);
 
     for (const emoji of parsed.reactEmojis || []) {
       try {
-        const sent = await channel.send({ content: emoji });
-        await sent.delete();
+        await sentMsg.react(emoji);
       } catch {}
     }
 

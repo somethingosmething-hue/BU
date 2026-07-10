@@ -157,7 +157,11 @@ client.once('ready', async () => {
 
   // Start intervals only after DB is connected
   // Channel sync interval
+  let channelSyncRunning = false;
   setInterval(async () => {
+    if (channelSyncRunning) return;
+    channelSyncRunning = true;
+    try {
     for (const guild of client.guilds.cache.values()) {
       try {
         await guild.channels.fetch();
@@ -174,6 +178,7 @@ client.once('ready', async () => {
         await new Promise(r => setTimeout(r, 2000));
       } catch (e) {}
     }
+    } finally { channelSyncRunning = false; }
   }, 60000);
 
   // Pending sends interval
@@ -208,6 +213,23 @@ client.once('ready', async () => {
     }
     console.log(`Recovered ${pendingReminders.length} pending bump reminders`);
   } catch (e) { console.error('Bump reminder recovery error:', e.message); }
+
+  // Regular reminder checker - runs every 30 seconds
+  setInterval(async () => {
+    try {
+      const reminders = await db.getReminders();
+      for (const [id, r] of Object.entries(reminders)) {
+        if (Date.now() >= r.at) {
+          const user = await client.users.fetch(r.userId).catch(() => null);
+          if (user) {
+            await user.send({ content: `⏰ **Reminder:** ${r.text}` }).catch(() => {});
+          }
+          delete reminders[id];
+        }
+      }
+      await db.saveReminders(reminders);
+    } catch (e) { console.error('Reminder check error:', e.message); }
+  }, 30000);
 
   // Bump reminder checker - runs every 30 seconds
   setInterval(async () => {
@@ -265,7 +287,11 @@ client.once('ready', async () => {
             const winnerCount = Math.min(gw.winners || 1, entries.length);
             const winners = [];
 
-            const shuffled = [...entries].sort(() => Math.random() - 0.5);
+            const shuffled = [...entries];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+              const j = Math.floor(Math.random() * (i + 1));
+              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
             for (let i = 0; i < winnerCount; i++) {
               winners.push(shuffled[i]);
             }
@@ -328,6 +354,7 @@ client.on('guildCreate', async (guild) => {
   }
 
   try {
+    await guild.channels.fetch();
     const channels = guild.channels.cache
       .filter(c => c.type === 0)
       .map(c => ({ id: c.id, name: c.name, parentId: c.parentId }))

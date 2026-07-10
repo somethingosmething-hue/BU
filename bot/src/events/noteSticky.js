@@ -33,7 +33,7 @@ async function refreshNote(guildId, channel, note) {
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
-    if (!message.guild) return;
+    if (!message.guild || message.author.bot) return;
 
     const note = await db.getNote(message.guild.id, message.channel.id);
     if (!note) return;

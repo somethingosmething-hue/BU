@@ -1,11 +1,12 @@
 if (process.env.VERCEL !== 'true') require('dotenv').config();
 const express = require('express');
 const { MongoClient, ObjectId } = require('mongodb');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const MONGODB_URI = process.env.MONGODB_URI;
-const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || 'admin';
+const DASHBOARD_PASSWORD = process.env.DASHBOARD_PASSWORD || crypto.randomBytes(16).toString('hex');
 
 if (!MONGODB_URI) {
   console.warn('MONGODB_URI is not set - database features disabled');
@@ -49,23 +50,27 @@ app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://cdn.discordapp.com;");
   next();
 });
-app.use(express.json({ limit: '50mb' }));
+app.use(express.json({ limit: '1mb' }));
+
+app.use(express.static(__dirname + '/public'));
 
 app.use(async (req, res, next) => {
   try { await ensureDB(); next(); }
   catch(e) { res.status(500).json({ error: 'Database not connected' }); }
 });
 
-app.use(express.static(__dirname + '/public'));
-
 function requireAuth(req, res, next) {
   const auth = req.headers.authorization;
   const guildId = req.headers['x-guild-id'];
-  if (!auth) {
+  if (!auth || auth !== DASHBOARD_PASSWORD) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Dashboard"');
     return res.status(401).send('Authentication required');
   }
   next();
+}
+
+function hashPassword(password) {
+  return crypto.createHash('sha256').update(password).digest('hex');
 }
 
 app.post('/api/auth', async (req, res) => {
@@ -78,7 +83,7 @@ app.post('/api/auth', async (req, res) => {
   if (!stored) {
     return res.status(401).json({ success: false, error: 'Password not set. Ask an admin to run /setpassword' });
   }
-  if (password !== stored.password) {
+  if (stored.password !== hashPassword(password)) {
     return res.status(401).json({ success: false, error: 'Invalid password' });
   }
   res.json({ success: true });
@@ -91,7 +96,7 @@ app.post('/api/set-password', async (req, res) => {
   }
   await db.collection('editorpasswords').updateOne(
     { guildId },
-    { $set: { guildId, password } },
+    { $set: { guildId, password: hashPassword(password) } },
     { upsert: true }
   );
   res.json({ success: true });

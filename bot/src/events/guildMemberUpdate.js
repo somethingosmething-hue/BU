@@ -4,7 +4,7 @@ const { parseReply } = require('../utils/parser');
 module.exports = {
   name: 'guildMemberUpdate',
   async execute(oldMember, newMember, client) {
-    if (oldMember.premiumSince || !newMember.premiumSince) return;
+    if (oldMember.premiumSince?.getTime() === newMember.premiumSince?.getTime() || !newMember.premiumSince) return;
 
     const guildId = newMember.guild.id;
     const settings = await db.getServerSettings(guildId);

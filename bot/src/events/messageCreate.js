@@ -55,9 +55,9 @@ module.exports = {
         if (rawPrefix && typeof rawPrefix !== 'string') {
           console.error('Invalid prefix type:', typeof rawPrefix, rawPrefix);
         }
-        const prefix = (typeof rawPrefix === 'string' ? rawPrefix : '/') || '/';
+        const prefix = (typeof rawPrefix === 'string' && rawPrefix) ? rawPrefix : null;
 
-        if (prefix && typeof prefix === 'string' && content.toLowerCase().startsWith(prefix.toLowerCase())) {
+        if (prefix && content.toLowerCase().startsWith(prefix.toLowerCase())) {
             const cmdContent = content.slice(prefix.length).trim();
             const cmdName    = cmdContent.split(' ')[0].toLowerCase();
             const args       = cmdContent.slice(cmdName.length).trim();
@@ -133,7 +133,11 @@ module.exports = {
                     matched = lowerContent.endsWith(lowerTrigger);
                     break;
                 case 'regex':
-                    try { matched = new RegExp(trigger, 'i').test(content); } catch { matched = false; }
+                    try {
+                      if (trigger.length > 200) { matched = false; break; }
+                      const re = new RegExp(trigger, 'i');
+                      matched = re.test(content);
+                    } catch { matched = false; }
                     break;
                 default:
                     matched = lowerContent === lowerTrigger; // fallback to exact

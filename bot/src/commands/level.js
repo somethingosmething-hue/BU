@@ -114,38 +114,36 @@ module.exports = {
         if (sub === 'setlevel') {
             const target = interaction.options.getUser('user');
             const level  = interaction.options.getInteger('level');
-            const dbData = await db.getLevelUser(guildId, target.id);
             let totalXP = 0;
             for (let i = 1; i <= level; i++) totalXP += db.xpForLevel(i);
-            const raw = db.loadDB('levels');
-            raw[guildId] ??= {};
-            raw[guildId][target.id] = { xp: totalXP, level, lastXP: dbData.lastXP };
-            db.saveDB('levels', raw);
+            await db.getCollection('levels').updateOne(
+              { guildId, userId: target.id },
+              { $set: { data: { xp: totalXP, level, lastXP: Date.now() } } },
+              { upsert: true }
+            );
             return interaction.reply({ content: `✅ Set ${target.username}'s level to **${level}** (${totalXP.toLocaleString()} XP).` });
         }
 
         if (sub === 'setxp') {
             const target = interaction.options.getUser('user');
             const xp     = interaction.options.getInteger('xp');
-            const raw    = db.loadDB('levels');
-            raw[guildId] ??= {};
-            raw[guildId][target.id] ??= { xp: 0, level: 0, lastXP: 0 };
             let level = 0;
             let remaining = xp;
             while (remaining >= db.xpForLevel(level + 1)) {
                 remaining -= db.xpForLevel(level + 1);
                 level++;
             }
-            raw[guildId][target.id] = { xp, level, lastXP: raw[guildId][target.id].lastXP };
-            db.saveDB('levels', raw);
+            await db.getCollection('levels').updateOne(
+              { guildId, userId: target.id },
+              { $set: { data: { xp, level, lastXP: Date.now() } } },
+              { upsert: true }
+            );
             return interaction.reply({ content: `✅ Set ${target.username}'s XP to **${xp.toLocaleString()}** (Level ${level}).` });
         }
 
         if (sub === 'reset') {
             const target = interaction.options.getUser('user');
-            const raw    = db.loadDB('levels');
-            if (raw[guildId]?.[target.id]) delete raw[guildId][target.id];
-            db.saveDB('levels', raw);
+            await db.getCollection('levels').deleteOne({ guildId, userId: target.id });
             return interaction.reply({ content: `✅ Reset **${target.username}**'s level data.` });
         }
     },

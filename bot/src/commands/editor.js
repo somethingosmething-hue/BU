@@ -4,6 +4,7 @@ const EDITOR_URL = process.env.EDITOR_URL || 'https://catboy-amber.vercel.app';
 const EDITOR_API = process.env.EDITOR_API || 'https://catboy-amber.vercel.app';
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('editor')
     .setDescription('Get the web dashboard link')
@@ -26,7 +27,7 @@ module.exports = {
           body: JSON.stringify({ guildId, password })
         });
       } catch (e) {}
-      await interaction.reply({ content: `✅ Password set! Server: \`${guildId}\` Password: \`${password}\``, ephemeral: true });
+      await interaction.reply({ content: `✅ Password set!`, ephemeral: true });
       return;
     }
 

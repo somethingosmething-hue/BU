@@ -105,7 +105,7 @@ async function sendReminder(client, data) {
     if (userId) ping = `<@${userId}>`;
   }
 
-  let desc = `${ping} You can ${actionWord(data.type)} again on __${data.name}__!`;
+  let desc = `You can ${actionWord(data.type)} again on __${data.name}__!`;
   const embed = new EmbedBuilder().setColor('#BE74E3').setDescription(desc);
   if (data.website && data.url) {
     if (!links[data.serviceKey] && data.serviceKey !== '476259371912003597:/bump') {
@@ -113,10 +113,10 @@ async function sendReminder(client, data) {
     }
     const overrideUrl = links[data.serviceKey] || data.url;
     const components = [new ActionRowBuilder().addComponents(buildLinkButton(`✿・${actionWord(data.type)} here`, overrideUrl))];
-    await channel.send({ embeds: [embed], components }).catch(() => {});
+    await channel.send({ content: ping, embeds: [embed], components }).catch(() => {});
   } else {
     desc += ` *${data.command}*`;
-    await channel.send({ embeds: [embed] }).catch(() => {});
+    await channel.send({ content: ping, embeds: [embed] }).catch(() => {});
   }
 
   await db.deleteBumpReminder(data.guildId, data.serviceKey);

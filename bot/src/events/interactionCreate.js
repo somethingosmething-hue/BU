@@ -29,7 +29,7 @@ function buildPayload(parsed) {
     const payload = {};
     if (parsed.hasSeparators) {
         payload.flags = 1 << 15;
-        payload.components = parsed.rows;
+        payload.components = parsed.componentRows;
     } else {
         if (parsed.text)        payload.content    = parsed.text;
         if (parsed.embed)       payload.embeds     = [parsed.embed];
@@ -115,7 +115,9 @@ module.exports = {
             const customId = interaction.customId;
 
             if (customId.startsWith('embed-edit:')) {
-                const [, name, field] = customId.split(':');
+                const parts = customId.split(':');
+                const field = parts.pop();
+                const name = parts.slice(1).join(':');
                 const { ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
                 const saved = await db.getEmbed(interaction.guildId, name);
@@ -155,7 +157,7 @@ module.exports = {
             }
 
             if (customId.startsWith('embed-delete:')) {
-                const [, name] = customId.split(':');
+                const name = customId.slice('embed-delete:'.length);
                 const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
                     await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
@@ -210,6 +212,7 @@ module.exports = {
                 const payload = buildPayload(parsed);
 
                 if (Object.keys(payload).length > 0) {
+                    if (btnData.ephemeral) payload.ephemeral = true;
                     await interaction.reply(payload).catch(console.error);
                 } else {
                     await interaction.reply({ content: '✅ Done!' });
@@ -377,7 +380,9 @@ module.exports = {
             }
 
             if (customId.startsWith('embed-save:')) {
-                const [, name, field] = customId.split(':');
+                const parts = customId.split(':');
+                const field = parts.pop();
+                const name = parts.slice(1).join(':');
                 const value = interaction.fields.getTextInputValue('value') || null;
 
                 const saved = await db.getEmbed(interaction.guildId, name);

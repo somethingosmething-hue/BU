@@ -28,7 +28,7 @@ module.exports = {
       .setDescription(`Password for this server has been set.`)
       .addFields(
         { name: 'Server ID', value: `\`${guildId}\``, inline: true },
-        { name: 'Password', value: `\`${password}\``, inline: true },
+        { name: 'Password', value: `••••••••`, inline: true },
         { name: 'Dashboard', value: `[Open Dashboard](${EDITOR_URL})`, inline: false }
       )
       .setColor('#22c55e');

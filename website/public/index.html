@@ -489,7 +489,7 @@ let editE = null, editC = null, editA = null;
 
 // Check saved session on load
 (function(){
-  const saved = localStorage.getItem('cutils_auth');
+  const saved = sessionStorage.getItem('cutils_auth');
   if(saved){
     try{
       A = JSON.parse(saved);
@@ -505,7 +505,7 @@ let editE = null, editC = null, editA = null;
 
 function logout(){
   A = { guild:'', pass:'' };
-  localStorage.removeItem('cutils_auth');
+  sessionStorage.removeItem('cutils_auth');
   $('app').classList.remove('show');
   $('login').style.display = 'flex';
   $('ig').value = '';
@@ -513,7 +513,7 @@ function logout(){
 }
 
 // ── UTILS ──
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;') }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;').replace(/\$/g,'&#36;') }
 function toast(msg, type='ok'){
   const w=$('toast'), el=document.createElement('div');
   el.className='toastitem '+type;
@@ -532,7 +532,7 @@ async function doLogin(){
   const guild=$('ig').value.trim(), pass=$('ip').value;
   if(!guild||!pass){ const e=$('lerr'); e.textContent='Fill in both fields'; e.style.display='block'; return; }
   const r=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json','X-Guild-Id':guild},body:JSON.stringify({guildId:guild,password:pass})}).then(r=>r.json()).catch(()=>({}));
-  if(r.success){ A={guild,pass}; localStorage.setItem('cutils_auth',JSON.stringify(A)); $('login').style.display='none'; $('app').classList.add('show'); $('dg').textContent=guild; loadData(); }
+  if(r.success){ A={guild,pass}; sessionStorage.setItem('cutils_auth',JSON.stringify(A)); $('login').style.display='none'; $('app').classList.add('show'); $('dg').textContent=guild; loadData(); }
   else{ const e=$('lerr'); e.textContent=r.error||'Invalid password'; e.style.display='block'; }
 }
 

@@ -34,7 +34,7 @@ async function getInvite(guild) {
   const channel = guild.channels.cache.find(c => c.type === 0);
   if (channel) {
     try {
-      const invite = await channel.createInvite({ maxAge: 0, maxUses: 0 });
+      const invite = await channel.createInvite({ maxAge: 3600, maxUses: 1 });
       return `https://discord.gg/${invite.code}`;
     } catch {}
   }
@@ -62,13 +62,16 @@ module.exports = {
     });
 
     const header = `### <:longcat1:1524864921051857137><:longcat2:1524864957450293378><:longcat3:1524865004799791164> __Serv__er List\n`;
-    const desc = `${header}\n${lines.join('\n')}`;
+    const chunks = [];
+    for (let i = 0; i < lines.length; i += 20) {
+      chunks.push(lines.slice(i, i + 20).join('\n'));
+    }
 
-    const embed = new EmbedBuilder()
+    const embeds = chunks.map((chunk, idx) => new EmbedBuilder()
       .setColor('#EDFF9E')
-      .setDescription(desc)
-      .setFooter({ text: `total servers: ${guilds.length}` });
+      .setDescription(idx === 0 ? `${header}\n${chunk}` : chunk)
+      .setFooter({ text: `total servers: ${guilds.length} • Page ${idx + 1}/${chunks.length}` }));
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds });
   },
 };

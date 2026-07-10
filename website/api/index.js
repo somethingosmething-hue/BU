@@ -35,7 +35,7 @@ function checkAuth(req, res, next) {
 }
 
 app.post('/api/auth', (req, res) => {
-  if (req.body.password === process.env.DASHBOARD_PASSWORD || 'mimuadmin') res.json({ success: true });
+  if (req.body.password === (process.env.DASHBOARD_PASSWORD || 'mimuadmin')) res.json({ success: true });
   else res.status(401).json({ success: false });
 });
 

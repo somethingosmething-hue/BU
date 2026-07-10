@@ -34,6 +34,10 @@ module.exports = {
         return interaction.reply({ content: 'Number must be at least 1.', ephemeral: true });
       }
 
+      if (number > 100) {
+        return interaction.reply({ content: 'Number must be at most 100.', ephemeral: true });
+      }
+
       const curlist = await db.getGlobalCurList(name);
 
       if (!curlist || curlist.elements.length === 0) {
@@ -55,13 +59,17 @@ module.exports = {
     }
 
     const name = interaction.options.getString('name');
-    const number = interaction.options.getInteger('number');
+      const number = interaction.options.getInteger('number');
 
-    if (number < 1) {
-      return interaction.reply({ content: 'Number must be at least 1.', ephemeral: true });
-    }
+      if (number < 1) {
+        return interaction.reply({ content: 'Number must be at least 1.', ephemeral: true });
+      }
 
-    const curlist = await db.getCurList(guildId, name);
+      if (number > 100) {
+        return interaction.reply({ content: 'Number must be at most 100.', ephemeral: true });
+      }
+
+      const curlist = await db.getCurList(guildId, name);
 
     if (!curlist || curlist.elements.length === 0) {
       return interaction.reply({ content: `No elements found in list "${name}".`, ephemeral: true });

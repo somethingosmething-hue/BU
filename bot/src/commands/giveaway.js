@@ -48,7 +48,7 @@ module.exports = {
         .setTimestamp(endsAt);
 
       const enterBtn = new ButtonBuilder()
-        .setCustomId(`gw-enter-${endsAt}`)
+        .setCustomId(`gw-enter-${interaction.id}-${endsAt}`)
         .setLabel('🎉')
         .setStyle(ButtonStyle.Success);
 

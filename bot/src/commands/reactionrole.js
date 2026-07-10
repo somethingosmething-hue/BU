@@ -86,11 +86,9 @@ module.exports = {
 
       if (!toDelete.length) return interaction.reply({ content: '❌ No reaction roles found for that message.' });
 
-      const raw = db.loadDB('reactionroles');
       for (const key of toDelete) {
-        if (raw[guildId]) delete raw[guildId][key];
+        await db.deleteReactionRole(guildId, messageId, key.split(':')[1]);
       }
-      db.saveDB('reactionroles', raw);
 
       return interaction.reply({ content: `✅ Removed **${toDelete.length}** reaction role(s) from message \`${messageId}\`.` });
     }

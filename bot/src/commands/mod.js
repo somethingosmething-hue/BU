@@ -194,12 +194,16 @@ module.exports = {
         if (sub === 'delwarn') {
             if (!requirePerm('ModerateMembers')) return;
             const id = interaction.options.getInteger('id');
-            const raw = db.loadDB('modlogs');
-            if (!raw[guildId]) return interaction.reply({ content: '❌ No modlogs for this guild.' });
-            const idx = raw[guildId].findIndex(l => l.id === id);
+            const doc = await db.getCollection('modlogs').findOne({ guildId });
+            const logs = doc?.data || [];
+            const idx = logs.findIndex(l => l.id === id);
             if (idx === -1) return interaction.reply({ content: `❌ No log entry with ID \`${id}\`.` });
-            raw[guildId].splice(idx, 1);
-            db.saveDB('modlogs', raw);
+            logs.splice(idx, 1);
+            await db.getCollection('modlogs').updateOne(
+              { guildId },
+              { $set: { data: logs } },
+              { upsert: true }
+            );
             return interaction.reply({ content: `✅ Deleted log entry \`#${id}\`.` });
         }
 
