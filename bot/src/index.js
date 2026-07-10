@@ -101,6 +101,7 @@ async function findBusiestChannel(guild) {
   let busiest = null;
   let maxCount = 0;
   const oneHourAgo = Date.now() - 3600000;
+  try { await guild.channels.fetch(); } catch {}
   const textChannels = guild.channels.cache.filter(c => c.type === 0);
   for (const [, channel] of textChannels) {
     try {
@@ -117,10 +118,12 @@ async function findBusiestChannel(guild) {
 
 function setupGracefulShutdown() {
   async function onShutdown() {
+    console.log('Shutting down gracefully...');
     for (const [, guild] of client.guilds.cache) {
       try {
         const channel = await findBusiestChannel(guild);
-        if (!channel) continue;
+        if (!channel) { console.log(`No busy channel found for ${guild.id}`); continue; }
+        console.log(`Sending shutdown message to ${channel.id} in ${guild.id}`);
         const shutdownEmbed = new EmbedBuilder()
           .setColor('#FF9E9E')
           .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
@@ -130,12 +133,13 @@ function setupGracefulShutdown() {
           { $set: { guildId: guild.id, channelId: channel.id, messageId: msg.id } },
           { upsert: true }
         );
+        console.log('Shutdown message sent.');
       } catch (e) { console.error('Shutdown message error:', e.message); }
     }
-    process.exit(0);
   }
-  process.on('SIGINT', onShutdown);
-  process.on('SIGTERM', onShutdown);
+  const handler = () => { onShutdown().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); }); };
+  process.on('SIGINT', handler);
+  process.on('SIGTERM', handler);
 }
 
 db.connectDB().then(async () => {
@@ -386,12 +390,17 @@ client.once('clientReady', async () => {
   try {
     const status = await db.getCollection('botstatus').findOne({ key: 'shutdown' });
     if (status) {
-      const channel = client.channels.cache.get(status.channelId);
+      let channel = client.channels.cache.get(status.channelId);
+      if (!channel) {
+        try { channel = await client.channels.fetch(status.channelId); } catch {}
+      }
       if (channel) {
+        console.log(`Sending startup message to ${channel.id}`);
         const startupEmbed = new EmbedBuilder()
           .setColor('#9EFFC0')
           .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! Thank you for your patience.`);
         await channel.send({ embeds: [startupEmbed] });
+        console.log('Startup message sent.');
       }
       await db.getCollection('botstatus').deleteOne({ key: 'shutdown' });
     }
