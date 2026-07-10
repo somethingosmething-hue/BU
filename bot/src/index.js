@@ -147,7 +147,7 @@ db.connectDB().then(async () => {
   process.exit(1);
 });
 
-client.once('ready', async () => {
+client.once('clientReady', async () => {
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
 
   // Separate global commands (user app) from guild commands (server bot)
