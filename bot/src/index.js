@@ -99,10 +99,25 @@ function buildEmbed(data) {
 
 async function findBusiestChannel(guild) {
   let busiest = null;
-  let maxCount = 0;
+  let bestTimestamp = 0;
   const oneHourAgo = Date.now() - 3600000;
   try { await guild.channels.fetch(); } catch {}
   const textChannels = guild.channels.cache.filter(c => c.type === 0);
+
+  // First pass: use lastMessageId (instant, no API calls) to find most active channel
+  for (const [, channel] of textChannels) {
+    if (channel.lastMessageId) {
+      const ts = BigInt(channel.lastMessageId) >> 22n;
+      if (ts > bestTimestamp) {
+        bestTimestamp = ts;
+        busiest = channel;
+      }
+    }
+  }
+  if (busiest) return busiest;
+
+  // Fallback: if no lastMessageId, fetch recent messages and count those from last hour
+  let maxCount = 0;
   for (const [, channel] of textChannels) {
     try {
       const messages = await channel.messages.fetch({ limit: 50 });
@@ -117,29 +132,40 @@ async function findBusiestChannel(guild) {
 }
 
 function setupGracefulShutdown() {
-  async function onShutdown() {
-    console.log('Shutting down gracefully...');
-    for (const [, guild] of client.guilds.cache) {
-      try {
-        const channel = await findBusiestChannel(guild);
-        if (!channel) { console.log(`No busy channel found for ${guild.id}`); continue; }
-        console.log(`Sending shutdown message to ${channel.id} in ${guild.id}`);
-        const shutdownEmbed = new EmbedBuilder()
-          .setColor('#FF9E9E')
-          .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
-        const msg = await channel.send({ embeds: [shutdownEmbed] });
-        await db.getCollection('botstatus').updateOne(
-          { key: 'shutdown' },
-          { $set: { guildId: guild.id, channelId: channel.id, messageId: msg.id } },
-          { upsert: true }
-        );
-        console.log('Shutdown message sent.');
-      } catch (e) { console.error('Shutdown message error:', e.message); }
+  let shuttingDown = false;
+  async function onShutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`Received ${signal}, shutting down gracefully...`);
+    try {
+      for (const [, guild] of client.guilds.cache) {
+        try {
+          const channel = await findBusiestChannel(guild);
+          if (!channel) { console.log(`No busy channel found for ${guild.id}`); continue; }
+          console.log(`Sending shutdown message to #${channel.name} (${channel.id}) in ${guild.id}`);
+          const shutdownEmbed = new EmbedBuilder()
+            .setColor('#FF9E9E')
+            .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
+          const msg = await channel.send({ embeds: [shutdownEmbed] });
+          await db.getCollection('botstatus').updateOne(
+            { key: 'shutdown' },
+            { $set: { guildId: guild.id, channelId: channel.id, messageId: msg.id } },
+            { upsert: true }
+          );
+          console.log('Shutdown message sent.');
+        } catch (e) { console.error('Shutdown message error:', e.message); }
+      }
+    } catch (e) {
+      console.error('Shutdown failed:', e);
     }
+    process.exit(0);
   }
-  const handler = () => { onShutdown().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); }); };
-  process.on('SIGINT', handler);
-  process.on('SIGTERM', handler);
+  process.on('SIGINT', () => onShutdown('SIGINT'));
+  process.on('SIGTERM', () => onShutdown('SIGTERM'));
+  // Safety net: if something hangs, force exit after 10s
+  process.on('beforeExit', () => {
+    setTimeout(() => process.exit(0), 100).unref();
+  });
 }
 
 db.connectDB().then(async () => {
