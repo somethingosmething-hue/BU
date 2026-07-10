@@ -34,6 +34,6 @@ module.exports = {
       )
       .setColor('#22c55e');
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: 64 });
   },
 };

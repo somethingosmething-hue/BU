@@ -12,7 +12,7 @@ module.exports = {
     const channelId = interaction.channelId;
     const note = await db.getNote(guildId, channelId);
     if (!note) {
-      return interaction.reply({ content: '❌ No note set in this channel.', ephemeral: true });
+      return interaction.reply({ content: '❌ No note set in this channel.', flags: 64 });
     }
 
     if (note.type === 'embed') {

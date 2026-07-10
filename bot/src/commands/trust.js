@@ -25,13 +25,13 @@ module.exports = {
             const target = interaction.options.getUser('user');
 
             if (SPECIAL_USERS.includes(target.id)) {
-                return interaction.reply({ content: `⭐ ${target} is a permanent special user and is already trusted.`, ephemeral: true });
+                return interaction.reply({ content: `⭐ ${target} is a permanent special user and is already trusted.`, flags: 64 });
             }
 
             await db.setTrusted(guildId, target.id, true);
             return interaction.reply({
                 embeds: [botEmbed('#77dd77').setDescription(`✅ ${target} is now trusted and can run any bot command without needing server permissions.`)],
-                ephemeral: true,
+                flags: 64,
             });
         }
 
@@ -39,13 +39,13 @@ module.exports = {
             const target = interaction.options.getUser('user');
 
             if (SPECIAL_USERS.includes(target.id)) {
-                return interaction.reply({ content: `❌ ${target} is a permanent special user and cannot be untrusted.`, ephemeral: true });
+                return interaction.reply({ content: `❌ ${target} is a permanent special user and cannot be untrusted.`, flags: 64 });
             }
 
             await db.setTrusted(guildId, target.id, false);
             return interaction.reply({
                 embeds: [botEmbed('#ff6b6b').setDescription(`✅ Removed trusted status from ${target}.`)],
-                ephemeral: true,
+                flags: 64,
             });
         }
 
@@ -57,7 +57,7 @@ module.exports = {
                 .map(([userId]) => userId);
 
             if (!trusted.length) {
-                return interaction.reply({ content: '📭 No trusted users in this server.', ephemeral: true });
+                return interaction.reply({ content: '📭 No trusted users in this server.', flags: 64 });
             }
 
             const lines = trusted.map(id =>
@@ -66,7 +66,7 @@ module.exports = {
 
             return interaction.reply({
                 embeds: [botEmbed().setTitle(`🔑 Trusted Users (${trusted.length})`).setDescription(lines.join('\n'))],
-                ephemeral: true,
+                flags: 64,
             });
         }
     },

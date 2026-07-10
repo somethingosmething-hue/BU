@@ -16,16 +16,16 @@ module.exports = {
     const member = interaction.member;
 
     if (!guildId) {
-      return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return interaction.reply({ content: 'This command can only be used in a server.', flags: 64 });
     }
 
     const trusted = await db.isTrusted(guildId, member.id);
     if (!trusted && !member.permissions.has('Administrator')) {
-      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', ephemeral: true });
+      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', flags: 64 });
     }
 
     const channel = interaction.options.getChannel('channel');
     await db.setServerSetting(guildId, 'curlistChannel', channel.id);
-    await interaction.reply({ content: `CurList channel set to ${channel}. Messages starting with [ADD:name] will be processed.`, ephemeral: true });
+    await interaction.reply({ content: `CurList channel set to ${channel}. Messages starting with [ADD:name] will be processed.`, flags: 64 });
   },
 };

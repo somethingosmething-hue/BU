@@ -10,19 +10,19 @@ module.exports = {
     const user = interaction.user;
 
     if (!db.isGloballyTrusted(user.id)) {
-      return interaction.reply({ content: '❌ You are not globally trusted to use this command.', ephemeral: true });
+      return interaction.reply({ content: '❌ You are not globally trusted to use this command.', flags: 64 });
     }
 
     const lists = await db.getAllGlobalCurLists();
 
     if (!lists || lists.length === 0) {
-      return interaction.reply({ content: 'No global curlists found.', ephemeral: true });
+      return interaction.reply({ content: 'No global curlists found.', flags: 64 });
     }
 
     const lines = lists.map(l => `• **${l.name}** — **${l.elements.length}** element(s)`);
     await interaction.reply({
       content: `📊 **Global CurList Totals:**\n${lines.join('\n')}`,
-      ephemeral: true,
+      flags: 64,
     });
   },
 };

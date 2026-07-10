@@ -15,22 +15,22 @@ module.exports = {
     const member = interaction.member;
 
     if (!guildId) {
-      return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return interaction.reply({ content: 'This command can only be used in a server.', flags: 64 });
     }
 
     const trusted = await db.isTrusted(guildId, member.id);
     if (!trusted && !member.permissions.has('Administrator')) {
-      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', ephemeral: true });
+      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', flags: 64 });
     }
 
     const name = interaction.options.getString('name');
     const curlist = await db.getCurList(guildId, name);
 
     if (!curlist || curlist.elements.length === 0) {
-      return interaction.reply({ content: `No elements found in list "${name}".`, ephemeral: true });
+      return interaction.reply({ content: `No elements found in list "${name}".`, flags: 64 });
     }
 
     const content = `[FULL LIST: ${name}]\n${curlist.elements.join('\n')}`;
-    await interaction.reply({ content, ephemeral: true });
+    await interaction.reply({ content, flags: 64 });
   },
 };

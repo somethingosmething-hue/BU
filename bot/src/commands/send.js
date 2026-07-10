@@ -27,7 +27,7 @@ module.exports = {
     if (parsed.requireRole) {
         const role = resolveRole(interaction.guild, parsed.requireRole);
         if (role && !interaction.member.roles.cache.has(role.id)) {
-            await interaction.reply({ content: `❌ You need the **${role.name}** role!`, ephemeral: true });
+            await interaction.reply({ content: `❌ You need the **${role.name}** role!`, flags: 64 });
             return;
         }
     }
@@ -78,6 +78,6 @@ module.exports = {
       } catch {}
     }
 
-    await interaction.reply({ content: `✅ Sent to ${channel}`, ephemeral: true });
+    await interaction.reply({ content: `✅ Sent to ${channel}`, flags: 64 });
   },
 };

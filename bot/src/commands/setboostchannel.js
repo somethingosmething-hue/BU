@@ -23,6 +23,6 @@ module.exports = {
     const embed = botEmbed('#ff73fa')
       .setDescription(`✅ Boost announcements will be sent to ${channel}`);
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: 64 });
   },
 };

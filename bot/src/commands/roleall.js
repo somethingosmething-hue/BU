@@ -15,26 +15,26 @@ module.exports = {
     const member = interaction.member;
 
     if (!guildId) {
-      return interaction.reply({ content: 'This command can only be used in a server.', ephemeral: true });
+      return interaction.reply({ content: 'This command can only be used in a server.', flags: 64 });
     }
 
     const trusted = await db.isTrusted(guildId, member.id);
     if (!trusted && !member.permissions.has('Administrator')) {
-      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', ephemeral: true });
+      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', flags: 64 });
     }
 
     const role = interaction.options.getRole('role');
     if (!role) {
-      return interaction.reply({ content: 'Role not found.', ephemeral: true });
+      return interaction.reply({ content: 'Role not found.', flags: 64 });
     }
 
     // Check if bot can manage this role
     const botMember = interaction.guild.members.me;
     if (role.position >= botMember.roles.highest.position) {
-      return interaction.reply({ content: '❌ I cannot add that role because it is higher than my highest role.', ephemeral: true });
+      return interaction.reply({ content: '❌ I cannot add that role because it is higher than my highest role.', flags: 64 });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     try {
       const members = await interaction.guild.members.fetch();
@@ -60,10 +60,10 @@ module.exports = {
         }
       }
 
-      await interaction.editReply({ content: `✅ Added ${role.name} to ${addedCount} member(s). Failed: ${failedCount}`, ephemeral: true });
+      await interaction.editReply({ content: `✅ Added ${role.name} to ${addedCount} member(s). Failed: ${failedCount}`, flags: 64 });
     } catch (error) {
       console.error('Error in roleall:', error);
-      await interaction.editReply({ content: '❌ Failed to fetch members or add roles.', ephemeral: true });
+      await interaction.editReply({ content: '❌ Failed to fetch members or add roles.', flags: 64 });
     }
   },
 };

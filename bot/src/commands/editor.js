@@ -27,7 +27,7 @@ module.exports = {
           body: JSON.stringify({ guildId, password })
         });
       } catch (e) {}
-      await interaction.reply({ content: `✅ Password set!`, ephemeral: true });
+      await interaction.reply({ content: `✅ Password set!`, flags: 64 });
       return;
     }
 
@@ -40,6 +40,6 @@ module.exports = {
       )
       .setColor('#5865F2');
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: 64 });
   },
 };

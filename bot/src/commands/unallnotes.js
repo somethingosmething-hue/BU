@@ -11,7 +11,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const notes = await db.getAllNotes(guildId);
     if (!notes.length) {
-      return interaction.reply({ content: '📭 No notes found in this server.', ephemeral: true });
+      return interaction.reply({ content: '📭 No notes found in this server.', flags: 64 });
     }
 
     const names = notes.map(n => {
@@ -29,7 +29,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('unallcancel').setLabel('❌ Cancel').setStyle(ButtonStyle.Secondary)
     );
 
-    const reply = await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    const reply = await interaction.reply({ embeds: [embed], components: [row], flags: 64 });
 
     const filter = i => i.user.id === interaction.user.id;
     const collected = await reply.awaitMessageComponent({ filter, time: 30000 }).catch(() => null);

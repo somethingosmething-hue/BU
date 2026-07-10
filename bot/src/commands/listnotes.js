@@ -17,7 +17,7 @@ module.exports = {
     const guildId = interaction.guildId;
     const notes = await db.getAllNotes(guildId);
     if (!notes.length) {
-      return interaction.reply({ content: '📭 No notes found in this server.', ephemeral: true });
+      return interaction.reply({ content: '📭 No notes found in this server.', flags: 64 });
     }
 
     const showGluedBy = interaction.options.getBoolean('show_glued_by') || false;
@@ -51,7 +51,7 @@ module.exports = {
       new ButtonBuilder().setCustomId('next').setLabel('Next ▶').setStyle(ButtonStyle.Secondary).setDisabled(pages.length <= 1)
     );
 
-    const reply = await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+    const reply = await interaction.reply({ embeds: [embed], components: [row], flags: 64 });
 
     if (pages.length <= 1) return;
 
@@ -62,7 +62,7 @@ module.exports = {
 
     collector.on('collect', async (btn) => {
       if (btn.user.id !== interaction.user.id) {
-        return btn.reply({ content: '❌ Not your button.', ephemeral: true });
+        return btn.reply({ content: '❌ Not your button.', flags: 64 });
       }
       page = btn.customId === 'next' ? page + 1 : page - 1;
 

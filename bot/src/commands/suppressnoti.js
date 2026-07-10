@@ -9,7 +9,7 @@ module.exports = {
   async execute(interaction) {
     const trusted = await db.isTrusted(interaction.guildId, interaction.user.id);
     if (!trusted && !interaction.member.permissions.has('Administrator')) {
-      return interaction.reply({ content: '❌ You need Administrator permission or Trusted status.', ephemeral: true });
+      return interaction.reply({ content: '❌ You need Administrator permission or Trusted status.', flags: 64 });
     }
 
     await db.getCollection('botstatus').updateOne(
@@ -22,6 +22,6 @@ module.exports = {
       .setColor('#9EFFC0')
       .setDescription('✅ The next time the bot restarts, the back-up/down notification will be suppressed. After that, notifications resume as normal.');
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: 64 });
   },
 };

@@ -20,7 +20,7 @@ module.exports = {
 
     const note = await db.getNote(guildId, channelId);
     if (!note) {
-      return interaction.reply({ content: '❌ No note set in that channel.', ephemeral: true });
+      return interaction.reply({ content: '❌ No note set in that channel.', flags: 64 });
     }
 
     if (note.messageId) {
@@ -33,6 +33,6 @@ module.exports = {
     await db.deleteNote(guildId, channelId);
 
     const name = channel.id === interaction.channelId ? 'this channel' : channel.toString();
-    await interaction.reply({ content: `✅ Note removed from ${name}.`, ephemeral: true });
+    await interaction.reply({ content: `✅ Note removed from ${name}.`, flags: 64 });
   },
 };

@@ -50,13 +50,13 @@ client.on('interactionCreate', async (interaction) => {
 
   const gw = await db.getGiveaway(guildId, msgId);
   if (!gw || gw.ended) {
-    return interaction.reply({ content: '❌ This giveaway has ended.', ephemeral: true });
+    return interaction.reply({ content: '❌ This giveaway has ended.', flags: 64 });
   }
 
   if (!gw.entries) gw.entries = [];
 
   if (gw.entries.includes(userId)) {
-    return interaction.reply({ content: 'You have already entered this giveaway.', ephemeral: true });
+    return interaction.reply({ content: 'You have already entered this giveaway.', flags: 64 });
   }
 
   gw.entries.push(userId);
@@ -70,7 +70,7 @@ client.on('interactionCreate', async (interaction) => {
     await interaction.message.edit({ embeds: [embed] });
   } catch (e) {}
 
-  await interaction.reply({ content: 'You have entered this giveaway!', ephemeral: true });
+  await interaction.reply({ content: 'You have entered this giveaway!', flags: 64 });
 });
 
 

@@ -57,7 +57,7 @@ module.exports = {
     const key = interaction.options.getString('service');
     const svc = SERVICES.find(s => s.key === key);
     if (!svc) {
-      return interaction.reply({ content: '❌ Invalid service.', ephemeral: true });
+      return interaction.reply({ content: '❌ Invalid service.', flags: 64 });
     }
 
     const guildId = interaction.guildId;
@@ -83,6 +83,6 @@ module.exports = {
       }
     }
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.reply({ embeds: [embed], flags: 64 });
   },
 };

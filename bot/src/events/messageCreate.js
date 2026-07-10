@@ -22,9 +22,9 @@ module.exports = {
 
                 if (elements.length > 0) {
                     await db.addCurListElements(guildId, listName, elements);
-                    await message.reply({ content: `✅ Added ${elements.length} element(s) to list "${listName}".`, ephemeral: true }).catch(() => {});
+                    await message.reply({ content: `✅ Added ${elements.length} element(s) to list "${listName}".`, flags: 64 }).catch(() => {});
                 } else {
-                    await message.reply({ content: `No elements found to add to "${listName}".`, ephemeral: true }).catch(() => {});
+                    await message.reply({ content: `No elements found to add to "${listName}".`, flags: 64 }).catch(() => {});
                 }
                 return;
             }
@@ -34,7 +34,7 @@ module.exports = {
             if (gaddMatch) {
                 const listName = gaddMatch[1].trim();
                 if (!db.isGloballyTrusted(message.author.id)) {
-                    await message.reply({ content: '❌ You are not globally trusted to use GADD.', ephemeral: true }).catch(() => {});
+                    await message.reply({ content: '❌ You are not globally trusted to use GADD.', flags: 64 }).catch(() => {});
                     return;
                 }
                 const body = content.slice(gaddMatch[0].length).trim();
@@ -42,9 +42,9 @@ module.exports = {
 
                 if (elements.length > 0) {
                     await db.addGlobalCurListElements(listName, elements);
-                    await message.reply({ content: `🌐 Added ${elements.length} element(s) to global list "${listName}".`, ephemeral: true }).catch(() => {});
+                    await message.reply({ content: `🌐 Added ${elements.length} element(s) to global list "${listName}".`, flags: 64 }).catch(() => {});
                 } else {
-                    await message.reply({ content: `No elements found to add to "${listName}".`, ephemeral: true }).catch(() => {});
+                    await message.reply({ content: `No elements found to add to "${listName}".`, flags: 64 }).catch(() => {});
                 }
                 return;
             }

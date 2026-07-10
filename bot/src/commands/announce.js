@@ -30,13 +30,13 @@ module.exports = {
 
   async execute(interaction, client) {
     if (!db.isGloballyTrusted(interaction.user.id)) {
-      return interaction.reply({ content: '❌ You must be globally trusted to use this command.', ephemeral: true });
+      return interaction.reply({ content: '❌ You must be globally trusted to use this command.', flags: 64 });
     }
 
     const messageText = interaction.options.getString('message');
     const asEmbed = interaction.options.getBoolean('embed') || false;
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     const context = {
       member: interaction.member,

@@ -16,7 +16,7 @@ module.exports = {
 
     if (!prefix) {
       const current = await db.getPrefix(guildId);
-      return interaction.reply({ content: `Current prefix: \`${current || '/'}\``, ephemeral: true });
+      return interaction.reply({ content: `Current prefix: \`${current || '/'}\``, flags: 64 });
     }
 
     await db.setPrefix(guildId, prefix);

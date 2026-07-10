@@ -88,7 +88,7 @@ module.exports = {
 
       const embed = buildDivembFromData(existing);
       await channel.send({ embeds: [embed] });
-      return interaction.reply({ content: `✅ Divemb **${name}** sent to ${channel}.`, ephemeral: true });
+      return interaction.reply({ content: `✅ Divemb **${name}** sent to ${channel}.`, flags: 64 });
     }
 
     if (sub === 'delete') {
@@ -133,7 +133,7 @@ module.exports = {
 
       return interaction.reply({
         embeds: [botEmbed('#c9b8f5').setTitle(`📄 Divemb: ${name}`).setDescription(lines.join('\n'))],
-        ephemeral: true,
+        flags: 64,
       });
     }
   },

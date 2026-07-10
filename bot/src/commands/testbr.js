@@ -41,12 +41,12 @@ module.exports = {
     const brChannelId = settings.bumpReminderChannel;
 
     if (!brChannelId) {
-      return interaction.reply({ content: '❌ No bump reminder channel set. Use `/setbrchannel` first.', ephemeral: true });
+      return interaction.reply({ content: '❌ No bump reminder channel set. Use `/setbrchannel` first.', flags: 64 });
     }
 
     const channel = interaction.guild.channels.cache.get(brChannelId);
     if (!channel) {
-      return interaction.reply({ content: '❌ The bump reminder channel no longer exists.', ephemeral: true });
+      return interaction.reply({ content: '❌ The bump reminder channel no longer exists.', flags: 64 });
     }
 
     const role = `<@&${settings.bumpRole || '1524129755278868570'}>`;
@@ -88,6 +88,6 @@ module.exports = {
 
     await channel.send({ embeds: [embed], components: components?.length ? components : undefined });
 
-    await interaction.reply({ content: `✅ Test reminder sent to ${channel}`, ephemeral: true });
+    await interaction.reply({ content: `✅ Test reminder sent to ${channel}`, flags: 64 });
   },
 };

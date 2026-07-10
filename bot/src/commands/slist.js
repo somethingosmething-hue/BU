@@ -48,7 +48,7 @@ module.exports = {
     .setDescription('List all servers the bot is in with invites'),
 
   async execute(interaction) {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: 64 });
 
     const guilds = [...interaction.client.guilds.cache.values()]
       .sort((a, b) => b.memberCount - a.memberCount);

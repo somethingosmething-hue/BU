@@ -24,30 +24,30 @@ module.exports = {
     if (!guildId) {
       // Check if user is globally trusted
       if (!db.isGloballyTrusted(user.id)) {
-        return interaction.reply({ content: '❌ You are not globally trusted to use this command.', ephemeral: true });
+        return interaction.reply({ content: '❌ You are not globally trusted to use this command.', flags: 64 });
       }
 
       const name = interaction.options.getString('name');
       const number = interaction.options.getInteger('number');
 
       if (number < 1) {
-        return interaction.reply({ content: 'Number must be at least 1.', ephemeral: true });
+        return interaction.reply({ content: 'Number must be at least 1.', flags: 64 });
       }
 
       if (number > 100) {
-        return interaction.reply({ content: 'Number must be at most 100.', ephemeral: true });
+        return interaction.reply({ content: 'Number must be at most 100.', flags: 64 });
       }
 
       const curlist = await db.getGlobalCurList(name);
 
       if (!curlist || curlist.elements.length === 0) {
-        return interaction.reply({ content: `No elements found in global list "${name}".`, ephemeral: true });
+        return interaction.reply({ content: `No elements found in global list "${name}".`, flags: 64 });
       }
 
       const toSend = curlist.elements.slice(0, number);
       const remaining = curlist.elements.slice(number);
 
-      await interaction.reply({ content: `[GLOBAL LIST: ${name}]\n${toSend.join('\n')}`, ephemeral: true });
+      await interaction.reply({ content: `[GLOBAL LIST: ${name}]\n${toSend.join('\n')}`, flags: 64 });
       await db.saveGlobalCurList(name, remaining);
       return;
     }
@@ -55,24 +55,24 @@ module.exports = {
     // Server command
     const trusted = await db.isTrusted(guildId, member.id);
     if (!trusted && !member.permissions.has('Administrator')) {
-      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', ephemeral: true });
+      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', flags: 64 });
     }
 
     const name = interaction.options.getString('name');
       const number = interaction.options.getInteger('number');
 
       if (number < 1) {
-        return interaction.reply({ content: 'Number must be at least 1.', ephemeral: true });
+        return interaction.reply({ content: 'Number must be at least 1.', flags: 64 });
       }
 
       if (number > 100) {
-        return interaction.reply({ content: 'Number must be at most 100.', ephemeral: true });
+        return interaction.reply({ content: 'Number must be at most 100.', flags: 64 });
       }
 
       const curlist = await db.getCurList(guildId, name);
 
     if (!curlist || curlist.elements.length === 0) {
-      return interaction.reply({ content: `No elements found in list "${name}".`, ephemeral: true });
+      return interaction.reply({ content: `No elements found in list "${name}".`, flags: 64 });
     }
 
     const toSend = curlist.elements.slice(0, number);

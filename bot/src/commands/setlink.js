@@ -47,7 +47,7 @@ module.exports = {
 
     const svc = LINK_SERVICES.find(s => s.key === key);
     if (!svc) {
-      return interaction.reply({ content: '❌ Invalid service.', ephemeral: true });
+      return interaction.reply({ content: '❌ Invalid service.', flags: 64 });
     }
 
     if (!link) {

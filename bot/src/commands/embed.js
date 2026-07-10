@@ -128,11 +128,11 @@ module.exports = {
             };
 
             const validationError = validateEmbedData(data);
-            if (validationError) return interaction.reply({ content: validationError, ephemeral: true });
+            if (validationError) return interaction.reply({ content: validationError, flags: 64 });
 
             const existing = await db.getEmbed(guildId, name);
             if (existing) {
-                return interaction.reply({ content: `❌ An embed named **${name}** already exists. Use \`/embed edit\` to modify it.`, ephemeral: true });
+                return interaction.reply({ content: `❌ An embed named **${name}** already exists. Use \`/embed edit\` to modify it.`, flags: 64 });
             }
 
             await db.saveEmbed(guildId, name, data);
@@ -150,32 +150,32 @@ module.exports = {
             const name = interaction.options.getString('name').toLowerCase();
             const channel = interaction.options.getChannel('channel') || interaction.channel;
             const saved = await db.getEmbed(guildId, name);
-            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, flags: 64 });
 
             const validationError = validateEmbedData(saved);
-            if (validationError) return interaction.reply({ content: `❌ ${validationError}`, ephemeral: true });
+            if (validationError) return interaction.reply({ content: `❌ ${validationError}`, flags: 64 });
 
             await channel.send({ embeds: [buildEmbedFromData(saved)] });
-            return interaction.reply({ content: `✅ Sent embed **${name}** to ${channel}.`, ephemeral: true });
+            return interaction.reply({ content: `✅ Sent embed **${name}** to ${channel}.`, flags: 64 });
         }
 
         // ── Delete ────────────────────────────────────────────────────────────
         if (sub === 'delete') {
             const name = interaction.options.getString('name').toLowerCase();
             const existing = await db.getEmbed(guildId, name);
-            if (!existing) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            if (!existing) return interaction.reply({ content: `❌ No embed named **${name}**.`, flags: 64 });
             await db.deleteEmbed(guildId, name);
-            return interaction.reply({ content: `✅ Embed **${name}** deleted.`, ephemeral: true });
+            return interaction.reply({ content: `✅ Embed **${name}** deleted.`, flags: 64 });
         }
 
         // ── List ──────────────────────────────────────────────────────────────
         if (sub === 'list') {
             const embeds = await db.getEmbeds(guildId);
             const names = Object.keys(embeds);
-            if (!names.length) return interaction.reply({ content: '📭 No embeds saved yet.', ephemeral: true });
+            if (!names.length) return interaction.reply({ content: '📭 No embeds saved yet.', flags: 64 });
             return interaction.reply({
                 embeds: [botEmbed().setTitle('📋 Saved Embeds').setDescription(names.map(n => `• \`${n}\``).join('\n'))],
-                ephemeral: true,
+                flags: 64,
             });
         }
 
@@ -183,19 +183,19 @@ module.exports = {
         if (sub === 'preview') {
             const name = interaction.options.getString('name').toLowerCase();
             const saved = await db.getEmbed(guildId, name);
-            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, flags: 64 });
 
             const validationError = validateEmbedData(saved);
-            if (validationError) return interaction.reply({ content: `⚠️ ${validationError}`, ephemeral: true });
+            if (validationError) return interaction.reply({ content: `⚠️ ${validationError}`, flags: 64 });
 
-            return interaction.reply({ content: `Preview of **${name}**:`, embeds: [buildEmbedFromData(saved)], ephemeral: true });
+            return interaction.reply({ content: `Preview of **${name}**:`, embeds: [buildEmbedFromData(saved)], flags: 64 });
         }
 
         // ── Edit ──────────────────────────────────────────────────────────────
         if (sub === 'edit') {
             const name = interaction.options.getString('name').toLowerCase();
             const saved = await db.getEmbed(guildId, name);
-            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, flags: 64 });
 
             const embed = buildEmbedFromData(saved);
 
@@ -213,7 +213,7 @@ module.exports = {
             const value = interaction.options.getString('value');
 
             const saved = await db.getEmbed(guildId, name);
-            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, ephemeral: true });
+            if (!saved) return interaction.reply({ content: `❌ No embed named **${name}**.`, flags: 64 });
 
             saved[field] = value || null;
             await db.saveEmbed(guildId, name, saved);

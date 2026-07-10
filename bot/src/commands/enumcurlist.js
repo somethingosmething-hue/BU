@@ -16,16 +16,16 @@ module.exports = {
 
     // Check if user is globally trusted
     if (!db.isGloballyTrusted(user.id)) {
-      return interaction.reply({ content: '❌ You are not globally trusted to use this command.', ephemeral: true });
+      return interaction.reply({ content: '❌ You are not globally trusted to use this command.', flags: 64 });
     }
 
     const name = interaction.options.getString('name');
     const curlist = await db.getGlobalCurList(name);
 
     if (!curlist || curlist.elements.length === 0) {
-      return interaction.reply({ content: `No elements found in global list "${name}".`, ephemeral: true });
+      return interaction.reply({ content: `No elements found in global list "${name}".`, flags: 64 });
     }
 
-    await interaction.reply({ content: `🌐 **${name}** has **${curlist.elements.length}** element(s).`, ephemeral: true });
+    await interaction.reply({ content: `🌐 **${name}** has **${curlist.elements.length}** element(s).`, flags: 64 });
   },
 };

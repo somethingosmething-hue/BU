@@ -44,6 +44,6 @@ module.exports = {
       gluedAt: Date.now(),
     });
 
-    await interaction.reply({ content: '✅ Note set.', ephemeral: true });
+    await interaction.reply({ content: '✅ Note set.', flags: 64 });
   },
 };

@@ -122,7 +122,7 @@ module.exports = {
 
                 const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: '❌ Embed not found.', flags: 64 });
                     return;
                 }
 
@@ -160,7 +160,7 @@ module.exports = {
                 const name = customId.slice('embed-delete:'.length);
                 const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: '❌ Embed not found.', flags: 64 });
                     return;
                 }
                 await db.deleteEmbed(interaction.guildId, name);
@@ -212,7 +212,7 @@ module.exports = {
                 const payload = buildPayload(parsed);
 
                 if (Object.keys(payload).length > 0) {
-                    if (btnData.ephemeral) payload.ephemeral = true;
+                    if (btnData.ephemeral) payload.flags = 64;
                     await interaction.reply(payload).catch(console.error);
                 } else {
                     await interaction.reply({ content: '✅ Done!' });
@@ -258,7 +258,7 @@ module.exports = {
                     gluedAt: Date.now(),
                 });
 
-                await interaction.reply({ content: '✅ Note set.', ephemeral: true });
+                await interaction.reply({ content: '✅ Note set.', flags: 64 });
                 return;
             }
 
@@ -271,7 +271,7 @@ module.exports = {
                 const image = interaction.fields.getTextInputValue('image') || null;
 
                 if (!title && !description && !thumbnail && !image) {
-                    return interaction.reply({ content: '❌ At least one of title, description, thumbnail, or image is required.', ephemeral: true });
+                    return interaction.reply({ content: '❌ At least one of title, description, thumbnail, or image is required.', flags: 64 });
                 }
 
                 const guildId = interaction.guildId;
@@ -305,7 +305,7 @@ module.exports = {
                     gluedAt: Date.now(),
                 });
 
-                await interaction.reply({ content: '✅ Embed note set.', ephemeral: true });
+                await interaction.reply({ content: '✅ Embed note set.', flags: 64 });
                 return;
             }
 
@@ -316,7 +316,7 @@ module.exports = {
                 const channelId = interaction.channelId;
 
                 const note = await db.getNote(guildId, channelId);
-                if (!note) return interaction.reply({ content: '❌ Note not found.', ephemeral: true });
+                if (!note) return interaction.reply({ content: '❌ Note not found.', flags: 64 });
 
                 try {
                     const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
@@ -333,7 +333,7 @@ module.exports = {
                 note.gluedAt = Date.now();
                 await db.saveNote(guildId, channelId, note);
 
-                await interaction.reply({ content: '✅ Note updated.', ephemeral: true });
+                await interaction.reply({ content: '✅ Note updated.', flags: 64 });
                 return;
             }
 
@@ -349,7 +349,7 @@ module.exports = {
                 const channelId = interaction.channelId;
 
                 const note = await db.getNote(guildId, channelId);
-                if (!note) return interaction.reply({ content: '❌ Note not found.', ephemeral: true });
+                if (!note) return interaction.reply({ content: '❌ Note not found.', flags: 64 });
 
                 try {
                     const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
@@ -375,7 +375,7 @@ module.exports = {
                 note.gluedAt = Date.now();
                 await db.saveNote(guildId, channelId, note);
 
-                await interaction.reply({ content: '✅ Embed note updated.', ephemeral: true });
+                await interaction.reply({ content: '✅ Embed note updated.', flags: 64 });
                 return;
             }
 
@@ -387,7 +387,7 @@ module.exports = {
 
                 const saved = await db.getEmbed(interaction.guildId, name);
                 if (!saved) {
-                    await interaction.reply({ content: '❌ Embed not found.', ephemeral: true });
+                    await interaction.reply({ content: '❌ Embed not found.', flags: 64 });
                     return;
                 }
 
