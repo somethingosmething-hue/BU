@@ -56,7 +56,20 @@ module.exports = {
       }
     }
 
-    const sentMsg = await channel.send(payload);
+    // If the user was replying to a message when they ran /send,
+    // make the bot's message reply to that same message
+    const sendPayload = { ...payload };
+    try {
+      const recentMessages = await channel.messages.fetch({ limit: 25 });
+      const userReply = recentMessages.find(m =>
+        m.author.id === interaction.user.id && m.type === 19 && m.reference
+      );
+      if (userReply && userReply.reference.messageId) {
+        sendPayload.reply = { messageId: userReply.reference.messageId };
+      }
+    } catch {}
+
+    const sentMsg = await channel.send(sendPayload);
 
     for (const emoji of parsed.reactEmojis || []) {
       try {
