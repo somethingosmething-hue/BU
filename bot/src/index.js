@@ -137,8 +137,8 @@ function setupGracefulShutdown() {
           if (!channel) continue;
           console.log(`Sending shutdown message to #${channel.name} (${channel.id}) in ${guild.id}`);
           const shutdownEmbed = new EmbedBuilder()
-            .setColor('#FF9E9E')
-            .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
+            .setColor('#8FE09F')
+            .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! It has been updated.\n-# <:smolheart:1490431051007525048> For any problems or bugs, contact <@1486469966332170392>.`);
           await channel.send({ embeds: [shutdownEmbed] });
           // Save where we sent it so startup can send "back up" there
           await db.getCollection('botstatus').updateOne(
