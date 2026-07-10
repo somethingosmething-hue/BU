@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
 
 const PER_PAGE = 20;
 const MAX_DESC = 4096;
@@ -33,7 +33,15 @@ module.exports = {
           .setCustomId('listroles:prev')
           .setEmoji('<:a:OwO1:1524863682599977071>')
           .setLabel('Last Page')
-          .setStyle(ButtonStyle.Secondary));
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(false));
+      } else {
+        buttons.push(new ButtonBuilder()
+          .setCustomId('listroles:prev')
+          .setEmoji('<:a:OwO1:1524863682599977071>')
+          .setLabel('Last Page')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true));
       }
       buttons.push(new ButtonBuilder()
         .setCustomId('listroles:total')
@@ -45,7 +53,15 @@ module.exports = {
           .setCustomId('listroles:next')
           .setEmoji('<:a:OwO2:1524863704682860836>')
           .setLabel('Next Page')
-          .setStyle(ButtonStyle.Secondary));
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(false));
+      } else {
+        buttons.push(new ButtonBuilder()
+          .setCustomId('listroles:next')
+          .setEmoji('<:a:OwO2:1524863704682860836>')
+          .setLabel('Next Page')
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(true));
       }
 
       const rows = [];
@@ -54,7 +70,8 @@ module.exports = {
     }
 
     let currentPage = 0;
-    await interaction.reply({ ...buildPage(currentPage), ephemeral: true });
+    const pagePayload = buildPage(currentPage);
+    await interaction.reply({ ...pagePayload, flags: MessageFlags.Ephemeral });
     const msg = await interaction.fetchReply();
 
     const collector = msg.createMessageComponentCollector({
@@ -64,17 +81,21 @@ module.exports = {
 
     collector.on('collect', async (btn) => {
       if (btn.user.id !== interaction.user.id) {
-        return btn.reply({ content: 'Not your menu.', ephemeral: true });
+        return btn.reply({ content: 'Not your menu.', flags: MessageFlags.Ephemeral });
       }
       if (btn.customId === 'listroles:prev') currentPage = Math.max(0, currentPage - 1);
       else if (btn.customId === 'listroles:next') currentPage = Math.min(totalPages - 1, currentPage + 1);
-      await btn.update(buildPage(currentPage));
+      try {
+        await btn.update(buildPage(currentPage));
+      } catch {
+        // If the button interaction expired, fall back to editing via the original interaction
+        try { await interaction.editReply(buildPage(currentPage)); } catch {}
+      }
     });
 
     collector.on('end', async () => {
       try {
-        await interaction.editReply({ components: [...buildPage(currentPage).components, { type: 14, divider: true }] });
-        await interaction.editReply({ components: [] });
+        await interaction.editReply({ ...buildPage(currentPage), components: [] });
       } catch {}
     });
   },
