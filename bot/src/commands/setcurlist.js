@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const db = require('../database/db');
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('setcurlist')
     .setDescription('Set a channel to listen for curlist additions')

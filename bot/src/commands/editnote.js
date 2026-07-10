@@ -2,6 +2,7 @@ const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Act
 const db = require('../database/db');
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('editnote')
     .setDescription('Edit the glued message in this channel'),

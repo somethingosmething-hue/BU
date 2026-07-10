@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 
 module.exports = {
+    permissions: ['Administrator'],
     data: new SlashCommandBuilder()
         .setName('test')
         .setDescription('Echo a message (dev/testing use)')

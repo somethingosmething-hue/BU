@@ -1,6 +1,7 @@
 const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('noteembed')
     .setDescription('Glue a rich embed to the bottom of this channel'),

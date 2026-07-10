@@ -2,6 +2,7 @@ const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const db = require('../database/db');
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('unote')
     .setDescription('Remove the glued message from this channel')

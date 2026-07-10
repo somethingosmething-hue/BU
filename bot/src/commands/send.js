@@ -2,6 +2,7 @@ const { SlashCommandBuilder } = require('discord.js');
 const { parseReply, resolveRole } = require('../utils/parser');
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('send')
     .setDescription('Send a message with variables and embeds support')

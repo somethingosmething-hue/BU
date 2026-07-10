@@ -4,6 +4,7 @@ const EDITOR_URL = process.env.EDITOR_URL || 'https://catboy-amber.vercel.app';
 const EDITOR_API = process.env.EDITOR_API || 'https://catboy-amber.vercel.app';
 
 module.exports = {
+  permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('setpassword')
     .setDescription('Set the dashboard password for this server')
