@@ -100,33 +100,20 @@ function buildEmbed(data) {
 async function findBusiestChannel(guild) {
   let busiest = null;
   let bestTimestamp = 0;
-  const oneHourAgo = Date.now() - 3600000;
   try { await guild.channels.fetch(); } catch {}
   const textChannels = guild.channels.cache.filter(c => c.type === 0);
 
-  // First pass: use lastMessageId (instant, no API calls) to find most active channel
+  // Use lastMessageId (cached, instant, no API calls) to find most recently active channel
   for (const [, channel] of textChannels) {
     if (channel.lastMessageId) {
-      const ts = BigInt(channel.lastMessageId) >> 22n;
-      if (ts > bestTimestamp) {
-        bestTimestamp = ts;
-        busiest = channel;
-      }
+      try {
+        const ts = Number(BigInt(channel.lastMessageId) >> 22n);
+        if (ts > bestTimestamp) {
+          bestTimestamp = ts;
+          busiest = channel;
+        }
+      } catch {}
     }
-  }
-  if (busiest) return busiest;
-
-  // Fallback: if no lastMessageId, fetch recent messages and count those from last hour
-  let maxCount = 0;
-  for (const [, channel] of textChannels) {
-    try {
-      const messages = await channel.messages.fetch({ limit: 50 });
-      const recent = messages.filter(m => m.createdTimestamp > oneHourAgo).size;
-      if (recent > maxCount) {
-        maxCount = recent;
-        busiest = channel;
-      }
-    } catch {}
   }
   return busiest;
 }
@@ -138,18 +125,25 @@ function setupGracefulShutdown() {
     shuttingDown = true;
     console.log(`Received ${signal}, shutting down gracefully...`);
     try {
+      // Mark clean shutdown so next startup doesn't send retroactive "down" message
+      await db.getCollection('botstatus').updateOne(
+        { key: 'heartbeat' },
+        { $set: { cleanShutdown: true, stoppedAt: Date.now() } },
+        { upsert: true }
+      );
       for (const [, guild] of client.guilds.cache) {
         try {
           const channel = await findBusiestChannel(guild);
-          if (!channel) { console.log(`No busy channel found for ${guild.id}`); continue; }
+          if (!channel) continue;
           console.log(`Sending shutdown message to #${channel.name} (${channel.id}) in ${guild.id}`);
           const shutdownEmbed = new EmbedBuilder()
             .setColor('#FF9E9E')
             .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
-          const msg = await channel.send({ embeds: [shutdownEmbed] });
+          await channel.send({ embeds: [shutdownEmbed] });
+          // Save where we sent it so startup can send "back up" there
           await db.getCollection('botstatus').updateOne(
             { key: 'shutdown' },
-            { $set: { guildId: guild.id, channelId: channel.id, messageId: msg.id } },
+            { $set: { guildId: guild.id, channelId: channel.id } },
             { upsert: true }
           );
           console.log('Shutdown message sent.');
@@ -162,10 +156,7 @@ function setupGracefulShutdown() {
   }
   process.on('SIGINT', () => onShutdown('SIGINT'));
   process.on('SIGTERM', () => onShutdown('SIGTERM'));
-  // Safety net: if something hangs, force exit after 10s
-  process.on('beforeExit', () => {
-    setTimeout(() => process.exit(0), 100).unref();
-  });
+  process.on('SIGHUP', () => onShutdown('SIGHUP'));
 }
 
 db.connectDB().then(async () => {
@@ -412,25 +403,77 @@ client.once('clientReady', async () => {
     }
   }, 15000);
 
-  // Startup message — send if bot was previously shut down
+  // Startup message — detect unexpected shutdown & send status messages
   try {
-    const status = await db.getCollection('botstatus').findOne({ key: 'shutdown' });
-    if (status) {
-      let channel = client.channels.cache.get(status.channelId);
+    const heartbeat = await db.getCollection('botstatus').findOne({ key: 'heartbeat' });
+    const shutdownStatus = await db.getCollection('botstatus').findOne({ key: 'shutdown' });
+
+    // If there was a previous instance that DIDN'T shut down cleanly, send retroactive "down" message
+    if (heartbeat && !heartbeat.cleanShutdown && heartbeat.busiestChannels) {
+      console.log('Detected unexpected shutdown — sending retroactive down messages...');
+      for (const [guildId, info] of Object.entries(heartbeat.busiestChannels)) {
+        if (shutdownStatus && shutdownStatus.guildId === guildId) continue; // already sent cleanly
+        try {
+          const channel = client.channels.cache.get(info.channelId) || await client.channels.fetch(info.channelId).catch(() => null);
+          if (channel) {
+            const downEmbed = new EmbedBuilder()
+              .setColor('#FF9E9E')
+              .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is down! It may be restarting.\n-# <:smolheart:1490431051007525048> If it doesn't soon, contact <@1486469966332170392>.`);
+            await channel.send({ embeds: [downEmbed] });
+            console.log(`Retroactive down message sent to #${info.channelName} in ${guildId}`);
+            // Save this as the shutdown channel for the upcoming "back up" message
+            await db.getCollection('botstatus').updateOne(
+              { key: 'shutdown' },
+              { $set: { guildId, channelId: info.channelId } },
+              { upsert: true }
+            );
+          }
+        } catch (e) { console.error('Retroactive down message error:', e.message); }
+      }
+    }
+
+    // Send "back up" message if bot was previously down
+    if (shutdownStatus) {
+      let channel = client.channels.cache.get(shutdownStatus.channelId);
       if (!channel) {
-        try { channel = await client.channels.fetch(status.channelId); } catch {}
+        try { channel = await client.channels.fetch(shutdownStatus.channelId); } catch {}
       }
       if (channel) {
-        console.log(`Sending startup message to ${channel.id}`);
+        console.log(`Sending back-up message to #${channel.name} (${channel.id})`);
         const startupEmbed = new EmbedBuilder()
           .setColor('#9EFFC0')
           .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! Thank you for your patience.`);
         await channel.send({ embeds: [startupEmbed] });
-        console.log('Startup message sent.');
+        console.log('Back-up message sent.');
       }
       await db.getCollection('botstatus').deleteOne({ key: 'shutdown' });
     }
-  } catch (e) { console.error('Startup message error:', e.message); }
+
+    // Mark this instance as running (cleanShutdown=false so next startup knows it was unexpected)
+    await db.getCollection('botstatus').updateOne(
+      { key: 'heartbeat' },
+      { $set: { cleanShutdown: false, startedAt: Date.now(), busiestChannels: {} } },
+      { upsert: true }
+    );
+  } catch (e) { console.error('Startup status error:', e.message); }
+
+  // Heartbeat: periodically save busiest channel per guild + mark as alive
+  setInterval(async () => {
+    try {
+      const busiestChannels = {};
+      for (const [guildId, guild] of client.guilds.cache) {
+        const channel = await findBusiestChannel(guild);
+        if (channel) {
+          busiestChannels[guildId] = { channelId: channel.id, channelName: channel.name };
+        }
+      }
+      await db.getCollection('botstatus').updateOne(
+        { key: 'heartbeat' },
+        { $set: { cleanShutdown: false, lastBeat: Date.now(), busiestChannels } },
+        { upsert: true }
+      );
+    } catch (e) { console.error('Heartbeat error:', e.message); }
+  }, 300000); // every 5 minutes
 });
 
 client.on('guildCreate', async (guild) => {
