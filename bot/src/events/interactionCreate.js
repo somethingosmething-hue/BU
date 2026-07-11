@@ -244,6 +244,7 @@ module.exports = {
                     } catch {}
                 }
 
+                noteSticky.guardChannel(guildId, channelId);
                 const msg = await interaction.channel.send({
                     content,
                     flags: (suppress ? 1 << 2 : 0) | (1 << 12),
@@ -291,6 +292,7 @@ module.exports = {
                 if (thumbnail) embed.setThumbnail(thumbnail);
                 if (image) embed.setImage(image);
 
+                noteSticky.guardChannel(guildId, channelId);
                 const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
 
                 await db.saveNote(guildId, channelId, {
@@ -323,6 +325,7 @@ module.exports = {
                     if (old) await old.delete().catch(() => {});
                 } catch {}
 
+                noteSticky.guardChannel(guildId, channelId);
                 const msg = await interaction.channel.send({
                     content,
                     flags: (note.suppress ? 1 << 2 : 0) | (1 << 12),
@@ -364,6 +367,7 @@ module.exports = {
                 if (useThumbnail) embed.setThumbnail(useThumbnail);
                 if (useImage) embed.setImage(useImage);
 
+                noteSticky.guardChannel(guildId, channelId);
                 const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
 
                 note.title = title;

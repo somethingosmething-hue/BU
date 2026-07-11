@@ -36,6 +36,12 @@ async function refreshNote(guildId, channel, note) {
   await db.saveNote(note.guildId, note.channelId, note);
 }
 
+function guardChannel(guildId, channelId) {
+  const key = `${guildId}:${channelId}`;
+  _recentSticky.add(key);
+  setTimeout(() => _recentSticky.delete(key), 2000);
+}
+
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
@@ -52,4 +58,5 @@ module.exports = {
     await refreshNote(message.guild.id, message.channel, note);
   },
   refreshNote,
+  guardChannel,
 };

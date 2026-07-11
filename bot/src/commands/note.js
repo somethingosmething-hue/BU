@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
+const noteSticky = require('../events/noteSticky');
 
 module.exports = {
   permissions: ['ManageGuild'],
@@ -33,6 +34,7 @@ module.exports = {
     }
 
     const flags = (suppress ? 1 << 2 : 0) | (1 << 12);
+    noteSticky.guardChannel(guildId, channelId);
     const msg = await interaction.channel.send({ content, flags });
 
     await db.saveNote(guildId, channelId, {
