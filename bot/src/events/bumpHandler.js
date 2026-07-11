@@ -91,6 +91,13 @@ async function sendReminder(client, data) {
   const channel = client.channels.cache.get(data.channelId);
   if (!channel) return;
 
+  const gs = await db.getServerSettings(data.guildId);
+  if (gs.bumpReminderEnabled === false) {
+    await db.deleteBumpReminder(data.guildId, data.serviceKey);
+    await db.deleteBumpUser(data.guildId, data.serviceKey);
+    return;
+  }
+
   const cdMs = parseMs(data.cooldown);
   const cooldown = await db.getBumpCooldown(data.guildId, data.serviceKey);
   if (!cooldown || Date.now() - cooldown < cdMs) return;
@@ -222,6 +229,12 @@ module.exports = {
     const brChannel = await resolveBumpChannel(guildId, client);
     if (!brChannel) {
       console.log(`[BumpHandler] No bump reminder channel set for guild ${guildId}`);
+      return;
+    }
+
+    const guildSettings = await db.getServerSettings(guildId);
+    if (guildSettings.bumpReminderEnabled === false) {
+      console.log(`[BumpHandler] Bump reminders disabled for guild ${guildId}`);
       return;
     }
 
