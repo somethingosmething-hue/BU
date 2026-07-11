@@ -1,7 +1,13 @@
 const { EmbedBuilder } = require('discord.js');
 const db = require('../database/db');
 
+const _recentSticky = new Set();
+
 async function refreshNote(guildId, channel, note) {
+  const key = `${guildId}:${channel.id}`;
+  _recentSticky.add(key);
+  setTimeout(() => _recentSticky.delete(key), 2000);
+
   if (!note.messageId) return;
 
   try {
@@ -33,7 +39,10 @@ async function refreshNote(guildId, channel, note) {
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
-    if (!message.guild || message.author.bot) return;
+    if (!message.guild) return;
+
+    const key = `${message.guild.id}:${message.channel.id}`;
+    if (_recentSticky.has(key)) return;
 
     const note = await db.getNote(message.guild.id, message.channel.id);
     if (!note) return;
