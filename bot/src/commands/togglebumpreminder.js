@@ -3,7 +3,7 @@ const db = require('../database/db');
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName('disablebumpreminders')
+    .setName('togglebumpreminder')
     .setDescription('Toggle bump reminders on/off (saved settings preserved)')
     .setDefaultMemberPermissions(8),
 
