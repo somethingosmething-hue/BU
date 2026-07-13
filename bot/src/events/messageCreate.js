@@ -99,7 +99,23 @@ module.exports = {
                 });
             }
 
-            const roleListText = parsedRoles.map(r => `${r.emoji} <@&${r.roleId}>`).join('\n');
+            const roleListText = parsedRoles
+                .map(r => {
+                    let emojiText = '';
+            
+                    if (r.emoji) {
+                        if (r.emoji.id) {
+                            // Custom emoji
+                            emojiText = `<:${r.emoji.name}:${r.emoji.id}> `;
+                        } else {
+                            // Unicode emoji
+                            emojiText = `${r.emoji.name} `;
+                        }
+                    }
+            
+                    return `${emojiText}<@&${r.roleId}>`;
+                })
+                .join('\n');
 
             if (header) {
                 containerComponents.push({ type: 14, spacing: 2, divider: true });
