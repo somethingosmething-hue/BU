@@ -12,7 +12,7 @@ module.exports = {
     const emojis = [...interaction.guild.emojis.cache.values()]
       .sort((a, b) => a.name.localeCompare(b.name));
 
-    const lines = emojis.map(e => `${e} ⇢ \`:${e.name}:\` **${e.id}**${e.animated ? ' *(animated)*' : ''}`);
+    const lines = emojis.map(e => `${e} ⇢ \`${e.animated ? '<a:' : '<:'}${e.name}:${e.id}>\``);
     const totalPages = Math.max(1, Math.ceil(lines.length / PER_PAGE));
     const header = `### 😀 __Emoj__is List\n`;
 
