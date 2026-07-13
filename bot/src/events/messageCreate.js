@@ -80,7 +80,7 @@ module.exports = {
             const selectMenu = {
                 type: 3,
                 custom_id: selectCustomId,
-                placeholder: 'choose a role :3',
+                placeholder: 'Make a selection.',
                 min_values: 1,
                 max_values: Math.min(maxRoles, parsedRoles.length),
                 options: parsedRoles.map(r => {
