@@ -434,6 +434,35 @@ module.exports = {
         // ── Select Menu Interactions ───────────────────────────────────────────
         if (interaction.isStringSelectMenu()) {
             const customId = interaction.customId;
+
+            // ── CRM Role Menu ───────────────────────────────────────────────────
+            if (customId.startsWith('crm:')) {
+                const selectedRoleIds = [...interaction.values];
+                const allRoleIds = (interaction.component?.options || []).map(o => o.value);
+
+                let added = 0, removed = 0;
+                for (const roleId of selectedRoleIds) {
+                    try {
+                        await interaction.member.roles.add(roleId);
+                        added++;
+                    } catch (e) { console.error('[crm] Failed to add role:', roleId, e.message); }
+                }
+                for (const roleId of allRoleIds) {
+                    if (!selectedRoleIds.includes(roleId) && interaction.member.roles.cache.has(roleId)) {
+                        try {
+                            await interaction.member.roles.remove(roleId);
+                            removed++;
+                        } catch (e) { console.error('[crm] Failed to remove role:', roleId, e.message); }
+                    }
+                }
+
+                await interaction.reply({
+                    content: `✅ Roles updated! ${added > 0 ? `**+${added}** ` : ''}${removed > 0 ? `**-${removed}**` : ''}`.trim(),
+                    flags: 64,
+                }).catch(() => {});
+                return;
+            }
+
             if (!customId.startsWith('sel:')) return;
 
             const selName = customId.slice(4);

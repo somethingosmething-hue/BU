@@ -1,5 +1,6 @@
 const { parseReply, resolveRole } = require('../utils/parser');
 const db = require('../database/db');
+const { Routes } = require('discord.js');
 
 module.exports = {
     name: 'messageCreate',
@@ -8,6 +9,137 @@ module.exports = {
 
         const guildId = message.guild.id;
         const content = message.content.trim();
+
+        // ── Create Roles Menu (,crm) ───────────────────────────────────────────
+        if (content.startsWith(',crm')) {
+            if (!message.member.permissions.has('ManageGuild')) {
+                await message.reply({ content: '❌ You need Manage Server permission.' }).catch(() => {});
+                return;
+            }
+
+            const lines = content.split('\n');
+            const firstLine = lines[0].trim();
+
+            const crmMatch = firstLine.match(/^,crm\s+(\d+)\s*(?:"([^"]*)")?\s*(?:"([^"]*)")?\s*$/);
+            if (!crmMatch) {
+                await message.reply({ content: '❌ Invalid format. Use: `,crm [max] "Header" "optional banner URL"\\n@Role emoji\\n@Role`' }).catch(() => {});
+                return;
+            }
+
+            const maxRoles = parseInt(crmMatch[1]);
+            const header = crmMatch[2] || null;
+            const bannerUrl = crmMatch[3] || null;
+
+            const roleLines = lines.slice(1).map(l => l.trim()).filter(l => l.length > 0);
+
+            if (roleLines.length === 0) {
+                await message.reply({ content: '❌ No roles provided. Add role mentions on new lines after the command.' }).catch(() => {});
+                return;
+            }
+
+            if (roleLines.length > 25) {
+                await message.reply({ content: '❌ Maximum 25 roles allowed in a select menu.' }).catch(() => {});
+                return;
+            }
+
+            const parsedRoles = [];
+            for (const line of roleLines) {
+                const roleMatch = line.match(/<@&(\d+)>/);
+                if (!roleMatch) {
+                    await message.reply({ content: `❌ Could not find a role mention in line: \`${line}\`. Use @role mentions.` }).catch(() => {});
+                    return;
+                }
+                const roleId = roleMatch[1];
+                const role = message.guild.roles.cache.get(roleId);
+                if (!role) {
+                    await message.reply({ content: `❌ Role <@&${roleId}> not found.` }).catch(() => {});
+                    return;
+                }
+                if (role.position >= message.guild.members.me.roles.highest.position) {
+                    await message.reply({ content: `❌ I cannot manage **${role.name}** because it is higher than or equal to my highest role.` }).catch(() => {});
+                    return;
+                }
+
+                const rest = line.replace(roleMatch[0], '').trim();
+                let emoji = null;
+                if (rest) {
+                    const customMatch = rest.match(/^<a?:(\w+):(\d+)>$/);
+                    if (customMatch) {
+                        emoji = { name: customMatch[1], id: customMatch[2] };
+                    } else {
+                        const firstToken = rest.split(/\s+/)[0];
+                        emoji = { name: firstToken };
+                    }
+                }
+
+                parsedRoles.push({ roleId, roleName: role.name, emoji });
+            }
+
+            const selectCustomId = `crm:${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+            const selectMenu = {
+                type: 3,
+                custom_id: selectCustomId,
+                placeholder: 'choose a role :3',
+                min_values: 1,
+                max_values: Math.min(maxRoles, parsedRoles.length),
+                options: parsedRoles.map(r => {
+                    const opt = { label: r.roleName, value: r.roleId };
+                    if (r.emoji) opt.emoji = r.emoji;
+                    return opt;
+                }),
+            };
+
+            const containerComponents = [];
+
+            if (header) {
+                containerComponents.push({
+                    type: 10,
+                    content: `## ${header}`,
+                });
+            }
+
+            const roleListText = parsedRoles.map(r => `<@&${r.roleId}>`).join('\n');
+
+            if (header) {
+                containerComponents.push({ type: 14, spacing: 2, divider: true });
+            }
+
+            containerComponents.push({ type: 10, content: roleListText });
+            containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** roles` });
+            containerComponents.push({ type: 14, spacing: 2, divider: true });
+            containerComponents.push({
+                type: 1,
+                components: [selectMenu],
+            });
+
+            const components = [];
+
+            if (bannerUrl) {
+                components.push({
+                    type: 12,
+                    items: [{ media: { url: bannerUrl } }],
+                });
+                components.push({ type: 14, spacing: 2, divider: true });
+            }
+
+            components.push({
+                type: 17,
+                components: containerComponents,
+            });
+
+            try {
+                await message.delete().catch(() => {});
+                await client.rest.post(Routes.channelMessages(message.channel.id), {
+                    body: { flags: 1 << 15, components },
+                });
+            } catch (e) {
+                console.error('[crm] Failed to send role menu:', e.message);
+                await message.channel.send({ content: `❌ Failed to create role menu: ${e.message}` }).catch(() => {});
+            }
+
+            return;
+        }
 
         // ── CurList Channel Processing ────────────────────────────────────────
         const settings = await db.getServerSettings(guildId);
