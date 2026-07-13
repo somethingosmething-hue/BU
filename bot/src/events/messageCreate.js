@@ -65,7 +65,7 @@ module.exports = {
                 if (rest) {
                     const customMatch = rest.match(/^<a?:(\w+):(\d+)>$/);
                     if (customMatch) {
-                        emoji = { name: customMatch[1], id: customMatch[2] };
+                        emoji = { name: customMatch[1], id: customMatch[2], animated: rest.startsWith('<a:') };
                     } else {
                         const firstToken = rest.split(/\s+/)[0];
                         emoji = { name: firstToken };
@@ -102,17 +102,13 @@ module.exports = {
             const roleListText = parsedRoles
                 .map(r => {
                     let emojiText = '';
-            
                     if (r.emoji) {
                         if (r.emoji.id) {
-                            // Custom emoji
-                            emojiText = `<:${r.emoji.name}:${r.emoji.id}> `;
+                            emojiText = `<${r.emoji.animated ? 'a' : ''}:${r.emoji.name}:${r.emoji.id}> `;
                         } else {
-                            // Unicode emoji
                             emojiText = `${r.emoji.name} `;
                         }
                     }
-            
                     return `${emojiText}<@&${r.roleId}>`;
                 })
                 .join('\n');
@@ -147,7 +143,7 @@ module.exports = {
             try {
                 await message.delete().catch(() => {});
                 await client.rest.post(Routes.channelMessages(message.channel.id), {
-                    body: { flags: 1 << 15, components },
+                    body: { flags: 1 << 15, allowed_mentions: { parse: [] }, components },
                 });
             } catch (e) {
                 console.error('[crm] Failed to send role menu:', e.message);
