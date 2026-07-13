@@ -99,7 +99,7 @@ module.exports = {
                 });
             }
 
-            const roleListText = parsedRoles.map(r => `<@&${r.roleId}>`).join('\n');
+            const roleListText = parsedRoles.map(r => `${r.emoji} <@&${r.roleId}>`).join('\n');
 
             if (header) {
                 containerComponents.push({ type: 14, spacing: 2, divider: true });
