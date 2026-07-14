@@ -45,7 +45,7 @@ async function connectDB() {
   await db.collection('bumpreminders').createIndex({ guildId: 1, serviceKey: 1 });
   await db.collection('bumplinks').createIndex({ guildId: 1, serviceKey: 1 });
   await db.collection('notes').createIndex({ guildId: 1, channelId: 1 });
-  await db.collection('giveaways').createIndex({ guildId: 1 });
+  await db.collection('giveaways').createIndex({ guildId: 1, id: 1 });
   await db.collection('active_giveaways').createIndex({ guildId: 1, messageId: 1 });
    
   return db;
@@ -485,26 +485,31 @@ async function deleteNote(guildId, channelId) {
 }
 
 // ── Giveaway Templates ────────────────────────────────────────────────
-async function getGiveaway(guildId, title) {
-  const doc = await getCollection('giveaways').findOne({ guildId, title });
+async function getGiveaway(guildId, id) {
+  const doc = await getCollection('giveaways').findOne({ guildId, id });
   return doc?.data || null;
 }
 
-async function saveGiveaway(guildId, title, data) {
+async function getGiveawayById(guildId, id) {
+  const doc = await getCollection('giveaways').findOne({ guildId, id });
+  return doc ? { id: doc.id, ...doc.data } : null;
+}
+
+async function saveGiveaway(guildId, id, data) {
   await getCollection('giveaways').updateOne(
-    { guildId, title },
-    { $set: { guildId, title, data, updatedAt: Date.now() } },
+    { guildId, id },
+    { $set: { guildId, id, data, updatedAt: Date.now() } },
     { upsert: true }
   );
 }
 
-async function deleteGiveaway(guildId, title) {
-  await getCollection('giveaways').deleteOne({ guildId, title });
+async function deleteGiveaway(guildId, id) {
+  await getCollection('giveaways').deleteOne({ guildId, id });
 }
 
 async function getAllGiveaways(guildId) {
   const docs = await getCollection('giveaways').find({ guildId }).toArray();
-  return docs.map(d => ({ title: d.title, ...d.data }));
+  return docs.map(d => ({ id: d.id, ...d.data }));
 }
 
 // ── Active Giveaways ─────────────────────────────────────────────────
@@ -604,7 +609,7 @@ module.exports = {
   saveBumpReminder, getPendingBumpReminders, deleteBumpReminder,
   setBumpLink, deleteBumpLink, getBumpLink, getAllBumpLinks,
   saveNote, getNote, getAllNotes, deleteNote,
-  getGiveaway, saveGiveaway, deleteGiveaway, getAllGiveaways,
+  getGiveaway, getGiveawayById, saveGiveaway, deleteGiveaway, getAllGiveaways,
   saveActiveGiveaway, getActiveGiveaway, getAllActiveGiveaways, getActiveGiveawaysByGuild, deleteActiveGiveaway,
   addGiveawayEntrant, removeGiveawayEntrant, removeUserFromAllGiveaways,
   getChannels, loadDB, saveDB,

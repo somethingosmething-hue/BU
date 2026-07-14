@@ -11,23 +11,24 @@ module.exports = {
         .setDescription('Giveaway system')
         .addSubcommand(s => s.setName('create')
             .setDescription('Create a giveaway template')
+            .addStringOption(o => o.setName('id').setDescription('Unique ID for the giveaway').setRequired(true).setMaxLength(50))
             .addStringOption(o => o.setName('title').setDescription('Title of the giveaway').setRequired(true).setMaxLength(100))
             .addStringOption(o => o.setName('description').setDescription('Description for the giveaway').setRequired(true).setMaxLength(1500)))
         .addSubcommand(s => s.setName('edit')
             .setDescription('Edit an existing giveaway template')
-            .addStringOption(o => o.setName('title').setDescription('Title of the giveaway to edit').setRequired(true).setMaxLength(100))
-            .addStringOption(o => o.setName('new_title').setDescription('New title (leave empty to keep current)').setMaxLength(100))
+            .addStringOption(o => o.setName('id').setDescription('ID of the giveaway to edit').setRequired(true).setMaxLength(50).setAutocomplete(true))
+            .addStringOption(o => o.setName('title').setDescription('New title (leave empty to keep current)').setMaxLength(100))
             .addStringOption(o => o.setName('description').setDescription('New description (leave empty to keep current)').setMaxLength(1500)))
         .addSubcommand(s => s.setName('send')
             .setDescription('Send a giveaway from a template')
-            .addStringOption(o => o.setName('title').setDescription('Title of the giveaway template to send').setRequired(true).setMaxLength(100))
+            .addStringOption(o => o.setName('id').setDescription('ID of the giveaway template to send').setRequired(true).setMaxLength(50).setAutocomplete(true))
             .addStringOption(o => o.setName('duration').setDescription('Duration (e.g. 20h, 2d, 1m30s)').setRequired(true))
             .addChannelOption(o => o.setName('channel').setDescription('Channel to send in (defaults to current)'))
             .addIntegerOption(o => o.setName('winners').setDescription('Number of winners (default: 1)').setMinValue(1).setMaxValue(9))
             .addUserOption(o => o.setName('sponsor').setDescription('User sponsoring the giveaway payouts')))
         .addSubcommand(s => s.setName('delete')
             .setDescription('Delete a giveaway template')
-            .addStringOption(o => o.setName('title').setDescription('Title of the giveaway to delete').setRequired(true).setMaxLength(100)))
+            .addStringOption(o => o.setName('id').setDescription('ID of the giveaway to delete').setRequired(true).setMaxLength(50).setAutocomplete(true)))
         .addSubcommand(s => s.setName('list')
             .setDescription('List all giveaway templates in this server')),
 
@@ -35,9 +36,9 @@ module.exports = {
         const focused = interaction.options.getFocused();
         const giveaways = await db.getAllGiveaways(interaction.guildId);
         const choices = giveaways
-            .filter(g => g.title.toLowerCase().includes(focused.toLowerCase()))
+            .filter(g => g.id.toLowerCase().includes(focused.toLowerCase()) || g.title.toLowerCase().includes(focused.toLowerCase()))
             .slice(0, 25)
-            .map(g => ({ name: g.title.slice(0, 100), value: g.title }));
+            .map(g => ({ name: `${g.id} — ${g.title}`.slice(0, 100), value: g.id }));
         await interaction.respond(choices).catch(() => {});
     },
 
@@ -46,70 +47,57 @@ module.exports = {
         const guildId = interaction.guildId;
 
         if (sub === 'create') {
+            const id = interaction.options.getString('id');
             const title = interaction.options.getString('title');
             const description = interaction.options.getString('description');
 
-            const existing = await db.getGiveaway(guildId, title);
-
-            const activeForThisTitle = await db.getActiveGiveawaysByGuild(guildId);
-            if (activeForThisTitle.some(a => a.title === title)) {
-                return interaction.reply({ content: `❌ An **active** giveaway with the title "**${title}**" is currently running. Wait for it to end before recreating.`, flags: 64 });
-            }
-
+            const existing = await db.getGiveaway(guildId, id);
             if (existing) {
-                return interaction.reply({ content: `❌ A giveaway template with the title "**${title}**" already exists. Use \`/gw edit\` or choose a different title.`, flags: 64 });
+                return interaction.reply({ content: `❌ A giveaway with ID "**${id}**" already exists.`, flags: 64 });
             }
 
-            await db.saveGiveaway(guildId, title, { title, description });
-            return interaction.reply({ content: `✅ Created giveaway template "**${title}**".\nUse \`/gw send\` to launch it.`, flags: 64 });
+            const activeForThisId = await db.getActiveGiveawaysByGuild(guildId);
+            if (activeForThisId.some(a => a.id === id)) {
+                return interaction.reply({ content: `❌ An **active** giveaway with ID "**${id}**" is currently running. Wait for it to end first.`, flags: 64 });
+            }
+
+            await db.saveGiveaway(guildId, id, { id, title, description });
+            return interaction.reply({ content: `✅ Created giveaway template \`${id}\` — "**${title}**".\nUse \`/gw send\` to launch it.`, flags: 64 });
         }
 
         if (sub === 'edit') {
-            const title = interaction.options.getString('title');
-            const newTitle = interaction.options.getString('new_title');
+            const id = interaction.options.getString('id');
+            const newTitle = interaction.options.getString('title');
             const newDescription = interaction.options.getString('description');
 
-            const existing = await db.getGiveaway(guildId, title);
+            const existing = await db.getGiveawayById(guildId, id);
             if (!existing) {
-                return interaction.reply({ content: `❌ No giveaway template found with the title "**${title}**".`, flags: 64 });
+                return interaction.reply({ content: `❌ No giveaway found with ID "**${id}**".`, flags: 64 });
             }
 
             if (!newTitle && !newDescription) {
-                return interaction.reply({ content: `❌ Provide at least one of \`new_title\` or \`description\` to update.`, flags: 64 });
+                return interaction.reply({ content: `❌ Provide at least a new \`title\` or \`description\` to update.`, flags: 64 });
             }
 
-            if (newTitle && newTitle !== title) {
-                const conflict = await db.getGiveaway(guildId, newTitle);
-                if (conflict) {
-                    return interaction.reply({ content: `❌ A giveaway template with the title "**${newTitle}**" already exists.`, flags: 64 });
-                }
-            }
-
-            const finalTitle = newTitle || title;
+            const finalTitle = newTitle || existing.title;
             const finalDescription = newDescription !== null ? newDescription : existing.description;
 
-            if (finalTitle !== title) {
-                await db.deleteGiveaway(guildId, title);
-                await db.saveGiveaway(guildId, finalTitle, { title: finalTitle, description: finalDescription });
-            } else {
-                await db.saveGiveaway(guildId, finalTitle, { title: finalTitle, description: finalDescription });
-            }
-
-            return interaction.reply({ content: `✅ Updated giveaway template "**${finalTitle}**".`, flags: 64 });
+            await db.saveGiveaway(guildId, id, { id, title: finalTitle, description: finalDescription });
+            return interaction.reply({ content: `✅ Updated giveaway \`${id}\` — "**${finalTitle}**".`, flags: 64 });
         }
 
         if (sub === 'send') {
             await interaction.deferReply({ flags: 64 });
 
-            const title = interaction.options.getString('title');
+            const id = interaction.options.getString('id');
             const durationStr = interaction.options.getString('duration');
             const channel = interaction.options.getChannel('channel') || interaction.channel;
             const winners = interaction.options.getInteger('winners') || 1;
             const sponsor = interaction.options.getUser('sponsor');
 
-            const template = await db.getGiveaway(guildId, title);
+            const template = await db.getGiveawayById(guildId, id);
             if (!template) {
-                return interaction.editReply({ content: `❌ No giveaway template found with the title "**${title}**". Use \`/gw create\` first.` });
+                return interaction.editReply({ content: `❌ No giveaway found with ID "**${id}**".` });
             }
 
             const durationMs = parseDuration(durationStr);
@@ -123,6 +111,7 @@ module.exports = {
 
             const endAt = Date.now() + durationMs;
             const hosterId = interaction.user.id;
+            const title = template.title;
             const description = template.description || '';
 
             const payload = buildGiveawayPayload({
@@ -148,6 +137,7 @@ module.exports = {
                 guildId,
                 channelId: channel.id,
                 messageId: sentMessage.id,
+                id,
                 title,
                 description,
                 winners,
@@ -166,6 +156,7 @@ module.exports = {
                     guildId,
                     channelId: channel.id,
                     messageId: sentMessage.id,
+                    id,
                     title,
                     description,
                     winners,
@@ -175,21 +166,21 @@ module.exports = {
                 endGiveaway(client, gw);
             }, durationMs);
 
-            return interaction.editReply({ content: `✅ Giveaway "**${title}**" sent to ${channel} and will end in **${durationStr}**.` });
+            return interaction.editReply({ content: `✅ Giveaway \`${id}\` — "**${title}**" sent to ${channel} and will end in **${durationStr}**.` });
         }
 
         if (sub === 'delete') {
-            const title = interaction.options.getString('title');
-            const existing = await db.getGiveaway(guildId, title);
+            const id = interaction.options.getString('id');
+            const existing = await db.getGiveawayById(guildId, id);
             if (!existing) {
-                return interaction.reply({ content: `❌ No giveaway template found with the title "**${title}**".`, flags: 64 });
+                return interaction.reply({ content: `❌ No giveaway found with ID "**${id}**".`, flags: 64 });
             }
 
-            await db.deleteGiveaway(guildId, title);
+            await db.deleteGiveaway(guildId, id);
 
             const active = await db.getActiveGiveawaysByGuild(guildId);
             for (const gw of active) {
-                if (gw.title === title) {
+                if (gw.id === id) {
                     try {
                         const channel = client.channels.cache.get(gw.channelId);
                         if (channel) {
@@ -201,7 +192,7 @@ module.exports = {
                 }
             }
 
-            return interaction.reply({ content: `✅ Deleted giveaway template "**${title}**".`, flags: 64 });
+            return interaction.reply({ content: `✅ Deleted giveaway \`${id}\` — "**${existing.title}**".`, flags: 64 });
         }
 
         if (sub === 'list') {
@@ -217,8 +208,8 @@ module.exports = {
             const lines = [];
             for (let i = 0; i < giveaways.length; i++) {
                 const g = giveaways[i];
-                const activeGw = active.find(a => a.title === g.title);
-                let line = `**${i + 1}. ${g.title}**`;
+                const activeGw = active.find(a => a.id === g.id);
+                let line = `**${i + 1}.** \`${g.id}\` — **${g.title}**`;
                 if (activeGw) {
                     const remaining = Math.max(0, activeGw.endAt - Date.now());
                     const remainingMin = Math.ceil(remaining / 60000);
