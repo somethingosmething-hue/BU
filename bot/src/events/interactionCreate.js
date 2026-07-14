@@ -219,6 +219,53 @@ module.exports = {
                 }
             }
 
+            if (customId === 'gw_enter') {
+                const guildId = interaction.guild?.id;
+                const messageId = interaction.message?.id;
+                if (!guildId || !messageId) return;
+
+                const gw = await db.getActiveGiveaway(guildId, messageId);
+                if (!gw) {
+                    await interaction.reply({ content: '❌ This giveaway no longer exists.', flags: 64 }).catch(() => {});
+                    return;
+                }
+                if (gw.ended) {
+                    await interaction.reply({ content: '❌ This giveaway has already ended.', flags: 64 }).catch(() => {});
+                    return;
+                }
+                if (Date.now() >= gw.endAt) {
+                    await interaction.reply({ content: '❌ This giveaway has ended.', flags: 64 }).catch(() => {});
+                    return;
+                }
+
+                const entrants = gw.entrants || [];
+                if (entrants.includes(interaction.user.id)) {
+                    await interaction.reply({ content: '❌ You have already entered this giveaway.', flags: 64 }).catch(() => {});
+                    return;
+                }
+
+                const added = await db.addGiveawayEntrant(guildId, messageId, interaction.user.id);
+                if (!added) {
+                    await interaction.reply({ content: '❌ You have already entered this giveaway.', flags: 64 }).catch(() => {});
+                    return;
+                }
+
+                const freshGw = await db.getActiveGiveaway(guildId, messageId);
+                const newCount = (freshGw?.entrants || []).length;
+
+                const { buildEnterConfirmationPayload, updateGiveawayParticipantCount } = require('./giveawayHandler');
+                await interaction.reply(buildEnterConfirmationPayload()).catch(() => {});
+
+                if (freshGw?.originalPayload) {
+                    await updateGiveawayParticipantCount(client, freshGw, newCount).catch(() => {});
+                }
+                return;
+            }
+
+            if (customId === 'gw_part') {
+                return;
+            }
+
             return;
         }
 

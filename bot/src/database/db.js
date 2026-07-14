@@ -45,7 +45,9 @@ async function connectDB() {
   await db.collection('bumpreminders').createIndex({ guildId: 1, serviceKey: 1 });
   await db.collection('bumplinks').createIndex({ guildId: 1, serviceKey: 1 });
   await db.collection('notes').createIndex({ guildId: 1, channelId: 1 });
-  
+  await db.collection('giveaways').createIndex({ guildId: 1 });
+  await db.collection('active_giveaways').createIndex({ guildId: 1, messageId: 1 });
+   
   return db;
 }
 
@@ -482,6 +484,82 @@ async function deleteNote(guildId, channelId) {
   await getCollection('notes').deleteOne({ guildId, channelId });
 }
 
+// ── Giveaway Templates ────────────────────────────────────────────────
+async function getGiveaway(guildId, title) {
+  const doc = await getCollection('giveaways').findOne({ guildId, title });
+  return doc?.data || null;
+}
+
+async function saveGiveaway(guildId, title, data) {
+  await getCollection('giveaways').updateOne(
+    { guildId, title },
+    { $set: { guildId, title, data, updatedAt: Date.now() } },
+    { upsert: true }
+  );
+}
+
+async function deleteGiveaway(guildId, title) {
+  await getCollection('giveaways').deleteOne({ guildId, title });
+}
+
+async function getAllGiveaways(guildId) {
+  const docs = await getCollection('giveaways').find({ guildId }).toArray();
+  return docs.map(d => ({ title: d.title, ...d.data }));
+}
+
+// ── Active Giveaways ─────────────────────────────────────────────────
+async function saveActiveGiveaway(data) {
+  await getCollection('active_giveaways').updateOne(
+    { guildId: data.guildId, messageId: data.messageId },
+    { $set: data },
+    { upsert: true }
+  );
+}
+
+async function getActiveGiveaway(guildId, messageId) {
+  return await getCollection('active_giveaways').findOne({ guildId, messageId });
+}
+
+async function getAllActiveGiveaways() {
+  return await getCollection('active_giveaways').find({}).toArray();
+}
+
+async function getActiveGiveawaysByGuild(guildId) {
+  return await getCollection('active_giveaways').find({ guildId, ended: { $ne: true } }).toArray();
+}
+
+async function deleteActiveGiveaway(guildId, messageId) {
+  await getCollection('active_giveaways').deleteOne({ guildId, messageId });
+}
+
+async function addGiveawayEntrant(guildId, messageId, userId) {
+  const existing = await getCollection('active_giveaways').findOne(
+    { guildId, messageId, entrants: userId }
+  );
+  if (existing) return false;
+  await getCollection('active_giveaways').updateOne(
+    { guildId, messageId },
+    { $addToSet: { entrants: userId } }
+  );
+  return true;
+}
+
+async function removeGiveawayEntrant(guildId, messageId, userId) {
+  const result = await getCollection('active_giveaways').updateOne(
+    { guildId, messageId },
+    { $pull: { entrants: userId } }
+  );
+  return result.modifiedCount > 0;
+}
+
+async function removeUserFromAllGiveaways(guildId, userId) {
+  const result = await getCollection('active_giveaways').updateMany(
+    { guildId, ended: { $ne: true } },
+    { $pull: { entrants: userId } }
+  );
+  return result.modifiedCount;
+}
+
 // Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
 async function loadDB(collectionName) {
   const docs = await getCollection(collectionName).find({}).toArray();
@@ -526,6 +604,9 @@ module.exports = {
   saveBumpReminder, getPendingBumpReminders, deleteBumpReminder,
   setBumpLink, deleteBumpLink, getBumpLink, getAllBumpLinks,
   saveNote, getNote, getAllNotes, deleteNote,
+  getGiveaway, saveGiveaway, deleteGiveaway, getAllGiveaways,
+  saveActiveGiveaway, getActiveGiveaway, getAllActiveGiveaways, getActiveGiveawaysByGuild, deleteActiveGiveaway,
+  addGiveawayEntrant, removeGiveawayEntrant, removeUserFromAllGiveaways,
   getChannels, loadDB, saveDB,
   getCollection,
   getCurList, saveCurList, addCurListElements,

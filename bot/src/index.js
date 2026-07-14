@@ -245,6 +245,35 @@ client.once('clientReady', async () => {
     console.log(`Recovered ${pendingReminders.length} pending bump reminders`);
   } catch (e) { console.error('Bump reminder recovery error:', e.message); }
 
+  // Giveaway recovery - resume timers for active giveaways after restart
+  const giveawayHandler = require('./events/giveawayHandler');
+  try {
+    const activeGiveaways = await db.getAllActiveGiveaways();
+    for (const gw of activeGiveaways) {
+      const remaining = gw.endAt - Date.now();
+      if (remaining <= 0) {
+        giveawayHandler.endGiveaway(client, gw);
+      } else {
+        setTimeout(() => {
+          giveawayHandler.endGiveaway(client, gw);
+        }, remaining);
+      }
+    }
+    console.log(`Recovered ${activeGiveaways.length} active giveaways`);
+  } catch (e) { console.error('Giveaway recovery error:', e.message); }
+
+  // Giveaway safety net - check every 15 seconds for any past-due giveaways
+  setInterval(async () => {
+    try {
+      const active = await db.getAllActiveGiveaways();
+      for (const gw of active) {
+        if (Date.now() >= gw.endAt && !gw.ended) {
+          await giveawayHandler.endGiveaway(client, gw);
+        }
+      }
+    } catch (e) { console.error('Giveaway check error:', e.message); }
+  }, 15000);
+
   // Regular reminder checker - runs every 30 seconds
   setInterval(async () => {
     try {
