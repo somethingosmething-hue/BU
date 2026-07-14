@@ -13,10 +13,9 @@
 8. [Reaction Events](#reaction-events)
 9. [Reaction Role](#reactionrole)
 10. [Level](#level)
-11. [Giveaway](#giveaway)
-12. [Poll](#poll)
-13. [Reminder](#reminder)
-14. [Mod](#mod)
+11. [Poll](#poll)
+12. [Reminder](#reminder)
+13. [Mod](#mod)
 15. [Variables & Placeholders](#variables--placeholders)
 
 ---
@@ -323,25 +322,6 @@ XP and leveling system.
 /level setxp user:@User xp:5000
 /level reset user:@User
 ```
-
----
-
-## Giveaway
-
-**Subcommands:** `create`, `send`, `delete`, `list`
-
-```
-/gw create title:Nitro description:"1 month of Nitro" duration:24h winners:1
-/gw send title:Nitro
-/gw delete title:Nitro
-/gw list
-```
-
-`/gw create` stores a giveaway template. `/gw send` posts it to a channel
-(Components V2 giveaway message with Enter Giveaway + Participants buttons).
-`/gw delete` removes the template (already-sent giveaways stay in their channels).
-Description supports `{newline}`, `%nl%`, and `\n` for line breaks.
-Optional `sponsor` user argument adds a "Payouts sponsored by" line.
 
 ---
 

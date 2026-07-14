@@ -81,15 +81,6 @@ const COMMAND_CATALOG = [
         ],
     },
     {
-        category: '🎉 Giveaways',
-        commands: [
-            { name: '/gw create',  desc: 'Create a giveaway template (post later with /gw send)' },
-            { name: '/gw send',    desc: 'Send a created giveaway by title' },
-            { name: '/gw delete',  desc: 'Delete a created giveaway template by title' },
-            { name: '/gw list',    desc: 'List all giveaway templates and active giveaways' },
-        ],
-    },
-    {
         category: '📊 Polls',
         commands: [
             { name: '/poll', desc: 'Create a reaction poll (yes/no or up to 10 options)' },
@@ -151,8 +142,6 @@ module.exports = {
                 { name: 'Reaction Events', value: 'Reaction Events'},
                 { name: 'Reaction Roles',  value: 'Reaction Roles' },
                 { name: 'Levels',          value: 'Levels'         },
-                { name: 'Giveaways',       value: 'Giveaways'      },
-                { name: 'Polls',           value: 'Polls'          },
                 { name: 'Reminders',       value: 'Reminders'      },
                 { name: 'Moderation',      value: 'Moderation'     },
                 { name: 'Bot Config',      value: 'Bot Config'     },

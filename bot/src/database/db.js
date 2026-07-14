@@ -31,8 +31,6 @@ async function connectDB() {
   await db.collection('buttonresponders').createIndex({ guildId: 1 });
   await db.collection('reactiontriggers').createIndex({ guildId: 1 });
   await db.collection('polls').createIndex({ guildId: 1 });
-  await db.collection('giveaways').createIndex({ guildId: 1 });
-  await db.collection('gw_pending').createIndex({ guildId: 1, title: 1 });
   await db.collection('reactionroles').createIndex({ guildId: 1 });
   await db.collection('reminders').createIndex({ guildId: 1 });
   await db.collection('modlogs').createIndex({ guildId: 1 });
@@ -212,56 +210,6 @@ async function savePoll(guildId, msgId, data) {
 async function getPoll(guildId, msgId) {
   const doc = await getCollection('polls').findOne({ guildId });
   return doc?.data?.[msgId] || null;
-}
-
-// Giveaways
-async function saveGiveaway(guildId, msgId, data) {
-  await getCollection('giveaways').updateOne({ guildId }, { $set: { [`data.${msgId}`]: data } }, { upsert: true });
-}
-
-async function getGiveaway(guildId, msgId) {
-  const doc = await getCollection('giveaways').findOne({ guildId });
-  return doc?.data?.[msgId] || null;
-}
-
-async function getGiveaways(guildId) {
-  const doc = await getCollection('giveaways').findOne({ guildId });
-  return doc?.data || {};
-}
-
-async function getAllGiveaways() {
-  return await getCollection('giveaways').find({}).toArray();
-}
-
-async function findGiveawayByTitle(guildId, title) {
-  const all = await getGiveaways(guildId);
-  for (const [msgId, gw] of Object.entries(all)) {
-    if (gw.title && gw.title.toLowerCase() === title.toLowerCase()) {
-      return { msgId, ...gw };
-    }
-  }
-  return null;
-}
-
-async function deleteGiveaway(guildId, msgId) {
-  await getCollection('giveaways').updateOne({ guildId }, { $unset: { [`data.${msgId}`]: 1 } });
-}
-
-// Giveaway pending definitions (templates created via /gw create, sent via /gw send)
-async function saveGiveawayDef(guildId, title, data) {
-  await getCollection('gw_pending').updateOne({ guildId, title }, { $set: { ...data, guildId, title, updatedAt: Date.now() } }, { upsert: true });
-}
-
-async function getGiveawayDef(guildId, title) {
-  return await getCollection('gw_pending').findOne({ guildId, title });
-}
-
-async function getGiveawayDefs(guildId) {
-  return await getCollection('gw_pending').find({ guildId }).toArray();
-}
-
-async function deleteGiveawayDef(guildId, title) {
-  await getCollection('gw_pending').deleteOne({ guildId, title });
 }
 
 // Reaction Roles
@@ -565,8 +513,6 @@ module.exports = {
   getButtonResponders, getButtonResponder, saveButtonResponder, deleteButtonResponder,
   getReactionTriggers, getReactionTrigger, saveReactionTrigger, deleteReactionTrigger,
   savePoll, getPoll,
-  saveGiveaway, getGiveaway, getGiveaways, getAllGiveaways, findGiveawayByTitle, deleteGiveaway,
-  saveGiveawayDef, getGiveawayDef, getGiveawayDefs, deleteGiveawayDef,
   saveReactionRole, getReactionRole, getReactionRoles, deleteReactionRole,
   getReminders, saveReminders,
   addModLog, getUserModLogs,

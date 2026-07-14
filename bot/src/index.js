@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const db = require('./database/db');
-const giveaway = require('./giveaway');
 
 const client = new Client({
   intents: [
@@ -39,15 +38,6 @@ for (const file of eventFiles) {
     client.on(event.name, (...args) => event.execute(...args, client));
   }
 }
-
-// Handle giveaway button interactions (Components V2)
-client.on('interactionCreate', async (interaction) => {
-  try {
-    await giveaway.handleGiveawayButton(interaction, client);
-  } catch (e) {
-    console.error('Giveaway button handler error:', e.message);
-  }
-});
 
 
 
@@ -148,21 +138,6 @@ db.connectDB().then(async () => {
 
 client.once('clientReady', async () => {
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
-
-  // One-shot: wipe legacy giveaway records from the old embed-based system
-  // so they don't collide with /gw's components-v2 giveayway storage.
-  try {
-    const migrated = await db.getCollection('botstatus').findOne({ key: 'gw_v2_migration' });
-    if (!migrated) {
-      const result = await db.getCollection('giveaways').deleteMany({});
-      console.log(`[gw] Cleared ${result.deletedCount} legacy giveaway doc(s) from old system.`);
-      await db.getCollection('botstatus').updateOne(
-        { key: 'gw_v2_migration' },
-        { $set: { done: true, at: Date.now() } },
-        { upsert: true }
-      );
-    }
-  } catch (e) { console.error('[gw] Legacy giveaway cleanup error:', e.message); }
 
   // Separate global commands (user app) from guild commands (server bot)
   const globalCommands = client.commands.filter(cmd =>
@@ -316,31 +291,6 @@ client.once('clientReady', async () => {
     }
     console.log('Recovered sticky notes after restart');
   } catch (e) { console.error('Note recovery error:', e.message); }
-
-  // Giveaway end checker - runs every 15 seconds
-  setInterval(async () => {
-    try {
-      const giveaways = await db.getCollection('giveaways').find({}).toArray();
-
-      for (const doc of giveaways) {
-        const guildId = doc.guildId;
-        const giveawayData = doc.data || {};
-
-        for (const [msgId, gw] of Object.entries(giveawayData)) {
-          if (gw.ended || !gw.endsAt) continue;
-          if (Date.now() < gw.endsAt) continue;
-
-          try {
-            await giveaway.endGiveaway(client, guildId, msgId, gw);
-          } catch (e) {
-            console.error('Giveaway end error:', e.message);
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Giveaway checker error:', e.message);
-    }
-  }, 15000);
 
   // Startup message — detect unexpected shutdown & send status messages
   try {
