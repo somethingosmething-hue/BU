@@ -485,14 +485,23 @@ async function deleteNote(guildId, channelId) {
 }
 
 // ── Giveaway Templates ────────────────────────────────────────────────
+function resolveGiveawayData(doc) {
+  return {
+    id: doc.id || doc.data?.id || doc.title || '',
+    ...(doc.data || {}),
+  };
+}
+
 async function getGiveaway(guildId, id) {
-  const doc = await getCollection('giveaways').findOne({ guildId, id });
+  let doc = await getCollection('giveaways').findOne({ guildId, id });
+  if (!doc) doc = await getCollection('giveaways').findOne({ guildId, title: id });
   return doc?.data || null;
 }
 
 async function getGiveawayById(guildId, id) {
-  const doc = await getCollection('giveaways').findOne({ guildId, id });
-  return doc ? { id: doc.id, ...doc.data } : null;
+  let doc = await getCollection('giveaways').findOne({ guildId, id });
+  if (!doc) doc = await getCollection('giveaways').findOne({ guildId, title: id });
+  return doc ? resolveGiveawayData(doc) : null;
 }
 
 async function saveGiveaway(guildId, id, data) {
@@ -504,12 +513,15 @@ async function saveGiveaway(guildId, id, data) {
 }
 
 async function deleteGiveaway(guildId, id) {
-  await getCollection('giveaways').deleteOne({ guildId, id });
+  const result = await getCollection('giveaways').deleteOne({ guildId, id });
+  if (result.deletedCount === 0) {
+    await getCollection('giveaways').deleteOne({ guildId, title: id });
+  }
 }
 
 async function getAllGiveaways(guildId) {
   const docs = await getCollection('giveaways').find({ guildId }).toArray();
-  return docs.map(d => ({ id: d.id, ...d.data }));
+  return docs.map(d => resolveGiveawayData(d));
 }
 
 // ── Active Giveaways ─────────────────────────────────────────────────
