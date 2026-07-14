@@ -34,12 +34,15 @@ module.exports = {
 
     async autocomplete(interaction) {
         const focused = interaction.options.getFocused();
+        if (typeof focused !== 'string') return;
         const giveaways = await db.getAllGiveaways(interaction.guildId);
+        if (!giveaways || !Array.isArray(giveaways)) return;
+        const lower = focused.toLowerCase();
         const choices = giveaways
-            .filter(g => g.id.toLowerCase().includes(focused.toLowerCase()) || g.title.toLowerCase().includes(focused.toLowerCase()))
+            .filter(g => g && g.id && g.title && (g.id.toLowerCase().includes(lower) || g.title.toLowerCase().includes(lower)))
             .slice(0, 25)
             .map(g => ({ name: `${g.id} — ${g.title}`.slice(0, 100), value: g.id }));
-        await interaction.respond(choices).catch(() => {});
+        await interaction.respond(choices);
     },
 
     async execute(interaction, client) {
