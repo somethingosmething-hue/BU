@@ -328,14 +328,20 @@ XP and leveling system.
 
 ## Giveaway
 
-**Subcommands:** `start`, `end`, `reroll`, `list`
+**Subcommands:** `create`, `send`, `delete`, `list`
 
 ```
-/giveaway start prize:Nitro duration:24h winners:1
-/giveaway end message_id:123456789
-/giveaway reroll message_id:123456789
-/giveaway list
+/gw create title:Nitro description:"1 month of Nitro" duration:24h winners:1
+/gw send title:Nitro
+/gw delete title:Nitro
+/gw list
 ```
+
+`/gw create` stores a giveaway template. `/gw send` posts it to a channel
+(Components V2 giveaway message with Enter Giveaway + Participants buttons).
+`/gw delete` removes the template (already-sent giveaways stay in their channels).
+Description supports `{newline}`, `%nl%`, and `\n` for line breaks.
+Optional `sponsor` user argument adds a "Payouts sponsored by" line.
 
 ---
 

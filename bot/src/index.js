@@ -1,8 +1,9 @@
-const { Client, GatewayIntentBits, Collection, Partials, REST, Routes, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, REST, Routes, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 const db = require('./database/db');
+const giveaway = require('./giveaway');
 
 const client = new Client({
   intents: [
@@ -39,39 +40,16 @@ for (const file of eventFiles) {
   }
 }
 
-// Handle giveaway button interactions
+// Handle giveaway button interactions (Components V2)
 client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
-  if (!interaction.customId.startsWith('gw-enter-')) return;
-
-  const msgId = interaction.message.id;
-  const guildId = interaction.guild.id;
-  const userId = interaction.user.id;
-
-  const gw = await db.getGiveaway(guildId, msgId);
-  if (!gw || gw.ended) {
-    return interaction.reply({ content: '❌ This giveaway has ended.', flags: 64 });
-  }
-
-  if (!gw.entries) gw.entries = [];
-
-  if (gw.entries.includes(userId)) {
-    return interaction.reply({ content: 'You have already entered this giveaway.', flags: 64 });
-  }
-
-  gw.entries.push(userId);
-  await db.saveGiveaway(guildId, msgId, gw);
-
-  // Update embed with new entry count
   try {
-    const oldEmbed = interaction.message.embeds[0];
-    const embed = EmbedBuilder.from(oldEmbed)
-      .spliceFields(2, 1, { name: 'Entries:', value: `**${gw.entries.length}**`, inline: true });
-    await interaction.message.edit({ embeds: [embed] });
-  } catch (e) {}
-
-  await interaction.reply({ content: 'You have entered this giveaway!', flags: 64 });
+    await giveaway.handleGiveawayButton(interaction, client);
+  } catch (e) {
+    console.error('Giveaway button handler error:', e.message);
+  }
 });
+
+
 
 
 
@@ -170,6 +148,21 @@ db.connectDB().then(async () => {
 
 client.once('clientReady', async () => {
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
+
+  // One-shot: wipe legacy giveaway records from the old embed-based system
+  // so they don't collide with /gw's components-v2 giveayway storage.
+  try {
+    const migrated = await db.getCollection('botstatus').findOne({ key: 'gw_v2_migration' });
+    if (!migrated) {
+      const result = await db.getCollection('giveaways').deleteMany({});
+      console.log(`[gw] Cleared ${result.deletedCount} legacy giveaway doc(s) from old system.`);
+      await db.getCollection('botstatus').updateOne(
+        { key: 'gw_v2_migration' },
+        { $set: { done: true, at: Date.now() } },
+        { upsert: true }
+      );
+    }
+  } catch (e) { console.error('[gw] Legacy giveaway cleanup error:', e.message); }
 
   // Separate global commands (user app) from guild commands (server bot)
   const globalCommands = client.commands.filter(cmd =>
@@ -324,7 +317,7 @@ client.once('clientReady', async () => {
     console.log('Recovered sticky notes after restart');
   } catch (e) { console.error('Note recovery error:', e.message); }
 
-  // Giveaway checker - runs every 15 seconds
+  // Giveaway end checker - runs every 15 seconds
   setInterval(async () => {
     try {
       const giveaways = await db.getCollection('giveaways').find({}).toArray();
@@ -337,62 +330,8 @@ client.once('clientReady', async () => {
           if (gw.ended || !gw.endsAt) continue;
           if (Date.now() < gw.endsAt) continue;
 
-          // Giveaway has ended
           try {
-            const channel = await client.channels.fetch(gw.channelId).catch(() => null);
-            if (!channel) continue;
-
-            const message = await channel.messages.fetch(msgId).catch(() => null);
-            if (!message) continue;
-
-            // Pick winners from entries
-            const entries = gw.entries || [];
-            const winnerCount = Math.min(gw.winners || 1, entries.length);
-            const winners = [];
-
-            const shuffled = [...entries];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-              const j = Math.floor(Math.random() * (i + 1));
-              [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-            for (let i = 0; i < winnerCount; i++) {
-              winners.push(shuffled[i]);
-            }
-
-            // Update embed
-            const endedEmbed = new EmbedBuilder()
-              .setColor('#f9c4d2')
-              .setTitle(gw.title)
-              .setDescription(gw.description || '')
-              .addFields(
-                { name: 'Ended:', value: `<t:${Math.floor(gw.endsAt / 1000)}:F> (<t:${Math.floor(gw.endsAt / 1000)}:R>)`, inline: false },
-                { name: 'Hosted by:', value: `<@${gw.hostId}>`, inline: true },
-                { name: 'Entries:', value: `**${entries.length}**`, inline: true },
-                { name: 'Winners:', value: winners.map(id => `<@${id}>`).join(', ') || 'None', inline: true }
-              )
-              .setFooter({ text: `Started: ${new Date(gw.startedAt).toLocaleString()}` });
-
-            const disabledBtn = new ButtonBuilder()
-              .setCustomId('gw-disabled')
-              .setLabel('🎉')
-              .setStyle(ButtonStyle.Success)
-              .setDisabled(true);
-
-            const row = new ActionRowBuilder().addComponents(disabledBtn);
-
-            await message.edit({ embeds: [endedEmbed], components: [row] }).catch(() => {});
-
-            // Send winner announcement
-            if (winners.length > 0) {
-              const winnerMentions = winners.map(id => `<@${id}>`).join(', ');
-              await channel.send({ content: `Congratulations ${winnerMentions}! You won the **${gw.title}**!` }).catch(() => {});
-            }
-
-            // Mark as ended
-            gw.ended = true;
-            gw.winnerIds = winners;
-            await db.saveGiveaway(guildId, msgId, gw);
-
+            await giveaway.endGiveaway(client, guildId, msgId, gw);
           } catch (e) {
             console.error('Giveaway end error:', e.message);
           }

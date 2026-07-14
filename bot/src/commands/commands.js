@@ -83,10 +83,10 @@ const COMMAND_CATALOG = [
     {
         category: '🎉 Giveaways',
         commands: [
-            { name: '/giveaway start',  desc: 'Start a giveaway' },
-            { name: '/giveaway end',    desc: 'End a giveaway early' },
-            { name: '/giveaway reroll', desc: 'Reroll a giveaway winner' },
-            { name: '/giveaway list',   desc: 'List active giveaways' },
+            { name: '/gw create',  desc: 'Create a giveaway template (post later with /gw send)' },
+            { name: '/gw send',    desc: 'Send a created giveaway by title' },
+            { name: '/gw delete',  desc: 'Delete a created giveaway template by title' },
+            { name: '/gw list',    desc: 'List all giveaway templates and active giveaways' },
         ],
     },
     {

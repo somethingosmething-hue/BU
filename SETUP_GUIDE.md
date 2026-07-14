@@ -81,7 +81,7 @@ You should see:
 | `/cvar` | Custom user variables |
 | `/reactevent` | Reaction trigger events |
 | `/level` | XP & leveling system |
-| `/giveaway` | Host giveaways |
+| `/gw` | Host giveaways |
 | `/poll` | Create polls |
 | `/reminder` | Personal reminders |
 | `/mod` | Moderation tools |
