@@ -245,51 +245,62 @@ module.exports = {
                         return;
                     }
 
+                    await interaction.deferReply({ flags: 64 }).catch(() => {});
+
                     const added = await db.addGiveawayEntrant(guildId, messageId, interaction.user.id);
                     if (!added) {
-                        await interaction.reply({ content: '❌ You have already entered this giveaway.', flags: 64 });
+                        await interaction.editReply({ content: '❌ You have already entered this giveaway.' });
                         return;
                     }
 
                     const freshGw = await db.getActiveGiveaway(guildId, messageId);
                     const newCount = (freshGw?.entrants || []).length;
 
-                    await interaction.deferReply({ flags: 64 });
-                    await interaction.editReply({
-                        flags: 32768 | 64,
-                        allowed_mentions: { parse: [] },
-                        components: [
-                            {
-                                type: 17,
-                                components: [
-                                    {
-                                        type: 10,
-                                        content: '<a:pinkarrow:1524863871976734740> You have successfully entered this giveaway.\nIf you win, you will be notified.'
-                                    }
-                                ]
-                            }
-                        ]
-                    });
-
                     if (freshGw?.originalPayload) {
-                        const channel = client.channels.cache.get(freshGw.channelId) ||
-                            await client.channels.fetch(freshGw.channelId).catch(() => null);
-                        if (channel) {
-                            const msg = await channel.messages.fetch(freshGw.messageId).catch(() => null);
-                            if (msg) {
-                                const updatedPayload = JSON.parse(JSON.stringify(freshGw.originalPayload));
-                                for (const comp of updatedPayload.components) {
-                                    if (comp.type === 1 && Array.isArray(comp.components)) {
-                                        for (const btn of comp.components) {
-                                            if (btn.custom_id === 'gw_part') {
-                                                btn.label = `${newCount} Participants`;
+                        try {
+                            const channel = client.channels.cache.get(freshGw.channelId) ||
+                                await client.channels.fetch(freshGw.channelId).catch(() => null);
+                            if (channel) {
+                                const msg = await channel.messages.fetch(freshGw.messageId).catch(() => null);
+                                if (msg) {
+                                    const updatedPayload = JSON.parse(JSON.stringify(freshGw.originalPayload));
+                                    for (const comp of updatedPayload.components) {
+                                        if (comp.type === 1 && Array.isArray(comp.components)) {
+                                            for (const btn of comp.components) {
+                                                if (btn.custom_id === 'gw_part') {
+                                                    btn.label = `${newCount} Participants`;
+                                                }
                                             }
                                         }
                                     }
+                                    await msg.edit(updatedPayload);
                                 }
-                                await msg.edit(updatedPayload);
                             }
+                        } catch (e) {
+                            console.error('[Giveaway] Failed to update participant count:', e.message);
                         }
+                    }
+
+                    try {
+                        await interaction.editReply({
+                            allowed_mentions: { parse: [] },
+                            components: [
+                                {
+                                    type: 17,
+                                    components: [
+                                        {
+                                            type: 10,
+                                            content: '<a:pinkarrow:1524863871976734740> You have successfully entered this giveaway.\nIf you win, you will be notified.'
+                                        }
+                                    ]
+                                }
+                            ]
+                        });
+                    } catch (e) {
+                        console.error('[Giveaway] editReply with components failed, falling back:', e.message);
+                        await interaction.editReply({
+                            content: '<a:pinkarrow:1524863871976734740> You have successfully entered this giveaway.\nIf you win, you will be notified.'
+                        }).catch(() => {});
                     }
                 } catch (e) {
                     console.error('[Giveaway] gw_enter error:', e);
