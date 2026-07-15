@@ -144,7 +144,7 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
 
 function buildEnterConfirmationPayload() {
   return {
-    flags: 32768 | 64,
+    flags: 32768,
     allowed_mentions: { parse: [] },
     components: [
       {
