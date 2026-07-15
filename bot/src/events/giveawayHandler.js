@@ -40,7 +40,7 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
   if (sponsor) hosterText += `\nPayouts sponsored by <@${sponsor}>`;
 
   const endsIn = formatDuration(durationMs);
-  const endsText = `-# ${WHITE_HEART}Ends @ in ${endsIn}\n-# Winners: **${winners}** maximum`;
+  const endsText = `-# ${WHITE_HEART}Ends <t:${Math.floor(endAt / 1000)}:R>\n-# Winners: **${winners}** maximum`;
 
   const spacer = '‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ‎ \n‎ \n‎ ';
 
