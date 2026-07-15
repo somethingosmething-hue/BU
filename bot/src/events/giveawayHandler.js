@@ -49,7 +49,9 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
 
   return {
     flags: 32768,
-    allowed_mentions: { parse: [] },
+    allowed_mentions: {
+      parse: []
+    },
     components: [
       {
         type: 10,
