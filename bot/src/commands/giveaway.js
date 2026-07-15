@@ -1,7 +1,10 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
 const db = require('../database/db');
 const { parseDuration } = require('../utils/duration');
 const { buildGiveawayPayload, endGiveaway } = require('../events/giveawayHandler');
+
+const PARTICIPANTS_PER_PAGE = 20;
+const MAX_DESC = 4096;
 
 module.exports = {
     permissions: ['ManageGuild'],
@@ -236,35 +239,87 @@ module.exports = {
         }
 
         if (sub === 'participants') {
-            await interaction.deferReply({ flags: 64 });
-
             const id = interaction.options.getString('id');
             const active = await db.getActiveGiveawaysByGuild(guildId);
             const matching = active.filter(gw => gw.id === id);
             if (!matching.length) {
-                return interaction.editReply({ content: `❌ No active giveaway found with ID "**${id}**".` });
+                return interaction.reply({ content: `❌ No active giveaway found with ID "**${id}**".`, flags: MessageFlags.Ephemeral });
             }
 
             const gw = matching.sort((a, b) => b.endAt - a.endAt)[0];
             const entrants = gw.entrants || [];
 
-            const header = `🎁 Participants for \`${id}\` — "**${gw.title}**"`;
-            if (!entrants.length) {
-                return interaction.editReply({ content: `${header}\n\n*No participants yet.*` });
+            const lines = entrants.map(uid => `<@${uid}> ⇢ ${uid}`);
+            const totalPages = Math.max(1, Math.ceil(lines.length / PARTICIPANTS_PER_PAGE));
+            const header = `### <:longcat1:1524864921051857137><:longcat2:1524864957450293378><:longcat3:1524865004799791164> __Partici__pants List\n`;
+
+            function buildPage(page) {
+                const pageLines = lines.slice(page * PARTICIPANTS_PER_PAGE, (page + 1) * PARTICIPANTS_PER_PAGE);
+                let desc;
+                if (!pageLines.length) {
+                    desc = `${header}\n*No participants yet.*`;
+                } else {
+                    desc = `${header}\n${pageLines.join('\n')}`;
+                }
+                if (desc.length > MAX_DESC) {
+                    desc = desc.slice(0, MAX_DESC - 3) + '...';
+                }
+                const embed = new EmbedBuilder()
+                    .setColor('#9EFFC0')
+                    .setDescription(desc)
+                    .setFooter({ text: `Page ${page + 1}/${totalPages} • ${entrants.length} participants total` });
+
+                const buttons = [];
+                buttons.push(new ButtonBuilder()
+                    .setCustomId('gw_participants:prev')
+                    .setEmoji('<:a:OwO1:1524863682599977071>')
+                    .setLabel('Last Page')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page === 0));
+                buttons.push(new ButtonBuilder()
+                    .setCustomId('gw_participants:total')
+                    .setLabel('Total')
+                    .setStyle(ButtonStyle.Primary)
+                    .setDisabled(true));
+                buttons.push(new ButtonBuilder()
+                    .setCustomId('gw_participants:next')
+                    .setEmoji('<:a:OwO2:1524863704682860836>')
+                    .setLabel('Next Page')
+                    .setStyle(ButtonStyle.Secondary)
+                    .setDisabled(page >= totalPages - 1));
+
+                const rows = [new ActionRowBuilder().addComponents(buttons)];
+                return { embeds: [embed], components: rows };
             }
 
-            const lines = [];
-            for (let i = 0; i < entrants.length; i++) {
-                lines.push(`**${i + 1}.** <@${entrants[i]}> (\`${entrants[i]}\`)`);
-            }
+            let currentPage = 0;
+            const pagePayload = buildPage(currentPage);
+            await interaction.reply({ ...pagePayload, flags: MessageFlags.Ephemeral });
+            const msg = await interaction.fetchReply();
 
-            const totalLines = lines.join('\n');
-            const embed = new EmbedBuilder()
-                .setColor('#c9b8f5')
-                .setTitle(`${header} (${entrants.length})`)
-                .setDescription(totalLines.length <= 3800 ? totalLines : totalLines.slice(0, 3800) + '…');
+            const collector = msg.createMessageComponentCollector({
+                componentType: ComponentType.Button,
+                time: 300000,
+            });
 
-            return interaction.editReply({ embeds: [embed] });
+            collector.on('collect', async (btn) => {
+                if (btn.user.id !== interaction.user.id) {
+                    return btn.reply({ content: 'Not your menu.', flags: MessageFlags.Ephemeral });
+                }
+                if (btn.customId === 'gw_participants:prev') currentPage = Math.max(0, currentPage - 1);
+                else if (btn.customId === 'gw_participants:next') currentPage = Math.min(totalPages - 1, currentPage + 1);
+                try {
+                    await btn.update(buildPage(currentPage));
+                } catch {
+                    try { await interaction.editReply(buildPage(currentPage)); } catch {}
+                }
+            });
+
+            collector.on('end', async () => {
+                try {
+                    await interaction.editReply({ ...buildPage(currentPage), components: [] });
+                } catch {}
+            });
         }
     },
 };
