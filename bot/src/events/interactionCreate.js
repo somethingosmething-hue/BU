@@ -225,27 +225,27 @@ module.exports = {
                     const messageId = interaction.message?.id;
                     if (!guildId || !messageId) return;
 
+                    await interaction.deferReply({ flags: 64 }).catch(() => {});
+
                     const gw = await db.getActiveGiveaway(guildId, messageId);
                     if (!gw) {
-                        await interaction.reply({ content: '❌ This giveaway no longer exists.', flags: 64 });
+                        await interaction.editReply({ content: '❌ This giveaway no longer exists.' });
                         return;
                     }
                     if (gw.ended) {
-                        await interaction.reply({ content: '❌ This giveaway has already ended.', flags: 64 });
+                        await interaction.editReply({ content: '❌ This giveaway has already ended.' });
                         return;
                     }
                     if (Date.now() >= gw.endAt) {
-                        await interaction.reply({ content: '❌ This giveaway has ended.', flags: 64 });
+                        await interaction.editReply({ content: '❌ This giveaway has ended.' });
                         return;
                     }
 
                     const entrants = gw.entrants || [];
                     if (entrants.includes(interaction.user.id)) {
-                        await interaction.reply({ content: '❌ You have already entered this giveaway.', flags: 64 });
+                        await interaction.editReply({ content: '❌ You have already entered this giveaway.' });
                         return;
                     }
-
-                    await interaction.deferReply({ flags: 64 }).catch(() => {});
 
                     const added = await db.addGiveawayEntrant(guildId, messageId, interaction.user.id);
                     if (!added) {
@@ -304,9 +304,6 @@ module.exports = {
                     }
                 } catch (e) {
                     console.error('[Giveaway] gw_enter error:', e);
-                    if (!interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: '❌ Something went wrong.' }).catch(() => {});
-                    }
                 }
                 return;
             }
