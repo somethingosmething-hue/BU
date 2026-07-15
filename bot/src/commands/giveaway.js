@@ -30,7 +30,10 @@ module.exports = {
             .setDescription('Delete a giveaway template')
             .addStringOption(o => o.setName('id').setDescription('ID of the giveaway to delete').setRequired(true).setMaxLength(50).setAutocomplete(true)))
         .addSubcommand(s => s.setName('list')
-            .setDescription('List all giveaway templates in this server')),
+            .setDescription('List all giveaway templates in this server'))
+        .addSubcommand(s => s.setName('participants')
+            .setDescription('List participants in the latest active giveaway with this ID')
+            .addStringOption(o => o.setName('id').setDescription('ID of the giveaway').setRequired(true).setMaxLength(50).setAutocomplete(true))),
 
     async autocomplete(interaction) {
         const focused = interaction.options.getFocused();
@@ -228,6 +231,38 @@ module.exports = {
                 .setColor('#c9b8f5')
                 .setTitle(`🎁 Giveaway Templates (${giveaways.length})`)
                 .setDescription(lines.join('\n\n'));
+
+            return interaction.editReply({ embeds: [embed] });
+        }
+
+        if (sub === 'participants') {
+            await interaction.deferReply({ flags: 64 });
+
+            const id = interaction.options.getString('id');
+            const active = await db.getActiveGiveawaysByGuild(guildId);
+            const matching = active.filter(gw => gw.id === id);
+            if (!matching.length) {
+                return interaction.editReply({ content: `❌ No active giveaway found with ID "**${id}**".` });
+            }
+
+            const gw = matching.sort((a, b) => b.endAt - a.endAt)[0];
+            const entrants = gw.entrants || [];
+
+            const header = `🎁 Participants for \`${id}\` — "**${gw.title}**"`;
+            if (!entrants.length) {
+                return interaction.editReply({ content: `${header}\n\n*No participants yet.*` });
+            }
+
+            const lines = [];
+            for (let i = 0; i < entrants.length; i++) {
+                lines.push(`**${i + 1}.** <@${entrants[i]}> (\`${entrants[i]}\`)`);
+            }
+
+            const totalLines = lines.join('\n');
+            const embed = new EmbedBuilder()
+                .setColor('#c9b8f5')
+                .setTitle(`${header} (${entrants.length})`)
+                .setDescription(totalLines.length <= 3800 ? totalLines : totalLines.slice(0, 3800) + '…');
 
             return interaction.editReply({ embeds: [embed] });
         }
