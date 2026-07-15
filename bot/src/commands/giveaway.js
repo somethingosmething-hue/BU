@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, Routes } = require('discord.js');
 const db = require('../database/db');
 const { parseDuration } = require('../utils/duration');
 const { buildGiveawayPayload, endGiveaway } = require('../events/giveawayHandler');
@@ -128,9 +128,10 @@ module.exports = {
                 entrantCount: 0,
             });
 
-            let sentMessage;
+            let sentMessageId;
             try {
-                sentMessage = await channel.send(payload);
+                const raw = await client.rest.post(Routes.channelMessages(channel.id), { body: payload });
+                sentMessageId = raw.id;
             } catch (e) {
                 console.error('[Giveaway] Failed to send giveaway message:', e);
                 return interaction.editReply({ content: `❌ Failed to send the giveaway message: ${e.message}` });
@@ -139,7 +140,7 @@ module.exports = {
             await db.saveActiveGiveaway({
                 guildId,
                 channelId: channel.id,
-                messageId: sentMessage.id,
+                messageId: sentMessageId,
                 id,
                 title,
                 description,
@@ -158,7 +159,7 @@ module.exports = {
                 const gw = {
                     guildId,
                     channelId: channel.id,
-                    messageId: sentMessage.id,
+                    messageId: sentMessageId,
                     id,
                     title,
                     description,
