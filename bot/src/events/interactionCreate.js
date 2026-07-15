@@ -254,7 +254,8 @@ module.exports = {
                     const freshGw = await db.getActiveGiveaway(guildId, messageId);
                     const newCount = (freshGw?.entrants || []).length;
 
-                    await interaction.reply({
+                    await interaction.deferReply({ flags: 64 });
+                    await interaction.editReply({
                         flags: 32768 | 64,
                         allowed_mentions: { parse: [] },
                         components: [
