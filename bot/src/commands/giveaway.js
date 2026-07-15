@@ -41,7 +41,7 @@ module.exports = {
         const choices = giveaways
             .filter(g => g && g.id && g.title && (g.id.toLowerCase().includes(lower) || g.title.toLowerCase().includes(lower)))
             .slice(0, 25)
-            .map(g => ({ name: `${g.id} — ${g.title}`.slice(0, 100), value: g.id }));
+            .map(g => ({ name: g.id.slice(0, 100), value: g.id }));
         await interaction.respond(choices);
     },
 
