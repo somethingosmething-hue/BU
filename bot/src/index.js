@@ -323,12 +323,9 @@ client.once('clientReady', async () => {
 
   // Startup message — detect unexpected shutdown & send status messages
   try {
-    // Check if notifications are suppressed (one-time or persistent toggle)
-    const [suppressDoc, toggleDoc] = await Promise.all([
-      db.getCollection('botstatus').findOne({ key: 'suppressNoti' }),
-      db.getCollection('botstatus').findOne({ key: 'restartNotiToggle' })
-    ]);
-    const suppressed = suppressDoc?.suppress === true || toggleDoc?.disabled === true;
+    // Check if notifications are suppressed for this restart
+    const suppressDoc = await db.getCollection('botstatus').findOne({ key: 'suppressNoti' });
+    const suppressed = suppressDoc?.suppress === true;
     if (suppressed) {
       console.log('Back-up/down notifications suppressed for this restart.');
       await db.getCollection('botstatus').deleteOne({ key: 'suppressNoti' });
