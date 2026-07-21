@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, Partials, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, Collection, Partials, REST, Routes } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
@@ -93,30 +93,12 @@ function setupGracefulShutdown() {
     shuttingDown = true;
     console.log(`Received ${signal}, shutting down gracefully...`);
     try {
-      // Mark clean shutdown so next startup doesn't send retroactive "down" message
+      // Mark clean shutdown so next startup doesn't try anything
       await db.getCollection('botstatus').updateOne(
         { key: 'heartbeat' },
         { $set: { cleanShutdown: true, stoppedAt: Date.now() } },
         { upsert: true }
       );
-      for (const [, guild] of client.guilds.cache) {
-        try {
-          const channel = await findBusiestChannel(guild);
-          if (!channel) continue;
-          console.log(`Sending shutdown message to #${channel.name} (${channel.id}) in ${guild.id}`);
-          const shutdownEmbed = new EmbedBuilder()
-            .setColor('#9EFFCA')
-            .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! It has been updated.\n-# <:smolheart:1490431051007525048> For any problems or bugs, contact <@1486469966332170392>.`);
-          await channel.send({ embeds: [shutdownEmbed] });
-          // Save where we sent it so startup can send "back up" there
-          await db.getCollection('botstatus').updateOne(
-            { key: 'shutdown' },
-            { $set: { guildId: guild.id, channelId: channel.id } },
-            { upsert: true }
-          );
-          console.log('Shutdown message sent.');
-        } catch (e) { console.error('Shutdown message error:', e.message); }
-      }
     } catch (e) {
       console.error('Shutdown failed:', e);
     }
@@ -321,75 +303,12 @@ client.once('clientReady', async () => {
     console.log('Recovered sticky notes after restart');
   } catch (e) { console.error('Note recovery error:', e.message); }
 
-  // Startup message — detect unexpected shutdown & send status messages
-  try {
-    // Check if notifications are suppressed for this restart
-    const suppressDoc = await db.getCollection('botstatus').findOne({ key: 'suppressNoti' });
-    const suppressed = suppressDoc?.suppress === true;
-    if (suppressed) {
-      console.log('Back-up/down notifications suppressed for this restart.');
-      await db.getCollection('botstatus').deleteOne({ key: 'suppressNoti' });
-      // Clean up any pending shutdown status so no messages fire
-      await db.getCollection('botstatus').deleteOne({ key: 'shutdown' });
-      // Still mark heartbeat as running
-      await db.getCollection('botstatus').updateOne(
-        { key: 'heartbeat' },
-        { $set: { cleanShutdown: true, startedAt: Date.now(), busiestChannels: {} } },
-        { upsert: true }
-      );
-    } else {
-      const heartbeat = await db.getCollection('botstatus').findOne({ key: 'heartbeat' });
-      const shutdownStatus = await db.getCollection('botstatus').findOne({ key: 'shutdown' });
-
-      // If there was a previous instance that DIDN'T shut down cleanly, send retroactive "down" message
-      if (heartbeat && !heartbeat.cleanShutdown && heartbeat.busiestChannels) {
-        console.log('Detected unexpected shutdown — sending retroactive down messages...');
-        for (const [guildId, info] of Object.entries(heartbeat.busiestChannels)) {
-          if (shutdownStatus && shutdownStatus.guildId === guildId) continue; // already sent cleanly
-          try {
-            const channel = client.channels.cache.get(info.channelId) || await client.channels.fetch(info.channelId).catch(() => null);
-            if (channel) {
-              const downEmbed = new EmbedBuilder()
-                .setColor('#FF9E9E')
-               .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! It has been updated.\n-# <:smolheart:1490431051007525048> For any problems or bugs, contact <@1486469966332170392>.`);
-              await channel.send({ embeds: [downEmbed] });
-              console.log(`Retroactive down message sent to #${info.channelName} in ${guildId}`);
-              // Save this as the shutdown channel for the upcoming "back up" message
-              await db.getCollection('botstatus').updateOne(
-                { key: 'shutdown' },
-                { $set: { guildId, channelId: info.channelId } },
-                { upsert: true }
-              );
-            }
-          } catch (e) { console.error('Retroactive down message error:', e.message); }
-        }
-      }
-
-      // Send "back up" message if bot was previously down
-      if (shutdownStatus) {
-        let channel = client.channels.cache.get(shutdownStatus.channelId);
-        if (!channel) {
-          try { channel = await client.channels.fetch(shutdownStatus.channelId); } catch {}
-        }
-        if (channel) {
-          console.log(`Sending back-up message to #${channel.name} (${channel.id})`);
-          const startupEmbed = new EmbedBuilder()
-            .setColor('#9EFFCA')
-            .setDescription(`<a:OwO1:1524863682599977071><a:OwO2:1524863704682860836> <@1494498067888476230> is back up! Thank you for your patience.`);
-          await channel.send({ embeds: [startupEmbed] });
-          console.log('Back-up message sent.');
-        }
-        await db.getCollection('botstatus').deleteOne({ key: 'shutdown' });
-      }
-
-      // Mark this instance as running (cleanShutdown=false so next startup knows it was unexpected)
-      await db.getCollection('botstatus').updateOne(
-        { key: 'heartbeat' },
-        { $set: { cleanShutdown: false, startedAt: Date.now(), busiestChannels: {} } },
-        { upsert: true }
-      );
-    }
-  } catch (e) { console.error('Startup status error:', e.message); }
+  // Mark this instance as running
+  await db.getCollection('botstatus').updateOne(
+    { key: 'heartbeat' },
+    { $set: { cleanShutdown: true, startedAt: Date.now(), busiestChannels: {} } },
+    { upsert: true }
+  );
 
   // Heartbeat: periodically save busiest channel per guild + mark as alive
   setInterval(async () => {
