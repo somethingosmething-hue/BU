@@ -67,8 +67,22 @@ module.exports = {
                     if (customMatch) {
                         emoji = { name: customMatch[1], id: customMatch[2], animated: rest.startsWith('<a:') };
                     } else {
-                        const firstToken = rest.split(/\s+/)[0];
-                        emoji = { name: firstToken };
+                        let firstToken = rest.split(/\s+/)[0];
+                        firstToken = firstToken.replace(/[\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\u00AD]/g, '');
+                        if (firstToken.length === 0) {
+                        } else if (firstToken.startsWith(':') && firstToken.endsWith(':') && firstToken.length > 2) {
+                            const shortcode = firstToken.slice(1, -1);
+                            const guildEmoji = message.guild.emojis.cache.find(e => e.name === shortcode);
+                            if (guildEmoji) {
+                                emoji = { name: guildEmoji.name, id: guildEmoji.id, animated: guildEmoji.animated };
+                            } else {
+                                const unicodeEmojiRegex = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\u200D\p{Emoji})*(\uFE0F)?$/u;
+                                if (unicodeEmojiRegex.test(firstToken)) emoji = { name: firstToken };
+                            }
+                        } else {
+                            const unicodeEmojiRegex = /^(\p{Extended_Pictographic}|\p{Emoji_Presentation}|\p{Emoji}\uFE0F)(\u200D\p{Emoji})*(\uFE0F)?$/u;
+                            if (unicodeEmojiRegex.test(firstToken)) emoji = { name: firstToken };
+                        }
                     }
                 }
 
@@ -143,7 +157,7 @@ module.exports = {
             try {
                 await message.delete().catch(() => {});
                 await client.rest.post(Routes.channelMessages(message.channel.id), {
-                    body: { flags: 1 << 15, allowed_mentions: { parse: [] }, components },
+                    body: { flags: 1 << 15, allowed_mentions: { parse: [], roles: [] }, components },
                 });
             } catch (e) {
                 console.error('[crm] Failed to send role menu:', e.message);
