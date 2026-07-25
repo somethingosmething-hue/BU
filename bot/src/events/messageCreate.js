@@ -139,8 +139,7 @@ module.exports = {
 
             if (parsedRoles.length > 10) {
                 const remaining = parsedRoles.length - 10;
-                containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...` });
-                containerComponents.push({ type: 10, content: `-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
+                containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...\n-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
             } else {
                 containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** ${maxRoleWord}` });
             }
