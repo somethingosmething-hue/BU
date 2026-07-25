@@ -104,6 +104,12 @@ module.exports = {
                 }),
             };
 
+            const fs = require('fs');
+            fs.writeFileSync('crm_debug.log', JSON.stringify({
+                count: parsedRoles.length,
+                roles: parsedRoles.map((r, i) => ({ idx: i, name: r.roleName, emoji: r.emoji }))
+            }, null, 2));
+
             const containerComponents = [];
 
             if (header) {
