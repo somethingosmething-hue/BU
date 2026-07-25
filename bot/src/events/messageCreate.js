@@ -120,7 +120,7 @@ module.exports = {
                 });
             }
 
-            const visibleRoles = parsedRoles.length > 10 ? parsedRoles.slice(0, 10) : parsedRoles;
+            const visibleRoles = parsedRoles.length > 12 ? parsedRoles.slice(0, 12) : parsedRoles;
 
             const roleListText = visibleRoles
                 .map(r => {
@@ -144,8 +144,8 @@ module.exports = {
 
             const maxRoleWord = maxRoles === 1 ? 'role' : 'roles';
 
-            if (parsedRoles.length > 10) {
-                const remaining = parsedRoles.length - 10;
+            if (parsedRoles.length > 12) {
+                const remaining = parsedRoles.length - 12;
                 containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...\n-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
             } else {
                 containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** ${maxRoleWord}` });
