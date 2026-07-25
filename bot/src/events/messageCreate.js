@@ -113,7 +113,9 @@ module.exports = {
                 });
             }
 
-            const roleListText = parsedRoles
+            const visibleRoles = parsedRoles.length > 10 ? parsedRoles.slice(0, 10) : parsedRoles;
+
+            const roleListText = visibleRoles
                 .map(r => {
                     let emojiText = '';
                     if (r.emoji) {
@@ -132,7 +134,16 @@ module.exports = {
             }
 
             containerComponents.push({ type: 10, content: roleListText });
-            containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** roles` });
+
+            const maxRoleWord = maxRoles === 1 ? 'role' : 'roles';
+
+            if (parsedRoles.length > 10) {
+                const remaining = parsedRoles.length - 10;
+                containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...` });
+                containerComponents.push({ type: 10, content: `-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
+            } else {
+                containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** ${maxRoleWord}` });
+            }
             containerComponents.push({ type: 14, spacing: 2, divider: true });
             containerComponents.push({
                 type: 1,
