@@ -148,7 +148,7 @@ module.exports = {
                 const remaining = parsedRoles.length - 12;
                 containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...\n-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
             } else {
-                containerComponents.push({ type: 10, content: `-# Max selection: **${maxRoles}** ${maxRoleWord}` });
+                containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> Max selection: **${maxRoles}** ${maxRoleWord}` });
             }
             containerComponents.push({ type: 14, spacing: 2, divider: true });
             containerComponents.push({
