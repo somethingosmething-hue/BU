@@ -535,8 +535,9 @@ module.exports = {
                     deferred: interaction.deferred,
                     id: interaction.id,
                     type: interaction.type,
+                    version: interaction.version,
+                    messageFlags: interaction.message?.flags,
                     componentType: interaction.componentType,
-                    messageFlags: interaction.message?.flags?.bitfield,
                 });
                 const selectedRoleIds = [...interaction.values];
                 const config = await db.getCRMMenu(customId);
@@ -552,10 +553,26 @@ module.exports = {
                             await interaction.reply(payload);
                         } catch (e) {
                             if (e?.code === 40060) {
-                                console.log('[crm] 40060 on reply — Discord auto-acknowledged; sending followUp instead');
-                                await interaction.followUp(payload).catch(e2 =>
-                                    console.error('[crm] followUp fallback failed:', e2.code),
-                                );
+                                console.log('[crm] 40060 on reply — Discord auto-acknowledged; using REST fallback');
+                                const rest = interaction.client.rest;
+                                // Strip flags for PATCH (can't change after acknowledgment)
+                                const { flags: _f, ...patchPayload } = payload;
+                                try {
+                                    await rest.patch(
+                                        `/webhooks/${interaction.applicationId}/${interaction.token}/messages/@original`,
+                                        { body: patchPayload },
+                                    );
+                                } catch (e2) {
+                                    console.error('[crm] REST patch @original failed:', e2.code);
+                                    try {
+                                        await rest.post(
+                                            `/webhooks/${interaction.applicationId}/${interaction.token}`,
+                                            { body: { ...payload, flags: 64 } },
+                                        );
+                                    } catch (e3) {
+                                        console.error('[crm] REST followUp also failed:', e3.code);
+                                    }
+                                }
                             } else {
                                 console.error('[crm] reply error:', e.code);
                             }
