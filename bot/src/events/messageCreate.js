@@ -163,7 +163,6 @@ module.exports = {
                     type: 12,
                     items: [{ media: { url: bannerUrl } }],
                 });
-                components.push({ type: 14, spacing: 2, divider: true });
             }
 
             components.push({
