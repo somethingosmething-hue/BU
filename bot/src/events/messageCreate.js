@@ -93,7 +93,7 @@ module.exports = {
             }
 
             // ── Parse spec lines ────────────────────────────────────────────────
-            const specs = { disallow: { type: null, messageLink: null, targetCustomId: null, targetRoleIds: null }, requires: { type: null, roleIds: null }, run: { delroles: false, recheck: false } };
+            const specs = { disallow: { type: null, messageLink: null, targetCustomId: null, targetRoleIds: null }, requires: { type: null, roleIds: null }, run: { delroles: false, recheck: false }, customLim: null };
             for (const spec of specLines) {
                 if (spec.startsWith('spec:disallow:')) {
                     const val = spec.slice('spec:disallow:'.length).trim();
@@ -119,7 +119,13 @@ module.exports = {
                     else { specs.requires.type = 'role'; specs.requires.roleIds = [val.trim()]; }
                 } else if (spec.startsWith('spec:run:delroles')) specs.run.delroles = true;
                 else if (spec.startsWith('spec:run:recheck')) specs.run.recheck = true;
+                else if (spec.startsWith('spec:customlim:')) {
+                    const num = parseInt(spec.slice('spec:customlim:'.length).trim());
+                    if (!isNaN(num) && num > 0 && num <= 25) specs.customLim = num;
+                }
             }
+
+            const visibleLimit = specs.customLim || 12;
 
             const selectCustomId = `crm:${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
@@ -145,7 +151,7 @@ module.exports = {
                 });
             }
 
-            const visibleRoles = parsedRoles.length > 12 ? parsedRoles.slice(0, 12) : parsedRoles;
+            const visibleRoles = parsedRoles.length > visibleLimit ? parsedRoles.slice(0, visibleLimit) : parsedRoles;
 
             const roleListText = visibleRoles
                 .map(r => {
@@ -169,8 +175,8 @@ module.exports = {
 
             const maxRoleWord = maxRoles === 1 ? 'role' : 'roles';
 
-            if (parsedRoles.length > 12) {
-                const remaining = parsedRoles.length - 12;
+            if (parsedRoles.length > visibleLimit) {
+                const remaining = parsedRoles.length - visibleLimit;
                 containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> And **${remaining}** more...\n-# <:invisible:1509293351365640263> Max selection: **${maxRoles}** ${maxRoleWord}` });
             } else {
                 containerComponents.push({ type: 10, content: `-# <:hawo:1490521492696465519> Max selection: **${maxRoles}** ${maxRoleWord}` });
