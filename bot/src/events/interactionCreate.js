@@ -530,15 +530,6 @@ module.exports = {
 
             // ── CRM Role Menu ───────────────────────────────────────────────────
             if (customId.startsWith('crm:')) {
-                console.log('[crm] state at entry:', {
-                    replied: interaction.replied,
-                    deferred: interaction.deferred,
-                    id: interaction.id,
-                    type: interaction.type,
-                    version: interaction.version,
-                    messageFlags: interaction.message?.flags,
-                    componentType: interaction.componentType,
-                });
                 const selectedRoleIds = [...interaction.values];
                 const config = await db.getCRMMenu(customId);
                 const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
@@ -553,7 +544,6 @@ module.exports = {
                             await interaction.reply(payload);
                         } catch (e) {
                             if (e?.code === 40060) {
-                                console.log('[crm] 40060 on reply — Discord auto-acknowledged; using REST fallback');
                                 const rest = interaction.client.rest;
                                 // Strip flags for PATCH (can't change after acknowledgment)
                                 const { flags: _f, ...patchPayload } = payload;
