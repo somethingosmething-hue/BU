@@ -531,7 +531,6 @@ module.exports = {
             // ── CRM Role Menu ───────────────────────────────────────────────────
             if (customId.startsWith('crm:')) {
                 const selectedRoleIds = [...interaction.values];
-                await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
                 const config = await db.getCRMMenu(customId);
                 const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
 
@@ -608,7 +607,23 @@ module.exports = {
                         }
                     }
 
-                    // ── Step 1: Always remove other CRM roles in channel if delroles configured ──
+                    // ── Step 1: Check requirements FAST (in-memory) before any API calls ──
+                    canProceed = checkRequires();
+
+                    // ── Step 2: If requirements fail, reply immediately ──
+                    if (!canProceed) {
+                        if (config.specs?.customize?.error) failReason = config.specs.customize.error;
+                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(e => console.error('[crm] reply error:', e));
+                        return;
+                    }
+
+                    // ── Step 3: Requirements passed — defer for remaining work ──
+                    await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
+
+                    // ── Step 4: Now check disallow (may need DB queries) ──
+                    canProceed = await checkDisallow();
+
+                    // ── Step 5: Remove other CRM roles if delroles configured ──
                     if (specs.run.delroles) {
                         const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
                         for (const menu of channelMenus) {
@@ -621,11 +636,7 @@ module.exports = {
                         }
                     }
 
-                    // ── Step 2: Check conditions ───────────────────────────
-                    canProceed = checkRequires();
-                    if (canProceed) canProceed = await checkDisallow();
-
-                    // ── Step 3: Recovery — if failed and delroles+recheck, remove from ALL menus and re-evaluate ──
+                    // ── Step 6: Recovery — if disallow failed and delroles+recheck ──
                     if (!canProceed && specs.run.delroles && specs.run.recheck) {
                         const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
                         for (const menu of channelMenus) {
@@ -645,6 +656,9 @@ module.exports = {
                         await interaction.editReply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.' }).catch(e => console.error('[crm] editReply error:', e));
                         return;
                     }
+                } else {
+                    // No specs — defer for role operations
+                    await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
                 }
 
                 // ── Apply role changes ──────────────────────────────────────
