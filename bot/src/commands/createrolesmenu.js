@@ -7,7 +7,7 @@ module.exports = {
     .setDescription('Learn how to create a role selection menu'),
 
   async execute(interaction) {
-    const msg = `# <:garrow:1530759025753456681> Custom Role Menus
+    const text = `# <:garrow:1530759025753456681> Custom Role Menus
 
 <a:blahajspin:1525312222979559464> To create a role menu, use \`,crm [max selectable roles] [boolean spacing before menu - optional] ["header"] ["banner url" (optional)] [\n'd roles] [spec]\`
 
@@ -67,6 +67,12 @@ spec:run:delroles
 spec:run:recheck\`\`\`
 -# The above is an admin-only role. The user must has administrator permissions in the server. If someone has a custom mod role from the same channel, it's not allowed. If they have it, it's deleted and the bot checks all conditions again: they do not have the mod role now, so it passes and now they have the custom admin role. The \`spec:disallow\` technically is not needed because of the \`spec:run:delroles,\` but was put for the sake of having an example.`;
 
-    await interaction.reply({ content: msg, flags: 64 }).catch(e => console.error('[createrolesmenu] reply error:', e));
+    await interaction.reply({
+      flags: 64,
+      components: [{
+        type: 17,
+        components: [{ type: 10, content: text }],
+      }],
+    }).catch(e => console.error('[createrolesmenu] reply error:', e));
   },
 };
