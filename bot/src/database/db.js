@@ -47,6 +47,8 @@ async function connectDB() {
   await db.collection('notes').createIndex({ guildId: 1, channelId: 1 });
   await db.collection('giveaways').createIndex({ guildId: 1, id: 1 });
   await db.collection('active_giveaways').createIndex({ guildId: 1, messageId: 1 });
+  await db.collection('crmMenus').createIndex({ channelId: 1 });
+  await db.collection('crmMenus').createIndex({ channelId: 1, messageId: 1 });
    
   return db;
 }
@@ -597,6 +599,31 @@ async function saveDB(collectionName, data) {
   }
 }
 
+// ── CRM Menu Config ────────────────────────────────────────────────────────
+async function saveCRMMenu(config) {
+  await getCollection('crmMenus').updateOne(
+    { _id: config.customId },
+    { $set: config },
+    { upsert: true }
+  );
+}
+
+async function getCRMMenu(customId) {
+  return await getCollection('crmMenus').findOne({ _id: customId });
+}
+
+async function getCRMMenuByMessage(channelId, messageId) {
+  return await getCollection('crmMenus').findOne({ channelId, messageId });
+}
+
+async function getCRMMenusByChannel(channelId) {
+  return await getCollection('crmMenus').find({ channelId }).toArray();
+}
+
+async function deleteCRMMenu(customId) {
+  await getCollection('crmMenus').deleteOne({ _id: customId });
+}
+
 module.exports = {
   connectDB,
   getDivembs, getDivemb, saveDivemb, deleteDivemb,
@@ -628,4 +655,5 @@ module.exports = {
   getCollection,
   getCurList, saveCurList, addCurListElements,
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,
+  saveCRMMenu, getCRMMenu, getCRMMenuByMessage, getCRMMenusByChannel, deleteCRMMenu,
 };

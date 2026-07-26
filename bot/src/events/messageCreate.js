@@ -31,7 +31,9 @@ module.exports = {
             const header = crmMatch[3] || null;
             const bannerUrl = crmMatch[4] || null;
 
-            const roleLines = lines.slice(1).map(l => l.trim()).filter(l => l.length > 0);
+            const rawLines = lines.slice(1).map(l => l.trim()).filter(l => l.length > 0);
+            const specLines = rawLines.filter(l => /^spec:/i.test(l));
+            const roleLines = rawLines.filter(l => !/^spec:/i.test(l));
 
             if (roleLines.length === 0) {
                 await message.reply({ content: '❌ No roles provided. Add role mentions on new lines after the command.' }).catch(() => {});
@@ -90,6 +92,35 @@ module.exports = {
                 parsedRoles.push({ roleId, roleName: role.name, emoji });
             }
 
+            // ── Parse spec lines ────────────────────────────────────────────────
+            const specs = { disallow: { type: null, messageLink: null, targetCustomId: null, targetRoleIds: null }, requires: { type: null, roleIds: null }, run: { delroles: false, recheck: false } };
+            for (const spec of specLines) {
+                if (spec.startsWith('spec:disallow:')) {
+                    const val = spec.slice('spec:disallow:'.length).trim();
+                    if (val === 'all') specs.disallow.type = 'all';
+                    else if (val.startsWith('http')) {
+                        specs.disallow.type = 'link';
+                        specs.disallow.messageLink = val;
+                        const linkMatch = val.match(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/);
+                        if (linkMatch) {
+                            const targetMenu = await db.getCRMMenuByMessage(linkMatch[2], linkMatch[3]);
+                            if (targetMenu) {
+                                specs.disallow.targetCustomId = targetMenu._id;
+                                specs.disallow.targetRoleIds = targetMenu.roleIds;
+                            }
+                        }
+                    }
+                } else if (spec.startsWith('spec:requires:')) {
+                    const val = spec.slice('spec:requires:'.length).trim();
+                    if (val === 'booster') specs.requires.type = 'booster';
+                    else if (val === 'administrator') specs.requires.type = 'administrator';
+                    else if (val.includes('+')) { specs.requires.type = 'all-roles'; specs.requires.roleIds = val.split('+').map(s => s.trim()).filter(Boolean); }
+                    else if (val.includes('/')) { specs.requires.type = 'any-roles'; specs.requires.roleIds = val.split('/').map(s => s.trim()).filter(Boolean); }
+                    else { specs.requires.type = 'role'; specs.requires.roleIds = [val.trim()]; }
+                } else if (spec.startsWith('spec:run:delroles')) specs.run.delroles = true;
+                else if (spec.startsWith('spec:run:recheck')) specs.run.recheck = true;
+            }
+
             const selectCustomId = `crm:${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
             const selectMenu = {
@@ -104,13 +135,6 @@ module.exports = {
                     return opt;
                 }),
             };
-
-            const fs = require('fs');
-            fs.writeFileSync('crm_debug.log', JSON.stringify({
-                count: parsedRoles.length,
-                roles: parsedRoles.map((r, i) => ({ idx: i, name: r.roleName, emoji: r.emoji })),
-                rawLines: roleLines,
-            }, null, 2));
 
             const containerComponents = [];
 
@@ -178,9 +202,21 @@ module.exports = {
 
             try {
                 await message.delete().catch(() => {});
-                await client.rest.post(Routes.channelMessages(message.channel.id), {
+                const sentMsg = await client.rest.post(Routes.channelMessages(message.channel.id), {
                     body: { flags: 1 << 15, allowed_mentions: { parse: [], roles: [] }, components },
                 });
+
+                // Save CRM config to DB if specs exist
+                if (specs.disallow.type || specs.requires.type || specs.run.delroles || specs.run.recheck) {
+                    await db.saveCRMMenu({
+                        customId: selectCustomId,
+                        guildId: message.guild.id,
+                        channelId: message.channel.id,
+                        messageId: sentMsg.id,
+                        roleIds: parsedRoles.map(r => r.roleId),
+                        specs,
+                    });
+                }
             } catch (e) {
                 console.error('[crm] Failed to send role menu:', e.message);
                 await message.channel.send({ content: `❌ Failed to create role menu: ${e.message}` }).catch(() => {});
