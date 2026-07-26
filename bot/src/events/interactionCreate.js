@@ -586,33 +586,7 @@ module.exports = {
                         return true;
                     }
 
-                    // Initial checks
-                    canProceed = checkRequires();
-                    if (canProceed) canProceed = await checkDisallow();
-
-                    // If failed and delroles configured, try recovery
-                    if (!canProceed && specs.run.delroles) {
-                        const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
-                        for (const menu of channelMenus) {
-                            for (const roleId of menu.roleIds) {
-                                if (!selectedRoleIds.includes(roleId) && interaction.member.roles.cache.has(roleId)) {
-                                    try { await interaction.member.roles.remove(roleId); } catch (e) { console.error('[crm] delroles remove failed:', roleId, e.message); }
-                                }
-                            }
-                        }
-                        if (specs.run.recheck) {
-                            failReason = null;
-                            canProceed = checkRequires();
-                            if (canProceed) canProceed = await checkDisallow();
-                        }
-                    }
-
-                    if (!canProceed) {
-                        await interaction.reply({ content: failReason || '❌ You cannot select roles from this menu.', flags: 64 }).catch(() => {});
-                        return;
-                    }
-
-                    // ── Always run delroles if configured (remove other CRM roles in channel) ──
+                    // ── Step 1: Always remove other CRM roles in channel if delroles configured ──
                     if (specs.run.delroles) {
                         const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
                         for (const menu of channelMenus) {
@@ -623,6 +597,30 @@ module.exports = {
                                 }
                             }
                         }
+                    }
+
+                    // ── Step 2: Check conditions ───────────────────────────
+                    canProceed = checkRequires();
+                    if (canProceed) canProceed = await checkDisallow();
+
+                    // ── Step 3: Recovery — if failed and delroles+recheck, remove from ALL menus and re-evaluate ──
+                    if (!canProceed && specs.run.delroles && specs.run.recheck) {
+                        const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
+                        for (const menu of channelMenus) {
+                            for (const roleId of menu.roleIds) {
+                                if (!selectedRoleIds.includes(roleId) && interaction.member.roles.cache.has(roleId)) {
+                                    try { await interaction.member.roles.remove(roleId); } catch (e) { console.error('[crm] delroles remove failed:', roleId, e.message); }
+                                }
+                            }
+                        }
+                        failReason = null;
+                        canProceed = checkRequires();
+                        if (canProceed) canProceed = await checkDisallow();
+                    }
+
+                    if (!canProceed) {
+                        await interaction.reply({ content: failReason || '❌ You cannot select roles from this menu.', flags: 64 }).catch(() => {});
+                        return;
                     }
                 }
 
