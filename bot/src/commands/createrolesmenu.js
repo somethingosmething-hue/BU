@@ -9,7 +9,6 @@ module.exports = {
   async execute(interaction) {
     const payload = {
       flags: MessageFlags.Ephemeral,
-      allowed_mentions: { parse: [] },
       components: [
         {
           type: 17,
@@ -23,6 +22,6 @@ module.exports = {
       ],
     };
 
-    await interaction.reply(payload).catch(() => {});
+    await interaction.reply(payload);
   },
 };
