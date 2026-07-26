@@ -540,50 +540,71 @@ module.exports = {
                     let canProceed = true;
                     let failReason = null;
 
+                    const memberRoles = Array.isArray(interaction.member?.roles)
+                        ? interaction.member.roles
+                        : interaction.member?.roles?.cache;
+
+                    function hasRole(id) {
+                        if (Array.isArray(memberRoles)) return memberRoles.includes(id);
+                        return memberRoles?.has(id) ?? false;
+                    }
+
                     function checkRequires() {
-                        if (!specs.requires.type) return true;
-                        if (specs.requires.type === 'booster') {
-                            if (!interaction.member.premiumSince) { failReason = '<a:mailnoti:1524863742888644770> You need to be a server booster to use this menu.'; return false; }
-                        } else if (specs.requires.type === 'administrator') {
-                            if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; return false; }
-                        } else if (specs.requires.type === 'role' || specs.requires.type === 'all-roles') {
-                            if (!specs.requires.roleIds.every(id => interaction.member.roles.cache.has(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; }
-                        } else if (specs.requires.type === 'any-roles') {
-                            if (!specs.requires.roleIds.some(id => interaction.member.roles.cache.has(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; }
+                        try {
+                            if (!specs.requires.type) return true;
+                            if (specs.requires.type === 'booster') {
+                                if (!interaction.member.premiumSince) { failReason = '<a:mailnoti:1524863742888644770> You need to be a server booster to use this menu.'; return false; }
+                            } else if (specs.requires.type === 'administrator') {
+                                if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; return false; }
+                            } else if (specs.requires.type === 'role' || specs.requires.type === 'all-roles') {
+                                if (!specs.requires.roleIds.every(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; }
+                            } else if (specs.requires.type === 'any-roles') {
+                                if (!specs.requires.roleIds.some(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; }
+                            }
+                            return true;
+                        } catch (e) {
+                            console.error('[crm] checkRequires error:', e);
+                            failReason = '<a:mailnoti:1524863742888644770> An error occurred while checking requirements.';
+                            return false;
                         }
-                        return true;
                     }
 
                     async function checkDisallow() {
-                        if (!specs.disallow.type) return true;
-                        if (specs.disallow.type === 'all') {
-                            const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
-                            for (const menu of channelMenus) {
-                                if (menu._id === customId) continue;
-                                for (const roleId of menu.roleIds) {
-                                    if (interaction.member.roles.cache.has(roleId)) {
-                                        failReason = '<a:mailnoti:1524863742888644770> You already have a role from another menu in this channel.';
+                        try {
+                            if (!specs.disallow.type) return true;
+                            if (specs.disallow.type === 'all') {
+                                const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
+                                for (const menu of channelMenus) {
+                                    if (menu._id === customId) continue;
+                                    for (const roleId of menu.roleIds) {
+                                        if (hasRole(roleId)) {
+                                            failReason = '<a:mailnoti:1524863742888644770> You already have a role from another menu in this channel.';
+                                            return false;
+                                        }
+                                    }
+                                }
+                            } else if (specs.disallow.type === 'link') {
+                                let targetRoleIds = specs.disallow.targetRoleIds || [];
+                                if (targetRoleIds.length === 0 && specs.disallow.messageLink) {
+                                    const linkMatch = specs.disallow.messageLink.match(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/);
+                                    if (linkMatch) {
+                                        const targetMenu = await db.getCRMMenuByMessage(linkMatch[2], linkMatch[3]);
+                                        if (targetMenu) targetRoleIds = targetMenu.roleIds;
+                                    }
+                                }
+                                for (const roleId of targetRoleIds) {
+                                    if (hasRole(roleId)) {
+                                        failReason = '<a:mailnoti:1524863742888644770> You already have a role from the specified conflicting menu.';
                                         return false;
                                     }
                                 }
                             }
-                        } else if (specs.disallow.type === 'link') {
-                            let targetRoleIds = specs.disallow.targetRoleIds || [];
-                            if (targetRoleIds.length === 0 && specs.disallow.messageLink) {
-                                const linkMatch = specs.disallow.messageLink.match(/https:\/\/discord\.com\/channels\/(\d+)\/(\d+)\/(\d+)/);
-                                if (linkMatch) {
-                                    const targetMenu = await db.getCRMMenuByMessage(linkMatch[2], linkMatch[3]);
-                                    if (targetMenu) targetRoleIds = targetMenu.roleIds;
-                                }
-                            }
-                            for (const roleId of targetRoleIds) {
-                                if (interaction.member.roles.cache.has(roleId)) {
-                                    failReason = '<a:mailnoti:1524863742888644770> You already have a role from the specified conflicting menu.';
-                                    return false;
-                                }
-                            }
+                            return true;
+                        } catch (e) {
+                            console.error('[crm] checkDisallow error:', e);
+                            failReason = '<a:mailnoti:1524863742888644770> An error occurred while checking restrictions.';
+                            return false;
                         }
-                        return true;
                     }
 
                     // ── Step 1: Always remove other CRM roles in channel if delroles configured ──
@@ -592,7 +613,7 @@ module.exports = {
                         for (const menu of channelMenus) {
                             if (menu._id === customId) continue;
                             for (const roleId of menu.roleIds) {
-                                if (interaction.member.roles.cache.has(roleId)) {
+                                if (hasRole(roleId)) {
                                     try { await interaction.member.roles.remove(roleId); } catch (e) { console.error('[crm] delroles remove failed:', roleId, e.message); }
                                 }
                             }
@@ -608,7 +629,7 @@ module.exports = {
                         const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
                         for (const menu of channelMenus) {
                             for (const roleId of menu.roleIds) {
-                                if (!selectedRoleIds.includes(roleId) && interaction.member.roles.cache.has(roleId)) {
+                                if (!selectedRoleIds.includes(roleId) && hasRole(roleId)) {
                                     try { await interaction.member.roles.remove(roleId); } catch (e) { console.error('[crm] delroles remove failed:', roleId, e.message); }
                                 }
                             }
@@ -619,8 +640,8 @@ module.exports = {
                     }
 
                     if (!canProceed) {
-                        if (config.specs?.customize?.error) failReason = `<a:mailnoti:1524863742888644770> ${config.specs.customize.error}`;
-                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(() => {});
+                        if (config.specs?.customize?.error) failReason = config.specs.customize.error;
+                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(e => console.error('[crm] reply error:', e));
                         return;
                     }
                 }
