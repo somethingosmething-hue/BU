@@ -530,11 +530,10 @@ module.exports = {
 
             // ── CRM Role Menu ───────────────────────────────────────────────────
             if (customId.startsWith('crm:')) {
-                const config = await db.getCRMMenu(customId);
                 const selectedRoleIds = [...interaction.values];
-                const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
-
                 await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
+                const config = await db.getCRMMenu(customId);
+                const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
 
                 // ── Check specs if config exists ────────────────────────────
                 if (config && config.specs) {
