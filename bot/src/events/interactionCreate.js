@@ -534,6 +534,8 @@ module.exports = {
                 const selectedRoleIds = [...interaction.values];
                 const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
 
+                await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
+
                 // ── Check specs if config exists ────────────────────────────
                 if (config && config.specs) {
                     const specs = config.specs;
@@ -641,7 +643,7 @@ module.exports = {
 
                     if (!canProceed) {
                         if (config.specs?.customize?.error) failReason = config.specs.customize.error;
-                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(e => console.error('[crm] reply error:', e));
+                        await interaction.editReply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.' }).catch(e => console.error('[crm] editReply error:', e));
                         return;
                     }
                 }
@@ -663,10 +665,9 @@ module.exports = {
                     }
                 }
 
-                await interaction.reply({
+                await interaction.editReply({
                     content: `✅ Roles updated! ${added > 0 ? `**+${added}** ` : ''}${removed > 0 ? `**-${removed}**` : ''}`.trim(),
-                    flags: 64,
-                }).catch(() => {});
+                }).catch(e => console.error('[crm] editReply error:', e));
                 return;
             }
 
