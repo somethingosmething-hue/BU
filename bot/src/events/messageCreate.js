@@ -121,7 +121,7 @@ module.exports = {
                 else if (spec.startsWith('spec:run:recheck')) specs.run.recheck = true;
                 else if (spec.startsWith('spec:customize:lim:')) {
                     const num = parseInt(spec.slice('spec:customize:lim:'.length).trim());
-                    if (!isNaN(num) && num > 0 && num <= 25) specs.customize.lim = num;
+                    if (!isNaN(num) && num > 0) specs.customize.lim = Math.min(num, 25);
                 } else if (spec.startsWith('spec:customize:error:')) {
                     specs.customize.error = spec.slice('spec:customize:error:'.length).trim();
                 }
