@@ -7,14 +7,13 @@ module.exports = {
     .setDescription('Learn how to create a role selection menu'),
 
   async execute(interaction, client) {
-const { SlashCommandBuilder } = require('discord.js');
 
     try {
       await client.rest.post(`/interactions/${interaction.id}/${interaction.token}/callback`, {
         body: {
           type: 4,
           data: {
-            flags: 32768,
+            flags: 64,
             allowed_mentions: { parse: [] },
             components: [{
               type: 17,
