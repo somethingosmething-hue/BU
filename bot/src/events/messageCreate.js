@@ -93,7 +93,7 @@ module.exports = {
             }
 
             // ── Parse spec lines ────────────────────────────────────────────────
-            const specs = { disallow: { type: null, messageLink: null, targetCustomId: null, targetRoleIds: null }, requires: { type: null, roleIds: null }, run: { delroles: false, recheck: false }, customLim: null };
+            const specs = { disallow: { type: null, messageLink: null, targetCustomId: null, targetRoleIds: null }, requires: { type: null, roleIds: null }, run: { delroles: false, recheck: false }, customize: { lim: null, error: null } };
             for (const spec of specLines) {
                 if (spec.startsWith('spec:disallow:')) {
                     const val = spec.slice('spec:disallow:'.length).trim();
@@ -119,13 +119,15 @@ module.exports = {
                     else { specs.requires.type = 'role'; specs.requires.roleIds = [val.trim()]; }
                 } else if (spec.startsWith('spec:run:delroles')) specs.run.delroles = true;
                 else if (spec.startsWith('spec:run:recheck')) specs.run.recheck = true;
-                else if (spec.startsWith('spec:customlim:')) {
-                    const num = parseInt(spec.slice('spec:customlim:'.length).trim());
-                    if (!isNaN(num) && num > 0 && num <= 25) specs.customLim = num;
+                else if (spec.startsWith('spec:customize:lim:')) {
+                    const num = parseInt(spec.slice('spec:customize:lim:'.length).trim());
+                    if (!isNaN(num) && num > 0 && num <= 25) specs.customize.lim = num;
+                } else if (spec.startsWith('spec:customize:error:')) {
+                    specs.customize.error = spec.slice('spec:customize:error:'.length).trim();
                 }
             }
 
-            const visibleLimit = specs.customLim || 12;
+            const visibleLimit = specs.customize.lim || 12;
 
             const selectCustomId = `crm:${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 

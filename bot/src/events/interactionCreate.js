@@ -619,6 +619,7 @@ module.exports = {
                     }
 
                     if (!canProceed) {
+                        if (config.specs?.customize?.error) failReason = `<a:mailnoti:1524863742888644770> ${config.specs.customize.error}`;
                         await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(() => {});
                         return;
                     }
