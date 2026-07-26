@@ -543,13 +543,13 @@ module.exports = {
                     function checkRequires() {
                         if (!specs.requires.type) return true;
                         if (specs.requires.type === 'booster') {
-                            if (!interaction.member.premiumSince) { failReason = '❌ You need to be a server booster to use this menu.'; return false; }
+                            if (!interaction.member.premiumSince) { failReason = '<a:mailnoti:1524863742888644770> You need to be a server booster to use this menu.'; return false; }
                         } else if (specs.requires.type === 'administrator') {
-                            if (!interaction.member.permissions.has('Administrator')) { failReason = '❌ You need Administrator permission to use this menu.'; return false; }
+                            if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; return false; }
                         } else if (specs.requires.type === 'role' || specs.requires.type === 'all-roles') {
-                            if (!specs.requires.roleIds.every(id => interaction.member.roles.cache.has(id))) { failReason = '❌ You are missing one or more required roles.'; return false; }
+                            if (!specs.requires.roleIds.every(id => interaction.member.roles.cache.has(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; }
                         } else if (specs.requires.type === 'any-roles') {
-                            if (!specs.requires.roleIds.some(id => interaction.member.roles.cache.has(id))) { failReason = '❌ You need at least one of the required roles.'; return false; }
+                            if (!specs.requires.roleIds.some(id => interaction.member.roles.cache.has(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; }
                         }
                         return true;
                     }
@@ -562,7 +562,7 @@ module.exports = {
                                 if (menu._id === customId) continue;
                                 for (const roleId of menu.roleIds) {
                                     if (interaction.member.roles.cache.has(roleId)) {
-                                        failReason = '❌ You already have a role from another menu in this channel.';
+                                        failReason = '<a:mailnoti:1524863742888644770> You already have a role from another menu in this channel.';
                                         return false;
                                     }
                                 }
@@ -578,7 +578,7 @@ module.exports = {
                             }
                             for (const roleId of targetRoleIds) {
                                 if (interaction.member.roles.cache.has(roleId)) {
-                                    failReason = '❌ You already have a role from the specified conflicting menu.';
+                                    failReason = '<a:mailnoti:1524863742888644770> You already have a role from the specified conflicting menu.';
                                     return false;
                                 }
                             }
@@ -619,7 +619,7 @@ module.exports = {
                     }
 
                     if (!canProceed) {
-                        await interaction.reply({ content: failReason || '❌ You cannot select roles from this menu.', flags: 64 }).catch(() => {});
+                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(() => {});
                         return;
                     }
                 }
