@@ -206,17 +206,15 @@ module.exports = {
                     body: { flags: 1 << 15, allowed_mentions: { parse: [], roles: [] }, components },
                 });
 
-                // Save CRM config to DB if specs exist
-                if (specs.disallow.type || specs.requires.type || specs.run.delroles || specs.run.recheck) {
-                    await db.saveCRMMenu({
-                        customId: selectCustomId,
-                        guildId: message.guild.id,
-                        channelId: message.channel.id,
-                        messageId: sentMsg.id,
-                        roleIds: parsedRoles.map(r => r.roleId),
-                        specs,
-                    });
-                }
+                // Save CRM menu to DB
+                await db.saveCRMMenu({
+                    customId: selectCustomId,
+                    guildId: message.guild.id,
+                    channelId: message.channel.id,
+                    messageId: sentMsg.id,
+                    roleIds: parsedRoles.map(r => r.roleId),
+                    specs,
+                });
             } catch (e) {
                 console.error('[crm] Failed to send role menu:', e.message);
                 await message.channel.send({ content: `❌ Failed to create role menu: ${e.message}` }).catch(() => {});
