@@ -530,9 +530,20 @@ module.exports = {
 
             // ── CRM Role Menu ───────────────────────────────────────────────────
             if (customId.startsWith('crm:')) {
+                console.log('[crm] state at entry:', { replied: interaction.replied, deferred: interaction.deferred, id: interaction.id });
                 const selectedRoleIds = [...interaction.values];
                 const config = await db.getCRMMenu(customId);
                 const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
+
+                async function ackReply(payload) {
+                    if (interaction.deferred) {
+                        await interaction.editReply({ content: payload.content }).catch(e => console.error('[crm] editReply error:', e));
+                    } else if (interaction.replied) {
+                        await interaction.followUp(payload).catch(e => console.error('[crm] followUp error:', e));
+                    } else {
+                        await interaction.reply(payload).catch(e => console.error('[crm] reply error:', e));
+                    }
+                }
 
                 // ── Check specs if config exists ────────────────────────────
                 if (config && config.specs) {
@@ -613,7 +624,7 @@ module.exports = {
                     // ── Step 2: If requirements fail, reply immediately ──
                     if (!canProceed) {
                         if (config.specs?.customize?.error) failReason = config.specs.customize.error;
-                        await interaction.reply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 }).catch(e => console.error('[crm] reply error:', e));
+                        await ackReply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.', flags: 64 });
                         return;
                     }
 
@@ -653,7 +664,7 @@ module.exports = {
 
                     if (!canProceed) {
                         if (config.specs?.customize?.error) failReason = config.specs.customize.error;
-                        await interaction.editReply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.' }).catch(e => console.error('[crm] editReply error:', e));
+                        await ackReply({ content: failReason || '<a:mailnoti:1524863742888644770> You cannot select roles from this menu.' });
                         return;
                     }
                 } else {
@@ -678,9 +689,9 @@ module.exports = {
                     }
                 }
 
-                await interaction.editReply({
+                await ackReply({
                     content: `✅ Roles updated! ${added > 0 ? `**+${added}** ` : ''}${removed > 0 ? `**-${removed}**` : ''}`.trim(),
-                }).catch(e => console.error('[crm] editReply error:', e));
+                });
                 return;
             }
 
