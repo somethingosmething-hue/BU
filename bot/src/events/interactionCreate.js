@@ -530,18 +530,53 @@ module.exports = {
 
             // ── CRM Role Menu ───────────────────────────────────────────────────
             if (customId.startsWith('crm:')) {
-                console.log('[crm] state at entry:', { replied: interaction.replied, deferred: interaction.deferred, id: interaction.id });
+                console.log('[crm] state at entry:', {
+                    replied: interaction.replied,
+                    deferred: interaction.deferred,
+                    id: interaction.id,
+                    type: interaction.type,
+                    version: interaction.version,
+                    messageFlags: interaction.message?.flags,
+                    componentType: interaction.componentType,
+                });
                 const selectedRoleIds = [...interaction.values];
                 const config = await db.getCRMMenu(customId);
                 const allRoleIds = config ? config.roleIds : (interaction.component?.options || []).map(o => o.value);
 
                 async function ackReply(payload) {
                     if (interaction.deferred) {
-                        await interaction.editReply({ content: payload.content }).catch(e => console.error('[crm] editReply error:', e));
+                        await interaction.editReply(payload).catch(e => console.error('[crm] editReply error:', e.code));
                     } else if (interaction.replied) {
-                        await interaction.followUp(payload).catch(e => console.error('[crm] followUp error:', e));
+                        await interaction.followUp(payload).catch(e => console.error('[crm] followUp error:', e.code));
                     } else {
-                        await interaction.reply(payload).catch(e => console.error('[crm] reply error:', e));
+                        try {
+                            await interaction.reply(payload);
+                        } catch (e) {
+                            if (e?.code === 40060) {
+                                console.log('[crm] 40060 on reply — Discord auto-acknowledged; using REST fallback');
+                                const rest = interaction.client.rest;
+                                // Strip flags for PATCH (can't change after acknowledgment)
+                                const { flags: _f, ...patchPayload } = payload;
+                                try {
+                                    await rest.patch(
+                                        `/webhooks/${interaction.applicationId}/${interaction.token}/messages/@original`,
+                                        { body: patchPayload },
+                                    );
+                                } catch (e2) {
+                                    console.error('[crm] REST patch @original failed:', e2.code);
+                                    try {
+                                        await rest.post(
+                                            `/webhooks/${interaction.applicationId}/${interaction.token}`,
+                                            { body: { ...payload, flags: 64 } },
+                                        );
+                                    } catch (e3) {
+                                        console.error('[crm] REST followUp also failed:', e3.code);
+                                    }
+                                }
+                            } else {
+                                console.error('[crm] reply error:', e.code);
+                            }
+                        }
                     }
                 }
 
