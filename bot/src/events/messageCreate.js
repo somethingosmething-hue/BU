@@ -20,15 +20,16 @@ module.exports = {
             const lines = content.split('\n');
             const firstLine = lines[0].trim();
 
-            const crmMatch = firstLine.match(/^,crm\s+(\d+)\s*(?:"([^"]*)")?\s*(?:"([^"]*)")?\s*$/);
+            const crmMatch = firstLine.match(/^,crm\s+(\d+)\s*(true\s+)?(?:"([^"]*)")?\s*(?:"([^"]*)")?\s*$/);
             if (!crmMatch) {
                 await message.reply({ content: '❌ Invalid format. Use: `,crm [max] "Header" "optional banner URL"\\n@Role emoji\\n@Role`' }).catch(() => {});
                 return;
             }
 
             const maxRoles = parseInt(crmMatch[1]);
-            const header = crmMatch[2] || null;
-            const bannerUrl = crmMatch[3] || null;
+            const addSpacers = !!crmMatch[2];
+            const header = crmMatch[3] || null;
+            const bannerUrl = crmMatch[4] || null;
 
             const roleLines = lines.slice(1).map(l => l.trim()).filter(l => l.length > 0);
 
@@ -157,6 +158,11 @@ module.exports = {
             });
 
             const components = [];
+
+            if (addSpacers) {
+                components.push({ type: 14, spacing: 2, divider: false });
+                components.push({ type: 14, spacing: 2, divider: false });
+            }
 
             if (bannerUrl) {
                 components.push({
