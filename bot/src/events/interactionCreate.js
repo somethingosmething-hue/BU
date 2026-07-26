@@ -611,6 +611,19 @@ module.exports = {
                         await interaction.reply({ content: failReason || '❌ You cannot select roles from this menu.', flags: 64 }).catch(() => {});
                         return;
                     }
+
+                    // ── Always run delroles if configured (remove other CRM roles in channel) ──
+                    if (specs.run.delroles) {
+                        const channelMenus = await db.getCRMMenusByChannel(interaction.channel.id);
+                        for (const menu of channelMenus) {
+                            if (menu._id === customId) continue;
+                            for (const roleId of menu.roleIds) {
+                                if (interaction.member.roles.cache.has(roleId)) {
+                                    try { await interaction.member.roles.remove(roleId); } catch (e) { console.error('[crm] delroles remove failed:', roleId, e.message); }
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // ── Apply role changes ──────────────────────────────────────
