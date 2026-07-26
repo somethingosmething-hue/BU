@@ -1,4 +1,5 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
+const db = require('../database/db');
 
 const PER_PAGE = 20;
 const MAX_DESC = 4096;
@@ -9,6 +10,13 @@ module.exports = {
     .setDescription('List all roles in this server with their IDs'),
 
   async execute(interaction) {
+    const member = interaction.member;
+    const guildId = interaction.guild.id;
+    const trusted = await db.isTrusted(guildId, member.id);
+    if (!trusted && !member.permissions.has('Administrator')) {
+      return interaction.reply({ content: 'You need Administrator permission or Trusted role.', flags: 64 });
+    }
+
     const roles = [...interaction.guild.roles.cache.values()]
       .sort((a, b) => b.position - a.position);
 
