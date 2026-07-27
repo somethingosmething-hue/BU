@@ -682,7 +682,7 @@ module.exports = {
                     }
 
                     // ── Step 3: Requirements passed — defer for remaining work ──
-                    await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
+                    await interaction.deferReply({ flags: 64 }).catch(() => {});
 
                     // ── Step 4: Now check disallow (may need DB queries) ──
                     canProceed = await checkDisallow();
@@ -722,8 +722,7 @@ module.exports = {
                     }
                 } else {
                     // No specs — defer for role operations
-                    await interaction.deferReply({ flags: 64 }).catch(e => console.error('[crm] defer error:', e));
-                }
+                    await interaction.deferReply({ flags: 64 }).catch(() => {});
 
                 // ── Apply role changes ──────────────────────────────────────
                 let added = 0, removed = 0;
