@@ -723,6 +723,7 @@ module.exports = {
                 } else {
                     // No specs — defer for role operations
                     await interaction.deferReply({ flags: 64 }).catch(() => {});
+                }
 
                 // ── Apply role changes ──────────────────────────────────────
                 let added = 0, removed = 0;
