@@ -247,7 +247,7 @@ module.exports = {
 
             const cooldown = await db.getReviveCooldown(guildId, typeKey);
             if (cooldown && Date.now() < cooldown) {
-                await message.reply({ content: '<:writing:1526779827611500604> This can be done again in <t:' + Math.floor(cooldown / 1000) + ':R>.' }).catch(() => {});
+                await message.reply({ content: '<:writing:1526779827611500604> This can be done again <t:' + Math.floor(cooldown / 1000) + ':R>.' }).catch(() => {});
                 return;
             }
 
