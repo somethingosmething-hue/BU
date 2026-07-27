@@ -269,7 +269,9 @@ module.exports = {
                 const question = questions[Math.floor(Math.random() * questions.length)];
                 bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, answer me this~!\n<:garrow:1530759025753456681> ' + question + '?';
             } else {
-                bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, wake up~!';
+                const customText = content.slice(reviveMatch[0].length).trim();
+                const reviveMsg = customText || 'wake up~!';
+                bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, ' + reviveMsg;
             }
 
             const payload = {
