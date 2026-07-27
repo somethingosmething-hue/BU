@@ -251,7 +251,17 @@ module.exports = {
                 return;
             }
 
-            await db.setReviveCooldown(guildId, typeKey, Date.now() + 3600000);
+            await db.setReviveCooldown(guildId, typeKey, Date.now() + 7200000);
+
+            // ── Check requirement role ──────────────────────────────────────
+            const reqRoleId = settings[`reviveReqRole_${typeKey}`];
+            if (reqRoleId) {
+                const reqRole = message.guild.roles.cache.get(reqRoleId);
+                if (reqRole && message.member.roles.highest.position < reqRole.position && message.guild.ownerId !== message.author.id) {
+                    await message.reply({ content: '<:writing:1526779827611500604> You need ' + reqRole.toString() + ' or higher to use this command.' }).catch(() => {});
+                    return;
+                }
+            }
 
             let bodyContent;
             if (isRandom) {
@@ -278,7 +288,6 @@ module.exports = {
             };
 
             try {
-                await message.delete().catch(() => {});
                 const sent = await client.rest.post(Routes.channelMessages(message.channel.id), { body: payload });
                 await db.saveReviveMessage(sent.id, guildId, roleId, typeKey);
             } catch (e) {

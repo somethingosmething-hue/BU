@@ -4,8 +4,8 @@ const db = require('../database/db');
 module.exports = {
   permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
-    .setName('setreviverole')
-    .setDescription('Set the role for c!revive / c!randomq commands')
+    .setName('setrevivereqrole')
+    .setDescription('Set a required role to use c!revive / c!randomq')
     .addStringOption(o =>
       o.setName('type')
         .setDescription('Type of revive command')
@@ -17,17 +17,17 @@ module.exports = {
     )
     .addRoleOption(o =>
       o.setName('role')
-        .setDescription('Role to ping and assign')
+        .setDescription('Role required to trigger (or higher)')
         .setRequired(true)
     ),
   async execute(interaction) {
     const type = interaction.options.getString('type');
     const role = interaction.options.getRole('role');
-    const key = `reviveRole_${type}`;
+    const key = `reviveReqRole_${type}`;
     await db.setServerSetting(interaction.guildId, key, role.id);
     const cmdLabel = type === 'chat' ? 'revive' : 'randomq';
     await interaction.reply({
-      content: '<:writing:1526779827611500604> Revive role for **' + type + '** set to ' + role.toString() + '.\nSet a requirement with `/setrevivereqrole`.\n-# <:hawo:1490521492696465519> To trigger this revive type, do **c!' + cmdLabel + '**',
+      content: '<:writing:1526779827611500604> **' + type + '** revives now require the role of ' + role.toString() + ' or higher.\n-# <:hawo:1490521492696465519> To trigger this revive type, do **c!' + cmdLabel + '**',
       flags: 64,
     });
   },
