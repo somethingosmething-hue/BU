@@ -170,27 +170,27 @@ module.exports = {
 
             // ── Revive buttons (Get Role / Remove Role) ─────────────────────
             if (customId === 'btn_1785115813345_9lcn' || customId === 'btn_1785115814564_k5vj') {
+                await interaction.deferReply({ flags: 64 }).catch(() => {});
                 const msgId = interaction.message.id;
                 const reviveMsg = await db.getReviveMessage(msgId);
                 if (!reviveMsg || !reviveMsg.roleId) {
-                    await interaction.reply({ content: '❌ This revive message is no longer valid.', flags: 64 });
+                    await interaction.editReply({ content: '❌ This revive message is no longer valid.' }).catch(() => {});
                     return;
                 }
                 const role = interaction.guild.roles.cache.get(reviveMsg.roleId);
                 if (!role) {
-                    await interaction.reply({ content: '❌ The revive role no longer exists.', flags: 64 });
+                    await interaction.editReply({ content: '❌ The revive role no longer exists.' }).catch(() => {});
                     return;
                 }
                 try {
                     if (customId === 'btn_1785115813345_9lcn') {
                         await interaction.member.roles.add(role);
-                        await interaction.reply({ content: `<:writing:1526779827611500604> You have been given the **${role.name}** role!`, flags: 64 });
                     } else {
                         await interaction.member.roles.remove(role);
-                        await interaction.reply({ content: `<:writing:1526779827611500604> The **${role.name}** role has been removed from you.`, flags: 64 });
                     }
+                    await interaction.editReply({ content: '<:writing:1526779827611500604> Role updated successfully!' }).catch(() => {});
                 } catch (e) {
-                    await interaction.reply({ content: `❌ Failed to manage role: ${e.message}`, flags: 64 });
+                    await interaction.editReply({ content: '❌ Failed to manage role: ' + e.message }).catch(() => {});
                 }
                 return;
             }
