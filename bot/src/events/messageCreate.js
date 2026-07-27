@@ -288,6 +288,18 @@ module.exports = {
             return;
         }
 
+        // ── c!reset — reset both revive cooldowns ─────────────────────────────
+        if (/^c!reset\b/i.test(content)) {
+            if (!message.member.permissions.has('ManageGuild')) {
+                await message.reply({ content: '❌ You need Manage Server permission.' }).catch(() => {});
+                return;
+            }
+            await db.getCollection('revivecooldowns').deleteOne({ key: guildId + ':chat' });
+            await db.getCollection('revivecooldowns').deleteOne({ key: guildId + ':randomquestion' });
+            await message.reply({ content: '<:writing:1526779827611500604> Both revive cooldowns have been reset.' }).catch(() => {});
+            return;
+        }
+
         // ── CurList Channel Processing ────────────────────────────────────────
         const settings = await db.getServerSettings(guildId);
         const curlistChannelId = settings?.curlistChannel;
