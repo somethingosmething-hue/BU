@@ -284,6 +284,62 @@ module.exports = {
             const cmdName    = cmdContent.split(' ')[0].toLowerCase();
             const args       = cmdContent.slice(cmdName.length).trim();
 
+            // ── Built-in revive / randomq ──────────────────────────────────
+            if (cmdName === 'revive' || cmdName === 'randomq') {
+                const isRandom = cmdName === 'randomq';
+                const typeKey = isRandom ? 'randomquestion' : 'chat';
+                const settings = await db.getServerSettings(guildId);
+                const roleKey = `reviveRole_${typeKey}`;
+                const roleId = settings[roleKey];
+
+                if (!roleId) {
+                    await message.reply({ content: `<:writing:1526779827611500604> No revive role has been set for **${typeKey}**. An admin can use \`/setreviverole\` to set it.` }).catch(() => {});
+                    return;
+                }
+
+                const cooldown = await db.getReviveCooldown(guildId);
+                if (cooldown && Date.now() < cooldown) {
+                    await message.reply({ content: `<:writing:1526779827611500604> This cannot be done for <t:${Math.floor(cooldown / 1000)}:R>.` }).catch(() => {});
+                    return;
+                }
+
+                await db.setReviveCooldown(guildId, Date.now() + 3600000);
+
+                let content;
+                if (isRandom) {
+                    const questions = require('../data/revivequestions.json');
+                    const question = questions[Math.floor(Math.random() * questions.length)];
+                    content = `<:writing:1526779827611500604> <@&${roleId}>, answer me this~!\n<:garrow:1530759025753456681> ${question}?`;
+                } else {
+                    content = `<:writing:1526779827611500604> <@&${roleId}>, wake up~!`;
+                }
+
+                const payload = {
+                    flags: 32768,
+                    allowed_mentions: { parse: ['roles'] },
+                    components: [
+                        { type: 10, content },
+                        {
+                            type: 1,
+                            components: [
+                                { type: 2, style: 2, label: 'Get Role', custom_id: 'btn_1785115813345_9lcn', emoji: { id: '1524864466422861924', name: 'whitestar', animated: false } },
+                                { type: 2, style: 2, label: 'Remove Role', custom_id: 'btn_1785115814564_k5vj', emoji: { id: '1524864466422861924', name: 'whitestar', animated: false } },
+                            ],
+                        },
+                    ],
+                };
+
+                try {
+                    await message.delete().catch(() => {});
+                    const sent = await client.rest.post(Routes.channelMessages(message.channel.id), { body: payload });
+                    await db.saveReviveMessage(sent.id, guildId, roleId, typeKey);
+                } catch (e) {
+                    console.error(`[revive] Failed:`, e.message);
+                    await message.channel.send({ content: `❌ Failed: ${e.message}` }).catch(() => {});
+                }
+                return;
+            }
+
             const customCommands = await db.getCustomCommands(guildId);
             const cmdData        = customCommands[cmdName];
 

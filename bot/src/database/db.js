@@ -49,6 +49,8 @@ async function connectDB() {
   await db.collection('active_giveaways').createIndex({ guildId: 1, messageId: 1 });
   await db.collection('crmMenus').createIndex({ channelId: 1 });
   await db.collection('crmMenus').createIndex({ channelId: 1, messageId: 1 });
+  await db.collection('revivecooldowns').createIndex({ key: 1 });
+  await db.collection('revivemessages').createIndex({ messageId: 1 });
    
   return db;
 }
@@ -465,6 +467,32 @@ async function getAllBumpLinks(guildId) {
   return result;
 }
 
+// ── Revive Cooldown & Message Mapping ──────────────────────────────────
+async function getReviveCooldown(guildId) {
+  const doc = await getCollection('revivecooldowns').findOne({ key: guildId });
+  return doc?.timestamp || null;
+}
+
+async function setReviveCooldown(guildId, timestamp) {
+  await getCollection('revivecooldowns').updateOne(
+    { key: guildId },
+    { $set: { timestamp } },
+    { upsert: true }
+  );
+}
+
+async function saveReviveMessage(messageId, guildId, roleId, type) {
+  await getCollection('revivemessages').updateOne(
+    { messageId },
+    { $set: { messageId, guildId, roleId, type } },
+    { upsert: true }
+  );
+}
+
+async function getReviveMessage(messageId) {
+  return await getCollection('revivemessages').findOne({ messageId });
+}
+
 // Notes (sticky message system)
 async function saveNote(guildId, channelId, data) {
   await getCollection('notes').updateOne(
@@ -656,4 +684,5 @@ module.exports = {
   getCurList, saveCurList, addCurListElements,
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,
   saveCRMMenu, getCRMMenu, getCRMMenuByMessage, getCRMMenusByChannel, deleteCRMMenu,
+  getReviveCooldown, setReviveCooldown, saveReviveMessage, getReviveMessage,
 };
