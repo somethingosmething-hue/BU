@@ -245,13 +245,13 @@ module.exports = {
                 return;
             }
 
-            const cooldown = await db.getReviveCooldown(guildId);
+            const cooldown = await db.getReviveCooldown(guildId, typeKey);
             if (cooldown && Date.now() < cooldown) {
-                await message.reply({ content: '<:writing:1526779827611500604> This cannot be done for <t:' + Math.floor(cooldown / 1000) + ':R>.' }).catch(() => {});
+                await message.reply({ content: '<:writing:1526779827611500604> This can be done again in <t:' + Math.floor(cooldown / 1000) + ':R>.' }).catch(() => {});
                 return;
             }
 
-            await db.setReviveCooldown(guildId, Date.now() + 3600000);
+            await db.setReviveCooldown(guildId, typeKey, Date.now() + 3600000);
 
             let bodyContent;
             if (isRandom) {

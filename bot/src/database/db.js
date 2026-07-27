@@ -468,14 +468,14 @@ async function getAllBumpLinks(guildId) {
 }
 
 // ── Revive Cooldown & Message Mapping ──────────────────────────────────
-async function getReviveCooldown(guildId) {
-  const doc = await getCollection('revivecooldowns').findOne({ key: guildId });
+async function getReviveCooldown(guildId, type) {
+  const doc = await getCollection('revivecooldowns').findOne({ key: guildId + ':' + type });
   return doc?.timestamp || null;
 }
 
-async function setReviveCooldown(guildId, timestamp) {
+async function setReviveCooldown(guildId, type, timestamp) {
   await getCollection('revivecooldowns').updateOne(
-    { key: guildId },
+    { key: guildId + ':' + type },
     { $set: { timestamp } },
     { upsert: true }
   );

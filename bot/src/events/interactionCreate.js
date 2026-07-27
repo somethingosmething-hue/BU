@@ -188,7 +188,8 @@ module.exports = {
                     } else {
                         await interaction.member.roles.remove(role);
                     }
-                    await interaction.editReply({ content: '<:writing:1526779827611500604> Role updated successfully!' }).catch(() => {});
+                    const label = customId === 'btn_1785115813345_9lcn' ? 'given' : 'removed';
+                    await interaction.editReply({ content: '<:writing:1526779827611500604> Role has been **' + label + '**!' }).catch(() => {});
                 } catch (e) {
                     await interaction.editReply({ content: '❌ Failed to manage role: ' + e.message }).catch(() => {});
                 }
