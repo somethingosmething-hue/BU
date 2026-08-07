@@ -263,15 +263,19 @@ module.exports = {
                 }
             }
 
+            const customText = content.slice(reviveMatch[0].length).trim();
+
             let bodyContent;
             if (isRandom) {
-                const questions = require('../data/revivequestions.json');
-                const question = questions[Math.floor(Math.random() * questions.length)];
-                bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, answer me this~!\n<:garrow:1530759025753456681> ' + question + '?';
+                if (customText) {
+                    bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, ' + customText + '?';
+                } else {
+                    const questions = require('../data/revivequestions.json');
+                    const question = questions[Math.floor(Math.random() * questions.length)];
+                    bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, answer me this~!\n<:garrow:1530759025753456681> ' + question + '?';
+                }
             } else {
-                const customText = content.slice(reviveMatch[0].length).trim();
-                const reviveMsg = customText || 'wake up~!';
-                bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, ' + reviveMsg;
+                bodyContent = '<:writing:1526779827611500604> <@&' + roleId + '>, ' + (customText || 'wake up~!');
             }
 
             const payload = {
@@ -290,6 +294,9 @@ module.exports = {
             };
 
             try {
+                if (customText) {
+                    await message.delete().catch(() => {});
+                }
                 const sent = await client.rest.post(Routes.channelMessages(message.channel.id), { body: payload });
                 await db.saveReviveMessage(sent.id, guildId, roleId, typeKey);
             } catch (e) {
