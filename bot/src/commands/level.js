@@ -176,7 +176,7 @@ module.exports = {
 
             await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
 
-            if (level > prevLevel) {
+            if (level !== prevLevel) {
                 await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel: level, xp });
             }
 
@@ -204,7 +204,7 @@ module.exports = {
 
             await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
 
-            if (level > prevLevel) {
+            if (level !== prevLevel) {
                 await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel: level, xp });
             }
 
