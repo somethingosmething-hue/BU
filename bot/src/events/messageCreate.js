@@ -327,10 +327,17 @@ module.exports = {
         }
 
         // ── Level sync (,sync / c!sync) ─────────────────────────────────────
-        const syncAlias = content.match(/^(c!|,)sync$/i);
+        const syncAlias = content.match(/^(c!|,)sync(?:\s+<@!?(\d+)>)?(?:\s+(\d+))?$/i);
         if (syncAlias) {
             try {
-                const payload = await leveling.syncUser(message, client);
+                const targetId = syncAlias[2];
+                const amount = syncAlias[3];
+                let targetUser = null;
+                if (targetId) {
+                    targetUser = message.guild.members.cache.get(targetId) || await message.guild.members.fetch(targetId).catch(() => null);
+                    if (!targetUser) return message.reply({ content: '❌ Could not find that user in this server.' }).catch(() => {});
+                }
+                const payload = await leveling.syncUser(message, client, targetUser, amount !== undefined ? Number(amount) : undefined);
                 await message.reply(payload).catch(e => console.error('[levels] sync reply failed:', e.message));
             } catch (e) {
                 console.error('[levels] sync error:', e.message);

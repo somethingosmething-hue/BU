@@ -402,15 +402,25 @@ async function syncFromMessages({ guildId, userId, client, guild, messages }) {
 }
 
 // ── ,sync message command (unlimited use) ────────────────────────────────
-async function syncUser(message, client) {
+// syncUser(message, client, targetUser?, overrideMessages?)
+// - no target: sync self from own message count
+// - target, no amount: sync target from their message count
+// - target + amount: sync target from the given message count
+async function syncUser(message, client, targetUser, overrideMessages) {
   const guildId = message.guild.id;
-  const userId = message.author.id;
-  const data = await db.getLevelUser(guildId, userId);
-  const messages = data.messages || 0;
+  const userId = targetUser ? targetUser.id : message.author.id;
+
+  let messages = overrideMessages;
+  if (messages === undefined) {
+    const data = await db.getLevelUser(guildId, userId);
+    messages = data.messages || 0;
+  }
 
   const result = await syncFromMessages({ guildId, userId, client, guild: message.guild, messages });
 
-  return confirmPayload(`${RSTARS} Successfully __synced__ your level from your **${fmt(result.messages)} messages**~!\n${GARROW} **${fmt(result.totalXp)} XP** ≈ **Level ${result.prevLevel}** ${GARROW} **Level ${result.newLevel}** *(${fmt(result.xp)} XP left)*`);
+  const who = targetUser ? `${targetUser}` : 'your';
+  const whoEnd = targetUser ? `${targetUser}'s` : 'your';
+  return confirmPayload(`${RSTARS} Successfully __synced__ ${whoEnd} level from **${fmt(result.messages)} messages**~!\n${GARROW} **${fmt(result.totalXp)} XP** ≈ **Level ${result.prevLevel}** ${GARROW} **Level ${result.newLevel}** *(${fmt(result.xp)} XP left)*`);
 }
 
 module.exports = {
