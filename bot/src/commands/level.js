@@ -156,29 +156,28 @@ module.exports = {
             const data = await db.getLevelUser(guildId, target.id);
             let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
-            // Treat XP as cumulative total from level 0 (like ,sync) so the
-            // level recalculates up or down as needed.
-            let total = 0;
-            for (let l = 0; l < level; l++) total += db.xpForLevel(l);
-            total += xp;
-
-            if (action === 'add') total = total + amount;
-            else if (action === 'set') total = amount;
-            else if (action === 'remove') total = Math.max(0, total - amount);
-            else if (action === 'reset') total = 0;
+            if (action === 'add') xp = xp + amount;
+            else if (action === 'set') xp = amount;
+            else if (action === 'remove') xp = xp - amount;
+            else if (action === 'reset') xp = 0;
 
             const prevLevel = level;
-            let newLevel = 0;
-            let newXp = total;
-            while (newXp >= db.xpForLevel(newLevel)) {
-                newXp -= db.xpForLevel(newLevel);
-                newLevel += 1;
+            // Normalize: level up when xp exceeds the threshold, level down when
+            // it goes negative.
+            while (xp >= db.xpForLevel(level)) {
+                xp -= db.xpForLevel(level);
+                level += 1;
             }
+            while (xp < 0 && level > 0) {
+                level -= 1;
+                xp += db.xpForLevel(level);
+            }
+            if (xp < 0) xp = 0;
 
-            await db.setLevelUser(guildId, target.id, { level: newLevel, xp: newXp, messages, lastXP, synced });
+            await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
 
-            if (newLevel > prevLevel) {
-                await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel, xp: newXp });
+            if (level > prevLevel) {
+                await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel: level, xp });
             }
 
             const text = action === 'reset'
