@@ -353,6 +353,7 @@ module.exports = {
                 newPage = Math.max(1, Math.min(newPage, leveling.MAX_PAGES));
 
                 try {
+                    await interaction.deferUpdate();
                     const payload = await leveling.buildLeaderboardPayload({ guildId: interaction.guild.id, requesterId, type, page: newPage });
                     await client.rest.patch(Routes.channelMessage(interaction.channelId, interaction.message.id), { body: payload }).catch(e => console.error('[levels] pagination error:', e.message));
                 } catch (e) {
