@@ -273,7 +273,7 @@ async function setCooldown(guildId, userId, trigger, timestamp) {
 }
 
 // Levels
-function xpForLevel(level) { return 20 + 12 * level * level; }
+function xpForLevel(level) { return Math.floor(200 * (level + 1) ** 0.87); }
 
 async function getLevelUser(guildId, userId) {
   const doc = await getCollection('levels').findOne({ guildId, userId });
