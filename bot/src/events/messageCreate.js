@@ -331,8 +331,11 @@ module.exports = {
         if (syncAlias) {
             const lvlSettings = await db.getLevelSettings(guildId);
             if (!lvlSettings.enabled) return;
+            const targetId = syncAlias[2];
+            if (targetId && !message.member.permissions.has('ManageGuild')) {
+                return message.reply({ content: '❌ You need Manage Server permission to sync other users.' }).catch(() => {});
+            }
             try {
-                const targetId = syncAlias[2];
                 const amount = syncAlias[3];
                 let targetUser = null;
                 if (targetId) {
