@@ -13,8 +13,8 @@ const DIVIDER1 = '<:divider1:1536178165972607038>';
 const DIVIDER2 = '<:divider2:1536178189762826240>';
 const RSTARS = '<:rstars:1536181894469918830>';
 const PETS = '<:pets:1526779649487536250>';
-const GREEN_CHECK = '<:greencheck:1536171451453804644>';
-const CHECKOUT = '<:checkout:1536170868688949358>';
+const GREEN_CHECK = '<:greencheck:1536179198333292564>';
+const CHECKOUT = '<:checkout:1536178354384928868>';
 const MSG_ICON = '<:image:1536192471271473162>';
 const LR = '\u200E';
 
@@ -157,7 +157,7 @@ function buildLevelUpPayload({ userId, prevLevel, level, xp, serverRank, globalR
       {
         type: 17,
         components: [
-          { type: 10, content: `## ${WHITE_HEART} Level Up ${level}` },
+          { type: 10, content: `## ${WHITE_HEART} Level Up [${level}]` },
           divider(2, true),
           divider(1, false),
           {
@@ -289,7 +289,9 @@ async function processMessageXp(message, client) {
   const userId = message.author.id;
 
   const data = await db.getLevelUser(guildId, userId);
-  let { level = 0, xp = 0, messages = 0 } = data;
+  let { level = 0, xp = 0, messages = 0, lastXP = 0 } = data;
+
+  if (lastXP && Date.now() - lastXP < 2000) return;
 
   xp += xpPerMessage;
   messages += 1;
@@ -302,7 +304,7 @@ async function processMessageXp(message, client) {
     leveledUp = true;
   }
 
-  await db.setLevelUser(guildId, userId, { level: newLevel, xp, messages });
+  await db.setLevelUser(guildId, userId, { level: newLevel, xp, messages, lastXP: Date.now() });
   if (!leveledUp) return;
 
   // Distribute role rewards for every level crossed.

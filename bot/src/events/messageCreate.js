@@ -334,10 +334,10 @@ module.exports = {
                 const mode = (levelAlias[3] || 'server').toLowerCase();
                 if (cmd === 'lb') {
                     const payload = await leveling.buildLeaderboardPayload({ guildId, requesterId: message.author.id, type: mode, page: 1 });
-                    await message.channel.send(payload).catch(e => console.error('[levels] lb send failed:', e.message));
+                    await message.reply(payload).catch(e => console.error('[levels] lb send failed:', e.message));
                 } else {
                     const payload = await leveling.rankPayloadFor({ guildId, userId: message.author.id });
-                    await message.channel.send(payload).catch(e => console.error('[levels] rank send failed:', e.message));
+                    await message.reply(payload).catch(e => console.error('[levels] rank send failed:', e.message));
                 }
             } catch (e) {
                 console.error('[levels] alias error:', e.message);
