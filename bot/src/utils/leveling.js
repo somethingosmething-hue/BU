@@ -365,22 +365,16 @@ async function postLevelChange({ client, guild, userId, prevLevel, newLevel, xp 
   await channel.send(payload).catch(e => console.error('[levels] Level-up message failed:', e.message));
 }
 
-// ── One-time sync: derive level purely from total msgs sent ────────────────
-async function syncUser(message, client) {
-  const guildId = message.guild.id;
+// ── Sync core: derive level+XP from a message count (as if from level 0) ──
+async function syncFromMessages({ guildId, userId, client, guild, messages }) {
   const settings = await db.getLevelSettings(guildId);
   const xpPerMessage = Math.max(1, Number(settings.xpPerMessage) || 10);
-  const userId = message.author.id;
 
   const data = await db.getLevelUser(guildId, userId);
-  if (data.synced) {
-    return confirmPayload(`${RSTARS} You've __already__ used your one-time level sync~!`);
-  }
+  const prevLevel = data.level || 0;
 
-  const totalMsgs = data.messages || 0;
-  const totalXp = totalMsgs * xpPerMessage;
+  const totalXp = messages * xpPerMessage;
 
-  // Recompute level from scratch (as if starting at level 0 with that total XP).
   let newLevel = 0;
   let newXp = totalXp;
   while (newXp >= db.xpForLevel(newLevel)) {
@@ -388,22 +382,30 @@ async function syncUser(message, client) {
     newLevel += 1;
   }
 
-  const prevLevel = data.level || 0;
-  const leveledUp = newLevel > prevLevel;
-
   await db.setLevelUser(guildId, userId, {
     level: newLevel,
     xp: newXp,
-    messages: totalMsgs,
+    messages,
     lastXP: 0,
-    synced: true,
   });
 
-  if (leveledUp) {
-    await postLevelChange({ client, guild: message.guild, userId, prevLevel, newLevel, xp: newXp });
+  if (newLevel !== prevLevel) {
+    await postLevelChange({ client, guild, userId, prevLevel, newLevel, xp: newXp });
   }
 
-  return confirmPayload(`${RSTARS} Successfully __synced__ your level from your **${fmt(totalMsgs)} messages**~!\n${GARROW} **${fmt(totalXp)} XP** ≈ **Level ${prevLevel}** ${GARROW} **Level ${newLevel}** *(${fmt(newXp)} XP left)*`);
+  return { prevLevel, newLevel, xp: newXp, totalXp, messages };
+}
+
+// ── ,sync message command (unlimited use) ────────────────────────────────
+async function syncUser(message, client) {
+  const guildId = message.guild.id;
+  const userId = message.author.id;
+  const data = await db.getLevelUser(guildId, userId);
+  const messages = data.messages || 0;
+
+  const result = await syncFromMessages({ guildId, userId, client, guild: message.guild, messages });
+
+  return confirmPayload(`${RSTARS} Successfully __synced__ your level from your **${fmt(result.messages)} messages**~!\n${GARROW} **${fmt(result.totalXp)} XP** ≈ **Level ${result.prevLevel}** ${GARROW} **Level ${result.newLevel}** *(${fmt(result.xp)} XP left)*`);
 }
 
 module.exports = {
@@ -414,6 +416,7 @@ module.exports = {
   confirmPayload,
   processMessageXp,
   syncUser,
+  syncFromMessages,
   postLevelChange,
   greenLevel,
   rankEmoji,

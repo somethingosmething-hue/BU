@@ -3,7 +3,7 @@ const db = require('../database/db');
 const leveling = require('../utils/leveling');
 
 const RSTARS = '<:rstars:1536181894469918830>';
-const ADMIN_SUBS = ['config', 'setreward', 'reset', 'xp', 'lvl'];
+const ADMIN_SUBS = ['config', 'setreward', 'reset', 'xp', 'lvl', 'msgs'];
 
 function confirm(text) {
     return leveling.confirmPayload(`${RSTARS} ${text}`);
@@ -34,6 +34,14 @@ module.exports = {
             .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
             .addIntegerOption(o => o.setName('amount').setDescription('Amount').setRequired(true).setMinValue(0)))
         .addSubcommand(s => s.setName('lvl').setDescription('Add/set/remove/reset a user\'s level')
+            .addStringOption(o => o.setName('action').setDescription('What to do').setRequired(true).addChoices(
+                { name: 'add', value: 'add' },
+                { name: 'set', value: 'set' },
+                { name: 'remove', value: 'remove' },
+                { name: 'reset', value: 'reset' }))
+            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
+            .addIntegerOption(o => o.setName('amount').setDescription('Amount').setRequired(true).setMinValue(0)))
+        .addSubcommand(s => s.setName('msgs').setDescription('Add/set/remove/reset a user\'s message count (then sync level)')
             .addStringOption(o => o.setName('action').setDescription('What to do').setRequired(true).addChoices(
                 { name: 'add', value: 'add' },
                 { name: 'set', value: 'set' },
@@ -215,6 +223,28 @@ module.exports = {
                 ? `Successfully __reset__ the **level** of ${target}~! *(XP kept)*`
                 : `Successfully __${action}__ **${amount.toLocaleString()} levels** ${action === 'set' ? 'to' : ''} ${target}~!`;
             return interaction.editReply(confirm(text.trim().replace(/\s+/g, ' ')));
+        }
+
+        // ── /level msgs ─────────────────────────────────────────────────────
+        if (sub === 'msgs') {
+            const action = interaction.options.getString('action');
+            const target = interaction.options.getUser('user');
+            const amount = interaction.options.getInteger('amount') || 0;
+
+            const data = await db.getLevelUser(guildId, target.id);
+            let messages = data.messages || 0;
+
+            if (action === 'add') messages = messages + amount;
+            else if (action === 'set') messages = amount;
+            else if (action === 'remove') messages = Math.max(0, messages - amount);
+            else if (action === 'reset') messages = 0;
+
+            const result = await leveling.syncFromMessages({ guildId, userId: target.id, client, guild: interaction.guild, messages });
+
+            const text = action === 'reset'
+                ? `Successfully __reset__ the **messages** of ${target}~!`
+                : `Successfully __${action}__ **${action === 'set' ? fmt(amount) : fmt(amount)} messages** ${action === 'set' ? 'to' : action === 'add' ? 'to' : 'from'} ${target}~!`;
+            return interaction.editReply(confirm(`${text}\n${GARROW} **Level ${result.prevLevel}** ${GARROW} **Level ${result.newLevel}** *(${fmt(result.xp)} XP left)*`));
         }
 
         // ── /level rank ──────────────────────────────────────────────────────
