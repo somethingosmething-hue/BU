@@ -52,12 +52,15 @@ module.exports = {
         const sub = interaction.options.getSubcommand();
         const guildId = interaction.guildId;
 
+        // Defer so slow DB work + postLevelChange channel send don't expire the token.
+        await interaction.deferReply();
+
         // rank + leaderboard are public; everything else needs ManageGuild
         // (trusted users get ALMIGHTY_PERMS injected by interactionCreate).
         if (ADMIN_SUBS.includes(sub)) {
             const memberPerms = interaction.member?.permissions;
             if (!memberPerms?.has('ManageGuild')) {
-                return interaction.reply({ content: '❌ You do not have permission to use this command.', flags: 64 });
+                return interaction.editReply({ content: '❌ You do not have permission to use this command.', flags: 64 });
             }
         }
 
@@ -82,7 +85,7 @@ module.exports = {
                     `**Level-up messages**: ${cur.disableLevelMsgs ? '🔕 Disabled' : '✅ Enabled'}`,
                     `**XP per message**: ${cur.xpPerMessage || 10}`,
                 ];
-                return interaction.reply(confirm(`Current level settings:\n${lines.join('\n')}`));
+                return interaction.editReply(confirm(`Current level settings:\n${lines.join('\n')}`));
             }
 
             await db.setLevelSettings(guildId, update);
@@ -102,7 +105,7 @@ module.exports = {
                 }
             }
 
-            return interaction.reply(confirm(parts.join('\n')));
+            return interaction.editReply(confirm(parts.join('\n')));
         }
 
         // ── /level setreward ─────────────────────────────────────────────────
@@ -118,9 +121,9 @@ module.exports = {
             // No options given → show current reward info.
             if (enabled === null && !roleGiven && perkMessage === null) {
                 if (existing.enabled === false) {
-                    return interaction.reply(confirm(`The level **${lv}** reward is __disabled__. Use \`/level setreward ${lv} enabled:true\` to re-enable it.`));
+                    return interaction.editReply(confirm(`The level **${lv}** reward is __disabled__. Use \`/level setreward ${lv} enabled:true\` to re-enable it.`));
                 }
-                return interaction.reply(confirm(`**Level ${lv}** reward:\n• **Role**: ${existing.roleGiven ? `<@&${existing.roleGiven}>` : '*(none)*'}\n• **Perk message**: ${existing.perkMessage || '*(none)*'}\nUse \`/level setreward ${lv} role_given:@role perk_message:...\` to set it.`));
+                return interaction.editReply(confirm(`**Level ${lv}** reward:\n• **Role**: ${existing.roleGiven ? `<@&${existing.roleGiven}>` : '*(none)*'}\n• **Perk message**: ${existing.perkMessage || '*(none)*'}\nUse \`/level setreward ${lv} role_given:@role perk_message:...\` to set it.`));
             }
 
             const updated = { ...existing };
@@ -137,14 +140,14 @@ module.exports = {
             if (roleGiven) parts.push(`__set__ ${roleGiven} as the role for level **${lv}**`);
             if (perkMessage !== null) parts.push(`__set__ the perk message for level **${lv}**`);
             if (!parts.length) parts.push(`__updated__ the level **${lv}** reward`);
-            return interaction.reply(confirm(`Successfully ${parts.join(' & ')}~!`));
+            return interaction.editReply(confirm(`Successfully ${parts.join(' & ')}~!`));
         }
 
         // ── /level reset ─────────────────────────────────────────────────────
         if (sub === 'reset') {
             const target = interaction.options.getUser('user');
             await db.getCollection('levels').deleteOne({ guildId, userId: target.id });
-            return interaction.reply(confirm(`Successfully __reset__ the **level & XP** of ${target}~!`));
+            return interaction.editReply(confirm(`Successfully __reset__ the **level & XP** of ${target}~!`));
         }
 
         // ── /level xp ────────────────────────────────────────────────────────
@@ -183,7 +186,7 @@ module.exports = {
             const text = action === 'reset'
                 ? `Successfully __reset__ the **XP** of ${target}~!`
                 : `Successfully __${action}__ **${amount.toLocaleString()} XP** ${action === 'set' ? 'to' : ''} ${target}~!`;
-            return interaction.reply(confirm(text.trim().replace(/\s+/g, ' ')));
+            return interaction.editReply(confirm(text.trim().replace(/\s+/g, ' ')));
         }
 
         // ── /level lvl ───────────────────────────────────────────────────────
@@ -211,21 +214,21 @@ module.exports = {
             const text = action === 'reset'
                 ? `Successfully __reset__ the **level** of ${target}~! *(XP kept)*`
                 : `Successfully __${action}__ **${amount.toLocaleString()} levels** ${action === 'set' ? 'to' : ''} ${target}~!`;
-            return interaction.reply(confirm(text.trim().replace(/\s+/g, ' ')));
+            return interaction.editReply(confirm(text.trim().replace(/\s+/g, ' ')));
         }
 
         // ── /level rank ──────────────────────────────────────────────────────
         if (sub === 'rank') {
             const target = interaction.options.getUser('user') || interaction.user;
             const payload = await leveling.rankPayloadFor({ guildId, userId: target.id });
-            return interaction.reply(payload);
+            return interaction.editReply(payload);
         }
 
         // ── /level leaderboard ───────────────────────────────────────────────
         if (sub === 'leaderboard') {
             const type = interaction.options.getString('type') || 'server';
             const payload = await leveling.buildLeaderboardPayload({ guildId, requesterId: interaction.user.id, type, page: 1 });
-            return interaction.reply(payload);
+            return interaction.editReply(payload);
         }
     },
 };
