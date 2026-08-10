@@ -318,18 +318,27 @@ async function processMessageXp(message, client) {
   await db.setLevelUser(guildId, userId, { level: newLevel, xp, messages, lastXP, synced });
   if (!leveledUp) return;
 
-  // Distribute role rewards for every level crossed.
+  await postLevelChange({ client, guild: message.guild, userId, prevLevel: level, newLevel, xp });
+}
+
+// ── Grant any missing reward roles + send one level-up message ─────────────
+async function postLevelChange({ client, guild, userId, prevLevel, newLevel, xp }) {
+  const guildId = guild.id;
+  const settings = await db.getLevelSettings(guildId);
   const rewards = await db.getLevelRewards(guildId);
-  let member = message.guild.members.cache.get(userId);
-  if (!member) member = await message.guild.members.fetch(userId).catch(() => null);
-  for (let lv = level + 1; lv <= newLevel; lv++) {
-    const r = rewards[lv];
-    if (r && r.enabled !== false && r.roleGiven && member) {
+
+  // Backfill: give the member every reward role they should have up to the new
+  // level that they don't already have (covers previously missed rewards).
+  let member = guild.members.cache.get(userId);
+  if (!member) member = await guild.members.fetch(userId).catch(() => null);
+  for (const [lvKey, r] of Object.entries(rewards)) {
+    const lv = Number(lvKey);
+    if (r && r.enabled !== false && r.roleGiven && lv <= newLevel && member && !member.roles.cache.has(r.roleGiven)) {
       await member.roles.add(r.roleGiven).catch(() => {});
     }
   }
 
-  // Level-up message.
+  // One level-up message for the final level only.
   if (settings.disableLevelMsgs) return;
   const channelId = settings.levelUpChannel;
   if (!channelId) return;
@@ -343,7 +352,7 @@ async function processMessageXp(message, client) {
 
   const payload = buildLevelUpPayload({
     userId,
-    prevLevel: level,
+    prevLevel,
     level: newLevel,
     xp,
     serverRank: serverRank || list.length + 1,
@@ -389,40 +398,7 @@ async function syncUser(message, client) {
   });
 
   if (leveledUp) {
-    // Distribute role rewards for every level crossed.
-    const rewards = await db.getLevelRewards(guildId);
-    let member = message.guild.members.cache.get(userId);
-    if (!member) member = await message.guild.members.fetch(userId).catch(() => null);
-    for (let lv = prevLevel + 1; lv <= newLevel; lv++) {
-      const r = rewards[lv];
-      if (r && r.enabled !== false && r.roleGiven && member) {
-        await member.roles.add(r.roleGiven).catch(() => {});
-      }
-    }
-
-    // One level-up message for the final level only (not each level crossed).
-    if (!settings.disableLevelMsgs) {
-      const channelId = settings.levelUpChannel;
-      if (channelId) {
-        const channel = client.channels.cache.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
-        if (channel && channel.isTextBased()) {
-          const list = await db.getLevelLeaderboard(guildId);
-          const global = await db.getGlobalLevelLeaderboard();
-          const serverRank = list.findIndex(e => e.userId === userId) + 1;
-          const globalRank = global.findIndex(e => e.userId === userId) + 1;
-          const payload = buildLevelUpPayload({
-            userId,
-            prevLevel,
-            level: newLevel,
-            xp: newXp,
-            serverRank: serverRank || list.length + 1,
-            globalRank: globalRank || global.length + 1,
-            rewards,
-          });
-          await channel.send(payload).catch(e => console.error('[levels] Sync level-up message failed:', e.message));
-        }
-      }
-    }
+    await postLevelChange({ client, guild: message.guild, userId, prevLevel, newLevel, xp: newXp });
   }
 
   return confirmPayload(`${RSTARS} Successfully __synced__ your level from your **${fmt(totalMsgs)} messages**~!\n${GARROW} **${fmt(totalXp)} XP** ≈ **Level ${prevLevel}** ${GARROW} **Level ${newLevel}** *(${fmt(newXp)} XP left)*`);
@@ -436,6 +412,7 @@ module.exports = {
   confirmPayload,
   processMessageXp,
   syncUser,
+  postLevelChange,
   greenLevel,
   rankEmoji,
   PER_PAGE,

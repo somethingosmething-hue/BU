@@ -156,12 +156,30 @@ module.exports = {
             const data = await db.getLevelUser(guildId, target.id);
             let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
-            if (action === 'add') xp = xp + amount;
-            else if (action === 'set') xp = amount;
-            else if (action === 'remove') xp = Math.max(0, xp - amount);
-            else if (action === 'reset') xp = 0;
+            // Treat XP as cumulative total from level 0 (like ,sync) so the
+            // level recalculates up or down as needed.
+            let total = 0;
+            for (let l = 0; l < level; l++) total += db.xpForLevel(l);
+            total += xp;
 
-            await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
+            if (action === 'add') total = total + amount;
+            else if (action === 'set') total = amount;
+            else if (action === 'remove') total = Math.max(0, total - amount);
+            else if (action === 'reset') total = 0;
+
+            const prevLevel = level;
+            let newLevel = 0;
+            let newXp = total;
+            while (newXp >= db.xpForLevel(newLevel)) {
+                newXp -= db.xpForLevel(newLevel);
+                newLevel += 1;
+            }
+
+            await db.setLevelUser(guildId, target.id, { level: newLevel, xp: newXp, messages, lastXP, synced });
+
+            if (newLevel > prevLevel) {
+                await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel, xp: newXp });
+            }
 
             const text = action === 'reset'
                 ? `Successfully __reset__ the **XP** of ${target}~!`
@@ -178,6 +196,7 @@ module.exports = {
             const data = await db.getLevelUser(guildId, target.id);
             let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
+            const prevLevel = level;
             // Note: resetting the level does NOT reset XP.
             if (action === 'add') level = level + amount;
             else if (action === 'set') level = amount;
@@ -185,6 +204,10 @@ module.exports = {
             else if (action === 'reset') level = 0;
 
             await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
+
+            if (level > prevLevel) {
+                await leveling.postLevelChange({ client, guild: interaction.guild, userId: target.id, prevLevel, newLevel: level, xp });
+            }
 
             const text = action === 'reset'
                 ? `Successfully __reset__ the **level** of ${target}~! *(XP kept)*`
