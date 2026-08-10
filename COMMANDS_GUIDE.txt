@@ -321,7 +321,7 @@ XP and leveling system (disabled by default). Enable via `/level config enabled:
 /level xp add user:@User amount:100
 /level xp remove user:@User amount:100
 /level xp set user:@User amount:500
-/level level add user:@User amount:1
+/level lvl add user:@User amount:1
 /level rank
 /level rank user:@User
 /level leaderboard

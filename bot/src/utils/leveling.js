@@ -157,7 +157,7 @@ function buildLevelUpPayload({ userId, prevLevel, level, xp, serverRank, globalR
       {
         type: 17,
         components: [
-          { type: 10, content: `## ${WHITE_HEART} Level Up [${level}]` },
+          { type: 10, content: `## ${WHITE_HEART} Level up~! [${level}]` },
           divider(2, true),
           divider(1, false),
           {
@@ -191,10 +191,16 @@ async function buildLeaderboardPayload({ guildId, requesterId, type = 'server', 
   const start = (curPage - 1) * PER_PAGE;
   const entries = list.slice(start, start + PER_PAGE);
 
-  const lines = entries.map((e, i) => {
+  const lines = [];
+  for (let i = 0; i < PER_PAGE; i++) {
     const rank = start + i + 1;
-    return `${rankEmoji(rank)} <@${e.userId}>${MSG_ICON}**${fmt(e.messages || 0)}** messages`;
-  });
+    const e = entries[i];
+    if (e) {
+      lines.push(`${rankEmoji(rank)} <@${e.userId}>${MSG_ICON}**${fmt(e.messages || 0)}** messages`);
+    } else if (list.length > 0) {
+      lines.push(`${rankEmoji(rank)} None${MSG_ICON}**N/A** messages`);
+    }
+  }
 
   const requesterRank = list.findIndex(e => e.userId === requesterId) + 1;
 

@@ -3,7 +3,7 @@ const db = require('../database/db');
 const leveling = require('../utils/leveling');
 
 const RSTARS = '<:rstars:1536181894469918830>';
-const ADMIN_SUBS = ['config', 'setreward', 'reset', 'xp', 'level'];
+const ADMIN_SUBS = ['config', 'setreward', 'reset', 'xp', 'lvl'];
 
 function confirm(text) {
     return leveling.confirmPayload(`${RSTARS} ${text}`);
@@ -33,7 +33,7 @@ module.exports = {
                 { name: 'reset', value: 'reset' }))
             .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
             .addIntegerOption(o => o.setName('amount').setDescription('Amount').setRequired(true).setMinValue(0)))
-        .addSubcommand(s => s.setName('level').setDescription('Add/set/remove/reset a user\'s level')
+        .addSubcommand(s => s.setName('lvl').setDescription('Add/set/remove/reset a user\'s level')
             .addStringOption(o => o.setName('action').setDescription('What to do').setRequired(true).addChoices(
                 { name: 'add', value: 'add' },
                 { name: 'set', value: 'set' },
@@ -169,8 +169,8 @@ module.exports = {
             return interaction.reply(confirm(text.trim().replace(/\s+/g, ' ')));
         }
 
-        // ── /level level ─────────────────────────────────────────────────────
-        if (sub === 'level') {
+        // ── /level lvl ───────────────────────────────────────────────────────
+        if (sub === 'lvl') {
             const action = interaction.options.getString('action');
             const target = interaction.options.getUser('user');
             const amount = interaction.options.getInteger('amount') || 0;
