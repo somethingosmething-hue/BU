@@ -326,6 +326,18 @@ module.exports = {
             return;
         }
 
+        // ── Level sync (,sync / c!sync) ─────────────────────────────────────
+        const syncAlias = content.match(/^(c!|,)sync$/i);
+        if (syncAlias) {
+            try {
+                const payload = await leveling.syncUser(message, client);
+                await message.reply(payload).catch(e => console.error('[levels] sync reply failed:', e.message));
+            } catch (e) {
+                console.error('[levels] sync error:', e.message);
+            }
+            return;
+        }
+
         // ── Level aliases (c!lb ,lb / c!rank ,rank / c!level ,level) ─────────
         const levelAlias = content.match(/^(c!|,)(lb|rank|level)(?:\s+(global|server))?$/i);
         if (levelAlias) {

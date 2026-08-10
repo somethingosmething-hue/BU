@@ -154,14 +154,14 @@ module.exports = {
             const amount = interaction.options.getInteger('amount') || 0;
 
             const data = await db.getLevelUser(guildId, target.id);
-            let { level = 0, xp = 0, messages = 0 } = data;
+            let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
             if (action === 'add') xp = xp + amount;
             else if (action === 'set') xp = amount;
             else if (action === 'remove') xp = Math.max(0, xp - amount);
             else if (action === 'reset') xp = 0;
 
-            await db.setLevelUser(guildId, target.id, { level, xp, messages });
+            await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
 
             const text = action === 'reset'
                 ? `Successfully __reset__ the **XP** of ${target}~!`
@@ -176,7 +176,7 @@ module.exports = {
             const amount = interaction.options.getInteger('amount') || 0;
 
             const data = await db.getLevelUser(guildId, target.id);
-            let { level = 0, xp = 0, messages = 0 } = data;
+            let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
             // Note: resetting the level does NOT reset XP.
             if (action === 'add') level = level + amount;
@@ -184,7 +184,7 @@ module.exports = {
             else if (action === 'remove') level = Math.max(0, level - amount);
             else if (action === 'reset') level = 0;
 
-            await db.setLevelUser(guildId, target.id, { level, xp, messages });
+            await db.setLevelUser(guildId, target.id, { level, xp, messages, lastXP, synced });
 
             const text = action === 'reset'
                 ? `Successfully __reset__ the **level** of ${target}~! *(XP kept)*`

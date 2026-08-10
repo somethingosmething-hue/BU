@@ -196,9 +196,9 @@ async function buildLeaderboardPayload({ guildId, requesterId, type = 'server', 
     const rank = start + i + 1;
     const e = entries[i];
     if (e) {
-      lines.push(`${rankEmoji(rank)} <@${e.userId}>${MSG_ICON}**${fmt(e.messages || 0)}** messages`);
+      lines.push(`${rankEmoji(rank)} <@${e.userId}>${MSG_ICON}**${fmt(e.messages || 0)}** messages & level **${e.level || 0}**`);
     } else if (list.length > 0) {
-      lines.push(`${rankEmoji(rank)} None${MSG_ICON}**N/A** messages`);
+      lines.push(`${rankEmoji(rank)} None${MSG_ICON}**N/A** messages & level **N/A**`);
     }
   }
 
@@ -289,18 +289,23 @@ function confirmPayload(content) {
 async function processMessageXp(message, client) {
   const guildId = message.guild.id;
   const settings = await db.getLevelSettings(guildId);
-  if (!settings.enabled) return;
-
   const xpPerMessage = Math.max(1, Number(settings.xpPerMessage) || 10);
   const userId = message.author.id;
 
   const data = await db.getLevelUser(guildId, userId);
-  let { level = 0, xp = 0, messages = 0, lastXP = 0 } = data;
+  let { level = 0, xp = 0, messages = 0, lastXP = 0, synced = false } = data;
 
-  if (lastXP && Date.now() - lastXP < 2000) return;
+  // Count every message sent in this server (drives ,sync).
+  messages += 1;
+
+  const onCooldown = lastXP && Date.now() - lastXP < 2000;
+  if (!settings.enabled || onCooldown) {
+    await db.setLevelUser(guildId, userId, { level, xp, messages, lastXP, synced });
+    return;
+  }
 
   xp += xpPerMessage;
-  messages += 1;
+  lastXP = Date.now();
 
   let newLevel = level;
   let leveledUp = false;
@@ -310,7 +315,7 @@ async function processMessageXp(message, client) {
     leveledUp = true;
   }
 
-  await db.setLevelUser(guildId, userId, { level: newLevel, xp, messages, lastXP: Date.now() });
+  await db.setLevelUser(guildId, userId, { level: newLevel, xp, messages, lastXP, synced });
   if (!leveledUp) return;
 
   // Distribute role rewards for every level crossed.
@@ -349,6 +354,80 @@ async function processMessageXp(message, client) {
   await channel.send(payload).catch(e => console.error('[levels] Level-up message failed:', e.message));
 }
 
+// ── One-time sync: derive level purely from total msgs sent ────────────────
+async function syncUser(message, client) {
+  const guildId = message.guild.id;
+  const settings = await db.getLevelSettings(guildId);
+  const xpPerMessage = Math.max(1, Number(settings.xpPerMessage) || 10);
+  const userId = message.author.id;
+
+  const data = await db.getLevelUser(guildId, userId);
+  if (data.synced) {
+    return confirmPayload(`${RSTARS} You've __already__ used your one-time level sync~!`);
+  }
+
+  const totalMsgs = data.messages || 0;
+  const totalXp = totalMsgs * xpPerMessage;
+
+  // Recompute level from scratch (as if starting at level 0 with that total XP).
+  let newLevel = 0;
+  let newXp = totalXp;
+  while (newXp >= db.xpForLevel(newLevel)) {
+    newXp -= db.xpForLevel(newLevel);
+    newLevel += 1;
+  }
+
+  const prevLevel = data.level || 0;
+  const leveledUp = newLevel > prevLevel;
+
+  await db.setLevelUser(guildId, userId, {
+    level: newLevel,
+    xp: newXp,
+    messages: totalMsgs,
+    lastXP: 0,
+    synced: true,
+  });
+
+  if (leveledUp) {
+    // Distribute role rewards for every level crossed.
+    const rewards = await db.getLevelRewards(guildId);
+    let member = message.guild.members.cache.get(userId);
+    if (!member) member = await message.guild.members.fetch(userId).catch(() => null);
+    for (let lv = prevLevel + 1; lv <= newLevel; lv++) {
+      const r = rewards[lv];
+      if (r && r.enabled !== false && r.roleGiven && member) {
+        await member.roles.add(r.roleGiven).catch(() => {});
+      }
+    }
+
+    // One level-up message for the final level only (not each level crossed).
+    if (!settings.disableLevelMsgs) {
+      const channelId = settings.levelUpChannel;
+      if (channelId) {
+        const channel = client.channels.cache.get(channelId) || await client.channels.fetch(channelId).catch(() => null);
+        if (channel && channel.isTextBased()) {
+          const list = await db.getLevelLeaderboard(guildId);
+          const global = await db.getGlobalLevelLeaderboard();
+          const serverRank = list.findIndex(e => e.userId === userId) + 1;
+          const globalRank = global.findIndex(e => e.userId === userId) + 1;
+          const payload = buildLevelUpPayload({
+            userId,
+            prevLevel,
+            level: newLevel,
+            xp: newXp,
+            serverRank: serverRank || list.length + 1,
+            globalRank: globalRank || global.length + 1,
+            rewards,
+          });
+          await channel.send(payload).catch(e => console.error('[levels] Sync level-up message failed:', e.message));
+        }
+      }
+    }
+  }
+
+  return confirmPayload(`${RSTARS} Successfully __synced__ your level from your **${fmt(totalMsgs)} messages**~!\n${GARROW} **${fmt(totalXp)} XP** ≈ **Level ${prevLevel}** ${GARROW} **Level ${newLevel}** *(${fmt(newXp)} XP left)*`);
+}
+
 module.exports = {
   buildRankPayload,
   buildLevelUpPayload,
@@ -356,6 +435,7 @@ module.exports = {
   rankPayloadFor,
   confirmPayload,
   processMessageXp,
+  syncUser,
   greenLevel,
   rankEmoji,
   PER_PAGE,
