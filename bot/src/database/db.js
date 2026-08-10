@@ -307,8 +307,15 @@ async function getLevelLeaderboard(guildId) {
 }
 
 async function getGlobalLevelLeaderboard() {
+  const settingsDocs = await getCollection('levelsettings').find({}).toArray();
+  const enabledGuildIds = new Set(
+    settingsDocs
+      .filter(d => d.data?.enabled === true)
+      .map(d => d.guildId)
+  );
   const docs = await getCollection('levels').find({}).toArray();
   return docs
+    .filter(d => enabledGuildIds.has(d.guildId))
     .map(d => ({ userId: d.userId, ...(d.data || { level: 0, xp: 0, messages: 0 }) }))
     .sort((a, b) => b.level - a.level || b.xp - a.xp);
 }
