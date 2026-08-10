@@ -1,5 +1,6 @@
 const { parseReply, resolveRole } = require('../utils/parser');
 const db = require('../database/db');
+const leveling = require('../utils/leveling');
 const { Routes } = require('discord.js');
 
 module.exports = {
@@ -9,6 +10,13 @@ module.exports = {
 
         const guildId = message.guild.id;
         const content = message.content.trim();
+
+        // ── Leveling XP ──────────────────────────────────────────────────────
+        try {
+            await leveling.processMessageXp(message, client);
+        } catch (e) {
+            console.error('[levels] XP processing error:', e.message);
+        }
 
         // ── Create Roles Menu (,crm) ───────────────────────────────────────────
         if (content.startsWith(',crm')) {
@@ -315,6 +323,25 @@ module.exports = {
             await db.getCollection('revivecooldowns').deleteOne({ key: guildId + ':chat' });
             await db.getCollection('revivecooldowns').deleteOne({ key: guildId + ':randomquestion' });
             await message.reply({ content: '<:writing:1526779827611500604> Both revive cooldowns have been reset.' }).catch(() => {});
+            return;
+        }
+
+        // ── Level aliases (c!lb ,lb / c!rank ,rank / c!level ,level) ─────────
+        const levelAlias = content.match(/^(c!|,)(lb|rank|level)(?:\s+(global|server))?$/i);
+        if (levelAlias) {
+            try {
+                const cmd = levelAlias[2].toLowerCase();
+                const mode = (levelAlias[3] || 'server').toLowerCase();
+                if (cmd === 'lb') {
+                    const payload = await leveling.buildLeaderboardPayload({ guildId, requesterId: message.author.id, type: mode, page: 1 });
+                    await message.channel.send(payload).catch(e => console.error('[levels] lb send failed:', e.message));
+                } else {
+                    const payload = await leveling.rankPayloadFor({ guildId, userId: message.author.id });
+                    await message.channel.send(payload).catch(e => console.error('[levels] rank send failed:', e.message));
+                }
+            } catch (e) {
+                console.error('[levels] alias error:', e.message);
+            }
             return;
         }
 

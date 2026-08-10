@@ -307,20 +307,29 @@ Simple role-on-react (legacy).
 
 ## Level
 
-XP and leveling system.
+XP and leveling system (disabled by default). Enable via `/level config enabled:true`.
 
-**Subcommands:** `rank`, `leaderboard`, `config`, `setlevel`, `setxp`, `reset`
+**Subcommands:** `config`, `setreward`, `reset`, `xp`, `level`, `rank`, `leaderboard`
 
 ```
+/level config enabled:true
+/level config levelup_channel:#level-ups
+/level config disable_levelmsgs:true
+/level config xp:10
+/level setreward level:5 role_given:@Role perk_message:Extra Giveaway Entry
+/level reset user:@User
+/level xp add user:@User amount:100
+/level xp remove user:@User amount:100
+/level xp set user:@User amount:500
+/level level add user:@User amount:1
 /level rank
 /level rank user:@User
 /level leaderboard
-/level config enabled:true
-/level config levelup_channel:#level-ups
-/level config levelup_message:{user_mention} hit Level {level}!
-/level setlevel user:@User level:10
-/level setxp user:@User xp:5000
-/level reset user:@User
+/level leaderboard type:global
+c!lb
+c!lb global
+,lb
+c!rank / ,rank / c!level / ,level
 ```
 
 ---

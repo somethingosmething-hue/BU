@@ -37,6 +37,7 @@ async function connectDB() {
   await db.collection('cooldowns').createIndex({ key: 1 });
   await db.collection('levels').createIndex({ guildId: 1, userId: 1 });
   await db.collection('levelsettings').createIndex({ guildId: 1 });
+  await db.collection('levelrewards').createIndex({ guildId: 1 });
   await db.collection('trusted').createIndex({ guildId: 1 });
   await db.collection('serversettings').createIndex({ guildId: 1 });
   await db.collection('curlists').createIndex({ guildId: 1, name: 1 });
@@ -272,11 +273,15 @@ async function setCooldown(guildId, userId, trigger, timestamp) {
 }
 
 // Levels
-function xpForLevel(level) { return Math.floor(100 * Math.pow(1.15, level)); }
+function xpForLevel(level) { return Math.floor(50 + 20 * level); }
 
 async function getLevelUser(guildId, userId) {
   const doc = await getCollection('levels').findOne({ guildId, userId });
-  return doc?.data || { xp: 0, level: 0, lastXP: 0 };
+  return doc?.data || { level: 0, xp: 0, messages: 0 };
+}
+
+async function setLevelUser(guildId, userId, data) {
+  await getCollection('levels').updateOne({ guildId, userId }, { $set: { data } }, { upsert: true });
 }
 
 async function getLevelSettings(guildId) {
@@ -285,12 +290,41 @@ async function getLevelSettings(guildId) {
 }
 
 async function setLevelSettings(guildId, update) {
-  await getCollection('levelsettings').updateOne({ guildId }, { $set: { data: update } }, { upsert: true });
+  const set = {};
+  for (const [key, value] of Object.entries(update)) {
+    if (value !== undefined) set[`data.${key}`] = value;
+  }
+  if (Object.keys(set).length) {
+    await getCollection('levelsettings').updateOne({ guildId }, { $set: set }, { upsert: true });
+  }
 }
 
 async function getLevelLeaderboard(guildId) {
   const docs = await getCollection('levels').find({ guildId }).toArray();
-  return docs.map(d => ({ userId: d.userId, xp: d.data?.xp || 0, level: d.data?.level || 0 })).sort((a, b) => b.xp - a.xp).slice(0, 20);
+  return docs
+    .map(d => ({ userId: d.userId, ...(d.data || { level: 0, xp: 0, messages: 0 }) }))
+    .sort((a, b) => b.level - a.level || b.xp - a.xp);
+}
+
+async function getGlobalLevelLeaderboard() {
+  const docs = await getCollection('levels').find({}).toArray();
+  return docs
+    .map(d => ({ userId: d.userId, ...(d.data || { level: 0, xp: 0, messages: 0 }) }))
+    .sort((a, b) => b.level - a.level || b.xp - a.xp);
+}
+
+// Level rewards (setrewards / perks)
+async function getLevelRewards(guildId) {
+  const doc = await getCollection('levelrewards').findOne({ guildId });
+  return doc?.data || {};
+}
+
+async function setLevelReward(guildId, level, reward) {
+  await getCollection('levelrewards').updateOne({ guildId }, { $set: { [`data.${level}`]: reward } }, { upsert: true });
+}
+
+async function deleteLevelReward(guildId, level) {
+  await getCollection('levelrewards').updateOne({ guildId }, { $unset: { [`data.${level}`]: 1 } });
 }
 
 // Server Settings
@@ -667,7 +701,8 @@ module.exports = {
   getReminders, saveReminders,
   addModLog, getUserModLogs,
   getCooldown, setCooldown,
-  xpForLevel, getLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
+  xpForLevel, getLevelUser, setLevelUser, getLevelSettings, setLevelSettings, getLevelLeaderboard,
+  getGlobalLevelLeaderboard, getLevelRewards, setLevelReward, deleteLevelReward,
   getServerSettings, setServerSetting, getPrefix, setPrefix,
   isTrusted, setTrusted,
   getPendingSends, deletePendingSend,

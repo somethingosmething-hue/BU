@@ -1,150 +1,209 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const db = require('../database/db');
-const { botEmbed } = require('../utils/parser');
+const leveling = require('../utils/leveling');
 
-function xpBar(xp, needed, length = 20) {
-    const filled = Math.round((xp / needed) * length);
-    return '█'.repeat(Math.max(0, filled)) + '░'.repeat(Math.max(0, length - filled));
+const RSTARS = '<:rstars:1536181894469918830>';
+const ADMIN_SUBS = ['config', 'setreward', 'reset', 'xp', 'level'];
+
+function confirm(text) {
+    return leveling.confirmPayload(`${RSTARS} ${text}`);
 }
 
 module.exports = {
-    // config/setlevel/setxp/reset all need ManageGuild at minimum.
-    // rank and leaderboard are public — the execute() function handles that split.
-    permissions: ['ManageGuild'],
-
     data: new SlashCommandBuilder()
         .setName('level')
         .setDescription('Leveling system commands')
+        .addSubcommand(s => s.setName('config').setDescription('Configure the leveling system')
+            .addBooleanOption(o => o.setName('enabled').setDescription('Enable/disable leveling (default: off)'))
+            .addChannelOption(o => o.setName('levelup_channel').setDescription('Channel used for level-up messages'))
+            .addBooleanOption(o => o.setName('disable_levelmsgs').setDescription('Completely disable level-up messages'))
+            .addIntegerOption(o => o.setName('xp').setDescription('XP gained per message (default: 10)').setMinValue(1).setMaxValue(100000)))
+        .addSubcommand(s => s.setName('setreward').setDescription('Set a role/perk reward for a level')
+            .addIntegerOption(o => o.setName('level').setDescription('The level this reward unlocks at').setRequired(true).setMinValue(0).setMaxValue(500))
+            .addBooleanOption(o => o.setName('enabled').setDescription('Enable/disable this reward (enabled by default)'))
+            .addRoleOption(o => o.setName('role_given').setDescription('Role given when someone reaches this level'))
+            .addStringOption(o => o.setName('perk_message').setDescription('Perk text shown on rank/level-up cards')))
+        .addSubcommand(s => s.setName('reset').setDescription('Reset a user\'s level and XP')
+            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true)))
+        .addSubcommand(s => s.setName('xp').setDescription('Add/set/remove/reset a user\'s XP')
+            .addStringOption(o => o.setName('action').setDescription('What to do').setRequired(true).addChoices(
+                { name: 'add', value: 'add' },
+                { name: 'set', value: 'set' },
+                { name: 'remove', value: 'remove' },
+                { name: 'reset', value: 'reset' }))
+            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
+            .addIntegerOption(o => o.setName('amount').setDescription('Amount').setRequired(true).setMinValue(0)))
+        .addSubcommand(s => s.setName('level').setDescription('Add/set/remove/reset a user\'s level')
+            .addStringOption(o => o.setName('action').setDescription('What to do').setRequired(true).addChoices(
+                { name: 'add', value: 'add' },
+                { name: 'set', value: 'set' },
+                { name: 'remove', value: 'remove' },
+                { name: 'reset', value: 'reset' }))
+            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
+            .addIntegerOption(o => o.setName('amount').setDescription('Amount').setRequired(true).setMinValue(0)))
         .addSubcommand(s => s.setName('rank').setDescription('View your or someone\'s rank card')
             .addUserOption(o => o.setName('user').setDescription('User to check')))
-        .addSubcommand(s => s.setName('leaderboard').setDescription('View the XP leaderboard'))
-        .addSubcommand(s => s.setName('config').setDescription('Configure the leveling system')
-            .addBooleanOption(o => o.setName('enabled').setDescription('Enable/disable leveling'))
-            .addChannelOption(o => o.setName('levelup_channel').setDescription('Channel for level-up messages'))
-            .addStringOption(o => o.setName('levelup_message').setDescription('Custom level-up message — use {user.mention} and {level}'))
-            .addBooleanOption(o => o.setName('disable_levelup').setDescription('Completely disable level-up messages')))
-        .addSubcommand(s => s.setName('setlevel').setDescription('Set a user\'s level')
-            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
-            .addIntegerOption(o => o.setName('level').setDescription('New level').setRequired(true).setMinValue(0).setMaxValue(500)))
-        .addSubcommand(s => s.setName('setxp').setDescription('Set a user\'s XP')
-            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))
-            .addIntegerOption(o => o.setName('xp').setDescription('New XP amount').setRequired(true).setMinValue(0)))
-        .addSubcommand(s => s.setName('reset').setDescription('Reset a user\'s level data')
-            .addUserOption(o => o.setName('user').setDescription('Target user').setRequired(true))),
+        .addSubcommand(s => s.setName('leaderboard').setDescription('View the XP leaderboard')
+            .addStringOption(o => o.setName('type').setDescription('Leaderboard type (default: server)').addChoices(
+                { name: 'server', value: 'server' },
+                { name: 'global', value: 'global' }))),
 
     async execute(interaction, client) {
-        const sub     = interaction.options.getSubcommand();
+        const sub = interaction.options.getSubcommand();
         const guildId = interaction.guildId;
 
-        // rank and leaderboard are open to everyone — skip the permission gate
-        // for those two. All others require ManageGuild (enforced by interactionCreate
-        // via the permissions export above, which injects ALMIGHTY_PERMS for trusted
-        // users so no special-casing needed here).
-
-        if (sub === 'rank') {
-            const target    = interaction.options.getUser('user') || interaction.user;
-            const data      = await db.getLevelUser(guildId, target.id);
-            const level     = data.level || 0;
-            const xp        = data.xp    || 0;
-            const needed    = db.xpForLevel(level + 1);
-            const currentXP = xp - Array.from({ length: level }, (_, i) => db.xpForLevel(i + 1)).reduce((a, b) => a + b, 0);
-            const lb        = await db.getLevelLeaderboard(guildId);
-            const rank      = lb.findIndex(e => e.userId === target.id) + 1;
-
-            return interaction.reply({
-                embeds: [new EmbedBuilder()
-                    .setColor('#c9b8f5')
-                    .setAuthor({ name: target.username, iconURL: target.displayAvatarURL() })
-                    .setTitle('📊 Rank Card')
-                    .addFields(
-                        { name: 'Level', value: `**${level}**`,               inline: true },
-                        { name: 'XP',    value: `**${xp.toLocaleString()}**`, inline: true },
-                        { name: 'Rank',  value: rank ? `**#${rank}**` : 'Unranked', inline: true },
-                        { name: `Progress to Level ${level + 1}`, value: `\`${xpBar(Math.max(0, currentXP), needed)}\` ${Math.max(0, currentXP).toLocaleString()} / ${needed.toLocaleString()} XP` },
-                    )],
-            });
+        // rank + leaderboard are public; everything else needs ManageGuild
+        // (trusted users get ALMIGHTY_PERMS injected by interactionCreate).
+        if (ADMIN_SUBS.includes(sub)) {
+            const memberPerms = interaction.member?.permissions;
+            if (!memberPerms?.has('ManageGuild')) {
+                return interaction.reply({ content: '❌ You do not have permission to use this command.', flags: 64 });
+            }
         }
 
-        if (sub === 'leaderboard') {
-            await interaction.deferReply();
-            const lb = await db.getLevelLeaderboard(guildId);
-            if (!lb.length) return interaction.editReply({ content: '📭 No level data yet!' });
-
-            const lines = await Promise.all(lb.map(async (e, i) => {
-                const u    = await client.users.fetch(e.userId).catch(() => null);
-                const name = u ? u.username : e.userId;
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `**${i + 1}.**`;
-                return `${medal} ${name} — Level **${e.level}** (${e.xp.toLocaleString()} XP)`;
-            }));
-
-            return interaction.editReply({
-                embeds: [botEmbed('#c9b8f5').setTitle('🏆 XP Leaderboard').setDescription(lines.join('\n')).setTimestamp()],
-            });
-        }
-
+        // ── /level config ────────────────────────────────────────────────────
         if (sub === 'config') {
-            const enabled        = interaction.options.getBoolean('enabled');
-            const channel        = interaction.options.getChannel('levelup_channel');
-            const message        = interaction.options.getString('levelup_message');
-            const disableLevelUp = interaction.options.getBoolean('disable_levelup');
+            const enabled = interaction.options.getBoolean('enabled');
+            const channel = interaction.options.getChannel('levelup_channel');
+            const disableLevelMsgs = interaction.options.getBoolean('disable_levelmsgs');
+            const xp = interaction.options.getInteger('xp');
 
             const update = {};
-            if (enabled        !== null) update.enabled        = enabled;
-            if (channel)                 update.levelUpChannel = channel.id;
-            if (message)                 update.levelUpMessage = message;
-            if (disableLevelUp !== null) update.levelUpChannel = disableLevelUp ? false : undefined;
+            if (enabled !== null) update.enabled = enabled;
+            if (channel) update.levelUpChannel = channel.id;
+            if (disableLevelMsgs !== null) update.disableLevelMsgs = disableLevelMsgs;
+            if (xp !== null) update.xpPerMessage = xp;
 
             if (!Object.keys(update).length) {
                 const cur = await db.getLevelSettings(guildId);
-                return interaction.reply({
-                    embeds: [botEmbed().setTitle('⚙️ Level Settings')
-                        .addFields(
-                            { name: 'Enabled',          value: String(cur.enabled !== false),                                                       inline: true },
-                            { name: 'Level-up Channel', value: cur.levelUpChannel === false ? 'Disabled' : cur.levelUpChannel ? `<#${cur.levelUpChannel}>` : 'Same channel', inline: true },
-                            { name: 'Custom Message',   value: cur.levelUpMessage || '*(default)*' },
-                        )],
-                    
-                });
+                const lines = [
+                    `**Enabled**: ${cur.enabled ? '✅ Yes' : '❌ No (default: off)'}`,
+                    `**Level-up channel**: ${cur.levelUpChannel ? `<#${cur.levelUpChannel}>` : '*(none)*'}`,
+                    `**Level-up messages**: ${cur.disableLevelMsgs ? '🔕 Disabled' : '✅ Enabled'}`,
+                    `**XP per message**: ${cur.xpPerMessage || 10}`,
+                ];
+                return interaction.reply(confirm(`Current level settings:\n${lines.join('\n')}`));
             }
 
             await db.setLevelSettings(guildId, update);
-            return interaction.reply({ content: '✅ Level settings updated.' });
-        }
 
-        if (sub === 'setlevel') {
-            const target = interaction.options.getUser('user');
-            const level  = interaction.options.getInteger('level');
-            let totalXP = 0;
-            for (let i = 1; i <= level; i++) totalXP += db.xpForLevel(i);
-            await db.getCollection('levels').updateOne(
-              { guildId, userId: target.id },
-              { $set: { data: { xp: totalXP, level, lastXP: Date.now() } } },
-              { upsert: true }
-            );
-            return interaction.reply({ content: `✅ Set ${target.username}'s level to **${level}** (${totalXP.toLocaleString()} XP).` });
-        }
+            const parts = [];
+            if (enabled === true) parts.push('Successfully __enabled__ leveling system~!');
+            if (enabled === false) parts.push('Successfully __disabled__ leveling system~!');
+            if (channel) parts.push(`Successfully __set__ level-up channel to ${channel}~!`);
+            if (disableLevelMsgs === true) parts.push('Successfully __disabled__ level-up __messages__~!');
+            if (disableLevelMsgs === false) parts.push('Successfully __enabled__ level-up __messages__~!');
+            if (xp !== null) parts.push(`Successfully __set__ XP per message to **${xp}**~!`);
 
-        if (sub === 'setxp') {
-            const target = interaction.options.getUser('user');
-            const xp     = interaction.options.getInteger('xp');
-            let level = 0;
-            let remaining = xp;
-            while (remaining >= db.xpForLevel(level + 1)) {
-                remaining -= db.xpForLevel(level + 1);
-                level++;
+            if (enabled === true) {
+                const cur = await db.getLevelSettings(guildId);
+                if (!cur.levelUpChannel && !channel) {
+                    parts.push("Don't forget to set a level-up channel with `/level config levelup_channel:#channel`~!");
+                }
             }
-            await db.getCollection('levels').updateOne(
-              { guildId, userId: target.id },
-              { $set: { data: { xp, level, lastXP: Date.now() } } },
-              { upsert: true }
-            );
-            return interaction.reply({ content: `✅ Set ${target.username}'s XP to **${xp.toLocaleString()}** (Level ${level}).` });
+
+            return interaction.reply(confirm(parts.join('\n')));
         }
 
+        // ── /level setreward ─────────────────────────────────────────────────
+        if (sub === 'setreward') {
+            const lv = interaction.options.getInteger('level');
+            const enabled = interaction.options.getBoolean('enabled');
+            const roleGiven = interaction.options.getRole('role_given');
+            const perkMessage = interaction.options.getString('perk_message');
+
+            const rewards = await db.getLevelRewards(guildId);
+            const existing = rewards[lv] || { level: lv, enabled: true, roleGiven: null, perkMessage: null };
+
+            // No options given → show current reward info.
+            if (enabled === null && !roleGiven && perkMessage === null) {
+                if (existing.enabled === false) {
+                    return interaction.reply(confirm(`The level **${lv}** reward is __disabled__. Use \`/level setreward ${lv} enabled:true\` to re-enable it.`));
+                }
+                return interaction.reply(confirm(`**Level ${lv}** reward:\n• **Role**: ${existing.roleGiven ? `<@&${existing.roleGiven}>` : '*(none)*'}\n• **Perk message**: ${existing.perkMessage || '*(none)*'}\nUse \`/level setreward ${lv} role_given:@role perk_message:...\` to set it.`));
+            }
+
+            const updated = { ...existing };
+            if (enabled === true) updated.enabled = true;
+            else if (enabled === false) updated.enabled = false;
+            if (roleGiven) updated.roleGiven = roleGiven.id;
+            if (perkMessage !== null) updated.perkMessage = perkMessage;
+
+            await db.setLevelReward(guildId, lv, updated);
+
+            const parts = [];
+            if (enabled === true) parts.push(`__enabled__ the level **${lv}** reward`);
+            if (enabled === false) parts.push(`__disabled__ the level **${lv}** reward`);
+            if (roleGiven) parts.push(`__set__ ${roleGiven} as the role for level **${lv}**`);
+            if (perkMessage !== null) parts.push(`__set__ the perk message for level **${lv}**`);
+            if (!parts.length) parts.push(`__updated__ the level **${lv}** reward`);
+            return interaction.reply(confirm(`Successfully ${parts.join(' & ')}~!`));
+        }
+
+        // ── /level reset ─────────────────────────────────────────────────────
         if (sub === 'reset') {
             const target = interaction.options.getUser('user');
             await db.getCollection('levels').deleteOne({ guildId, userId: target.id });
-            return interaction.reply({ content: `✅ Reset **${target.username}**'s level data.` });
+            return interaction.reply(confirm(`Successfully __reset__ the **level & XP** of ${target}~!`));
+        }
+
+        // ── /level xp ────────────────────────────────────────────────────────
+        if (sub === 'xp') {
+            const action = interaction.options.getString('action');
+            const target = interaction.options.getUser('user');
+            const amount = interaction.options.getInteger('amount') || 0;
+
+            const data = await db.getLevelUser(guildId, target.id);
+            let { level = 0, xp = 0, messages = 0 } = data;
+
+            if (action === 'add') xp = xp + amount;
+            else if (action === 'set') xp = amount;
+            else if (action === 'remove') xp = Math.max(0, xp - amount);
+            else if (action === 'reset') xp = 0;
+
+            await db.setLevelUser(guildId, target.id, { level, xp, messages });
+
+            const text = action === 'reset'
+                ? `Successfully __reset__ the **XP** of ${target}~!`
+                : `Successfully __${action}__ **${amount.toLocaleString()} XP** ${action === 'set' ? 'to' : ''} ${target}~!`;
+            return interaction.reply(confirm(text.trim().replace(/\s+/g, ' ')));
+        }
+
+        // ── /level level ─────────────────────────────────────────────────────
+        if (sub === 'level') {
+            const action = interaction.options.getString('action');
+            const target = interaction.options.getUser('user');
+            const amount = interaction.options.getInteger('amount') || 0;
+
+            const data = await db.getLevelUser(guildId, target.id);
+            let { level = 0, xp = 0, messages = 0 } = data;
+
+            // Note: resetting the level does NOT reset XP.
+            if (action === 'add') level = level + amount;
+            else if (action === 'set') level = amount;
+            else if (action === 'remove') level = Math.max(0, level - amount);
+            else if (action === 'reset') level = 0;
+
+            await db.setLevelUser(guildId, target.id, { level, xp, messages });
+
+            const text = action === 'reset'
+                ? `Successfully __reset__ the **level** of ${target}~! *(XP kept)*`
+                : `Successfully __${action}__ **${amount.toLocaleString()} levels** ${action === 'set' ? 'to' : ''} ${target}~!`;
+            return interaction.reply(confirm(text.trim().replace(/\s+/g, ' ')));
+        }
+
+        // ── /level rank ──────────────────────────────────────────────────────
+        if (sub === 'rank') {
+            const target = interaction.options.getUser('user') || interaction.user;
+            const payload = await leveling.rankPayloadFor({ guildId, userId: target.id });
+            return interaction.reply(payload);
+        }
+
+        // ── /level leaderboard ───────────────────────────────────────────────
+        if (sub === 'leaderboard') {
+            const type = interaction.options.getString('type') || 'server';
+            const payload = await leveling.buildLeaderboardPayload({ guildId, requesterId: interaction.user.id, type, page: 1 });
+            return interaction.reply(payload);
         }
     },
 };

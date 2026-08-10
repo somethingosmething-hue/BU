@@ -340,6 +340,28 @@ module.exports = {
                 return;
             }
 
+            // ── Level leaderboard pagination buttons ────────────────────────
+            if (customId.startsWith('level_lb:')) {
+                const parts = customId.split(':');
+                const type = parts[1] === 'global' ? 'global' : 'server';
+                const page = parseInt(parts[2], 10) || 1;
+                const dir = parts[3];
+                const requesterId = parts[4] || interaction.user.id;
+                const leveling = require('../utils/leveling');
+
+                let newPage = dir === 'left' ? page - 1 : dir === 'right' ? page + 1 : page;
+                newPage = Math.max(1, Math.min(newPage, leveling.MAX_PAGES));
+
+                try {
+                    const payload = await leveling.buildLeaderboardPayload({ guildId: interaction.guild.id, requesterId, type, page: newPage });
+                    delete payload.flags;
+                    await interaction.update(payload).catch(() => {});
+                } catch (e) {
+                    console.error('[levels] leaderboard pagination error:', e.message);
+                }
+                return;
+            }
+
             return;
         }
 

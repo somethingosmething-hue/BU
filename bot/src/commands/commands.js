@@ -72,12 +72,13 @@ const COMMAND_CATALOG = [
     {
         category: '📈 Levels',
         commands: [
-            { name: '/level rank',        desc: 'Show your (or another user\'s) rank card' },
-            { name: '/level leaderboard', desc: 'Server XP leaderboard' },
-            { name: '/level config',      desc: 'Configure the leveling system' },
-            { name: '/level setlevel',    desc: 'Set a user\'s level' },
-            { name: '/level setxp',       desc: 'Set a user\'s XP' },
+            { name: '/level config',      desc: 'Configure the leveling system (enabled, channel, xp, msgs)' },
+            { name: '/level setreward',   desc: 'Set a role/perk reward for a level' },
+            { name: '/level xp',          desc: 'Add/set/remove/reset a user\'s XP' },
+            { name: '/level level',       desc: 'Add/set/remove/reset a user\'s level' },
             { name: '/level reset',       desc: 'Reset a user\'s XP and level' },
+            { name: '/level rank',        desc: 'Show your (or another user\'s) rank card' },
+            { name: '/level leaderboard', desc: 'Server/global XP leaderboard (c!lb / ,lb)' },
         ],
     },
     {
