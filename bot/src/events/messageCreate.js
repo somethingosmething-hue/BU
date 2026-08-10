@@ -329,6 +329,8 @@ module.exports = {
         // ── Level sync (,sync / c!sync) ─────────────────────────────────────
         const syncAlias = content.match(/^(c!|,)sync(?:\s+<@!?(\d+)>)?(?:\s+(\d+))?$/i);
         if (syncAlias) {
+            const lvlSettings = await db.getLevelSettings(guildId);
+            if (!lvlSettings.enabled) return;
             try {
                 const targetId = syncAlias[2];
                 const amount = syncAlias[3];
@@ -348,6 +350,8 @@ module.exports = {
         // ── Level aliases (c!lb ,lb / c!rank ,rank / c!level ,level) ─────────
         const levelAlias = content.match(/^(c!|,)(lb|rank|level)(?:\s+(global|server))?$/i);
         if (levelAlias) {
+            const lvlSettings = await db.getLevelSettings(guildId);
+            if (!lvlSettings.enabled) return;
             try {
                 const cmd = levelAlias[2].toLowerCase();
                 const mode = (levelAlias[3] || 'server').toLowerCase();
