@@ -362,7 +362,8 @@ async function postLevelChange({ client, guild, userId, prevLevel, newLevel, xp 
     rewards,
   });
 
-  await channel.send(payload).catch(e => console.error('[levels] Level-up message failed:', e.message));
+  const { Routes } = require('discord.js');
+  await client.rest.post(Routes.channelMessages(channel.id), { body: payload }).catch(e => console.error('[levels] Level-up message failed:', e.message));
 }
 
 // ── Sync core: derive level+XP from a message count (as if from level 0) ──
@@ -390,7 +391,11 @@ async function syncFromMessages({ guildId, userId, client, guild, messages }) {
   });
 
   if (newLevel !== prevLevel) {
-    await postLevelChange({ client, guild, userId, prevLevel, newLevel, xp: newXp });
+    try {
+      await postLevelChange({ client, guild, userId, prevLevel, newLevel, xp: newXp });
+    } catch (e) {
+      console.error('[levels] postLevelChange failed:', e.message);
+    }
   }
 
   return { prevLevel, newLevel, xp: newXp, totalXp, messages };
