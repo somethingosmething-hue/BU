@@ -235,7 +235,9 @@ async function buildLeaderboardPayload({ guildId, requesterId, type = 'server', 
 
   return {
     flags: 36864,
-    allowed_mentions: { parse: [] },
+    allowed_mentions: {
+      "parse": []
+    },
     components: [
       { type: 12, items: [{ media: { url: LB_MEDIA } }] },
       {
