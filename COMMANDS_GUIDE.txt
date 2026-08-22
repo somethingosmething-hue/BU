@@ -1,4 +1,4 @@
-# Mimu2 — Command Reference
+# Mimu2 — Complete Command Reference
 
 ---
 
@@ -16,7 +16,7 @@
 11. [Poll](#poll)
 12. [Reminder](#reminder)
 13. [Mod](#mod)
-15. [Variables & Placeholders](#variables--placeholders)
+14. [Variables & Placeholders](#variables--placeholders)
 
 ---
 
@@ -47,20 +47,35 @@ Opens a modal with: title, description, color, footer, image, thumbnail, author,
 /divemb send name:welcome
 /divemb send name:welcome channel:#general
 ```
+Sends the divemb to current or specified channel.
 
 ### `/divemb edit`
 ```
 /divemb edit name:welcome field:title value:New Title
 /divemb edit name:welcome field:add_field value:Field Name|Field Value|true
 ```
+Edit existing divemb fields directly.
 
-### Other subcommands
+### `/divemb preview`
 ```
-/divemb list
 /divemb preview name:welcome
+```
+Shows how the divemb will look without sending it.
+
+### `/divemb view`
+```
 /divemb view name:welcome
+```
+View divemb details and structure.
+
+### `/divemb list`
+Lists all saved divembs.
+
+### `/divemb delete`
+```
 /divemb delete name:welcome
 ```
+Permanently delete a divemb.
 
 ---
 
@@ -87,14 +102,29 @@ Opens a button-based UI to edit each field.
 /embed quickedit name:rules field:description value:Follow the rules!
 /embed quickedit name:rules field:color value:#ff6b6b
 ```
+Quick field updates without the full UI.
 
-### Other subcommands
+### `/embed send`
 ```
+/embed send name:rules
 /embed send name:rules channel:#rules
-/embed list
+```
+Send embed to current or specified channel.
+
+### `/embed preview`
+```
 /embed preview name:rules
+```
+Preview embed before sending.
+
+### `/embed list`
+Lists all saved embeds.
+
+### `/embed delete`
+```
 /embed delete name:rules
 ```
+Permanently delete an embed.
 
 ---
 
@@ -121,20 +151,24 @@ Trigger automatic replies when someone sends a specific message.
 /ar add trigger:!rules reply:{divemb:rules-embed} match:exact
 
 /ar add trigger:help reply:Check <#1234567890>! match:contains cooldown:60
+
+/ar add trigger:^hello$ reply:Exact match only! match:regex send_type:send
 ```
 
 ### `/ar remove`
 ```
 /ar remove trigger:hello
 ```
+Remove a specific autoresponder.
 
 ### `/ar list`
-Shows all triggers.
+Shows all active autoresponders and their triggers.
 
 ### `/ar info`
 ```
 /ar info trigger:hello
 ```
+Get detailed info about a specific autoresponder.
 
 ---
 
@@ -153,13 +187,15 @@ Create interactive buttons and select menus.
 | `color` | `blue` \| `green` \| `grey` \| `red` |
 | `emoji` | Emoji on button |
 | `cooldown` | Cooldown in seconds |
-| `ephemeral` | Reply visible only to clicker? |
+| `ephemeral` | Reply visible only to clicker? (`true`/`false`) |
 
 **Examples:**
 ```
 /button add name:open-ticket label:Open Ticket reply:Staff will be with you! color:green
 
 /button add name:verify label:Verify reply:{addrole:Member} Welcome! color:green ephemeral:true
+
+/button add name:support label:Get Help emoji:🆘 reply:Support team incoming! color:blue cooldown:5
 ```
 
 ### `/button addselect` (select menus)
@@ -167,25 +203,31 @@ Create interactive buttons and select menus.
 |--------|-------------|
 | `name` | Internal ID |
 | `placeholder` | Placeholder text |
-| `options` | `label|value|desc` (comma separated) |
-| `reply` | Reply (use `{value}` for selected) |
+| `options` | `label\|value\|desc` (comma separated) |
+| `reply` | Reply (use `{value}` for selected option) |
 | `cooldown` | Cooldown in seconds |
 
 **Examples:**
 ```
-/button addselect name:color-select placeholder:Choose a color options:Red|red|Blood red|Blue|blue|Cool blue reply:You chose {value}!
+/button addselect name:color-select placeholder:Choose a color options:Red|red|Blood red,Blue|blue|Cool blue,Green|green|Forest green reply:You chose {value}!
+
+/button addselect name:role-select placeholder:Pick your role options:Gamer|gamer|Gaming enthusiast,Artist|artist|Creative person,Developer|dev|Code wizard reply:{addrole:{value}} Role added!
 ```
 
 ### `/button panel`
 ```
 /button panel components:open-ticket,verify message:Click below!
 ```
+Create a panel with multiple buttons together.
 
-### Other subcommands
+### `/button list`
+Lists all saved buttons and select menus.
+
+### `/button remove`
 ```
 /button remove name:open-ticket
-/button list
 ```
+Delete a button or select menu.
 
 ---
 
@@ -200,18 +242,27 @@ Create custom slash commands.
 /cc add name:help response:Check <#1234567890> for help!
 
 /cc add name:greet response:Hello {user_mention}! Welcome to {server_name}!
+
+/cc add name:avatar response:Here's your avatar: {user_avatar}
+
+/cc add name:welcome response:{divemb:welcome-embed}
 ```
+Create a custom slash command. Use `/name` to trigger it.
 
 ### `/cc remove`
 ```
 /cc remove name:help
 ```
+Delete a custom command.
 
-### Other subcommands
+### `/cc list`
+Shows all custom commands and their responses.
+
+### `/cc info`
 ```
-/cc list
 /cc info name:help
 ```
+View detailed info about a custom command.
 
 ---
 
@@ -224,37 +275,47 @@ Custom user variables — build your own economy!
 ### `/cvar set`
 ```
 /cvar set name:money value:100 user:@User
+/cvar set name:points value:0 user:@User
 ```
+Set a variable to a specific value.
 
 ### `/cvar get`
 ```
 /cvar get name:money user:@User
 ```
+Retrieve a variable's current value.
 
-### `/cvar add` (add to number)
+### `/cvar add` (increment number)
 ```
 /cvar add name:money amount:50 user:@User
+/cvar add name:points amount:10 user:@User
 ```
+Add to an existing variable.
 
-### `/cvar remove`
+### `/cvar remove` (decrement)
 ```
 /cvar remove name:money user:@User
 ```
+Subtract from a variable (decrements by 1, or use negative amounts).
 
 ### `/cvar list`
 ```
 /cvar list user:@User
 ```
+Show all variables for a user.
 
 ### `/cvar clear`
 ```
 /cvar clear user:@User
 ```
+Clear all variables for a user.
 
 ### Using variables in replies
 Use `%%var:name%%` in any reply:
 ```
 /cc add name:daily response:You earned 100 coins! {cvar:add:money:100}
+
+/cc add name:balance response:Your balance: %%money%% coins
 ```
 Or in math: `%%100 + %%money%%%%`
 
@@ -279,29 +340,56 @@ Trigger actions when someone adds a reaction to a message.
 **Examples:**
 ```
 /reactevent add message_id:123456789 emoji:🎮 response:You got the Gamer role! action:add_role role:@Gamer
+
+/reactevent add message_id:987654321 emoji:✅ response:Verified! action:add_role role:@Verified channel:#verification
+
+/reactevent add message_id:555555555 emoji:👍 response:Thanks for the reaction! action:send
 ```
 
-### Other subcommands
+### `/reactevent remove`
 ```
 /reactevent remove message_id:123456789 emoji:🎮
-/reactevent list
+```
+Remove a reaction event.
+
+### `/reactevent list`
+Shows all active reaction events.
+
+### `/reactevent edit`
+```
 /reactevent edit message_id:123456789 emoji:🎮 response:New response
 ```
+Modify an existing reaction event.
 
 ---
 
 ## ReactionRole
 
-Simple role-on-react (legacy).
+Simple role-on-react (legacy). Alternative to reactevent.
 
 **Subcommands:** `add`, `remove`, `list`, `clear`
 
+### `/reactionrole add`
 ```
 /reactionrole add message_id:123456789 emoji:🔴 role:@Red
+/reactionrole add message_id:123456789 emoji:🟦 role:@Blue
+```
+Add a reaction→role trigger.
+
+### `/reactionrole remove`
+```
 /reactionrole remove message_id:123456789 emoji:🔴
-/reactionrole list
+```
+Remove a reaction role.
+
+### `/reactionrole list`
+Shows all reaction roles on a message or server.
+
+### `/reactionrole clear`
+```
 /reactionrole clear message_id:123456789
 ```
+Remove all reaction roles from a message.
 
 ---
 
@@ -311,21 +399,60 @@ XP and leveling system (disabled by default). Enable via `/level config enabled:
 
 **Subcommands:** `config`, `setreward`, `reset`, `xp`, `level`, `rank`, `leaderboard`
 
+### `/level config`
 ```
 /level config enabled:true
+/level config enabled:false
 /level config levelup_channel:#level-ups
 /level config disable_levelmsgs:true
+/level config disable_levelmsgs:false
 /level config xp:10
+```
+Configure the leveling system.
+
+### `/level setreward`
+```
 /level setreward level:5 role_given:@Role perk_message:Extra Giveaway Entry
+/level setreward level:10 role_given:@VIP perk_message:VIP member!
+```
+Set rewards for reaching certain levels.
+
+### `/level reset`
+```
 /level reset user:@User
+```
+Reset a user's XP and level.
+
+### `/level xp`
+```
 /level xp add user:@User amount:100
 /level xp remove user:@User amount:100
 /level xp set user:@User amount:500
+```
+Manually manage user XP.
+
+### `/level lvl`
+```
 /level lvl add user:@User amount:1
+```
+Manually add levels to a user.
+
+### `/level rank`
+```
 /level rank
 /level rank user:@User
+```
+Check your rank or another user's rank.
+
+### `/level leaderboard`
+```
 /level leaderboard
 /level leaderboard type:global
+```
+View the XP leaderboard.
+
+### Prefix Commands (Legacy)
+```
 c!lb
 c!lb global
 ,lb
@@ -336,44 +463,145 @@ c!rank / ,rank / c!level / ,level
 
 ## Poll
 
+Create quick polls.
+
+**Subcommands:** default (no subcommands)
+
+### `/poll` (simple yes/no)
 ```
 /poll question:New channel?
-/poll question:Favorite game? options:PC|Console|Mobile
 ```
+Creates a yes/no poll.
+
+### `/poll` (with options)
+```
+/poll question:Favorite game? options:PC|Console|Mobile
+/poll question:Best time for game night? options:Friday|Saturday|Sunday
+```
+Creates a poll with custom options (pipe-separated).
 
 ---
 
 ## Reminder
 
+Personal reminders.
+
 **Subcommands:** `set`, `list`, `cancel`
 
+### `/reminder set`
 ```
 /reminder set time:10m message:Check the oven
-/reminder list
+/reminder set time:1h message:Meeting in 30 mins
+/reminder set time:7d message:Weekly backup reminder
+```
+Set a reminder for a specific time.
+
+**Time format:** `30s`, `5m`, `1h`, `7d`, etc.
+
+### `/reminder list`
+Shows all your active reminders.
+
+### `/reminder cancel`
+```
 /reminder cancel id:123456-123456789
 ```
-
-Time format: `30s`, `5m`, `1h`, `7d`
+Cancel a reminder by its ID.
 
 ---
 
 ## Mod
 
+Moderation tools.
+
 **Subcommands:** `ban`, `unban`, `kick`, `timeout`, `untimeout`, `warn`, `warnings`, `delwarn`, `purge`, `slowmode`, `lock`, `unlock`, `nickname`, `modlogs`
 
+### `/mod ban`
 ```
 /mod ban user:@User reason:Spamming
+/mod ban user:@User reason:Hate speech delete_message_days:7
+```
+Ban a user from the server.
+
+### `/mod unban`
+```
+/mod unban user:@User reason:Appeal accepted
+```
+Unban a user.
+
+### `/mod kick`
+```
 /mod kick user:@User reason:Rules violation
+```
+Kick a user from the server.
+
+### `/mod timeout`
+```
 /mod timeout user:@User duration:10m reason:Spam
+/mod timeout user:@User duration:1h reason:Inappropriate behavior
+```
+Timeout (mute) a user. Duration format: `30s`, `5m`, `1h`, `7d`, etc.
+
+### `/mod untimeout`
+```
+/mod untimeout user:@User reason:Early release
+```
+Remove timeout from a user.
+
+### `/mod warn`
+```
 /mod warn user:@User reason:Keep it civil
+```
+Issue a warning to a user.
+
+### `/mod warnings`
+```
 /mod warnings user:@User
+```
+Check warnings on a user.
+
+### `/mod delwarn`
+```
+/mod delwarn user:@User warn_id:1
+```
+Delete a specific warning.
+
+### `/mod purge`
+```
 /mod purge amount:50
+/mod purge amount:100 user:@User
+```
+Delete messages in bulk. Optionally from a specific user.
+
+### `/mod slowmode`
+```
 /mod slowmode duration:5m
+/mod slowmode duration:0
+```
+Set slowmode (0 to disable).
+
+### `/mod lock`
+```
 /mod lock channel:#general reason:Raid
+```
+Lock a channel (members can't send messages).
+
+### `/mod unlock`
+```
 /mod unlock channel:#general
+```
+Unlock a channel.
+
+### `/mod nickname`
+```
 /mod nickname user:@User nickname:NewName
+```
+Change a user's nickname.
+
+### `/mod modlogs`
+```
 /mod modlogs user:@User
 ```
+View mod action history for a user.
 
 ---
 
@@ -420,6 +648,42 @@ Time format: `30s`, `5m`, `1h`, `7d`
 ```
 %%100 + %%money%%%%
 %%myvar - 50%%
+%%score * 2%%
+```
+
+---
+
+## Quick Setup Examples
+
+### Create a welcome system:
+```
+/divemb create name:welcome
+/divemb send name:welcome channel:#welcome
+```
+
+### Custom economy:
+```
+/cvar set name:money value:0 user:@User
+/cc add name:daily reply:{cvar:add:money:100} You earned 100 coins!
+/cc add name:balance reply:Your balance: %%money%% coins
+```
+
+### Verify members:
+```
+/button add name:verify label:Verify reply:{addrole:Member} Welcome! color:green
+/button panel components:verify message:Click to verify and gain access!
+```
+
+### Role reactions:
+```
+/reactevent add message_id:123456789 emoji:🎮 response:Gamer role added! action:add_role role:@Gamer
+/reactevent add message_id:123456789 emoji:🎨 response:Artist role added! action:add_role role:@Artist
+```
+
+### Autoresponders:
+```
+/ar add trigger:hello reply:Hey {user_mention}! match:contains cooldown:30
+/ar add trigger:rules reply:{divemb:rules-embed} match:exact
 ```
 
 ---
