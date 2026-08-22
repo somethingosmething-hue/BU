@@ -17,6 +17,10 @@
 12. [Reminder](#reminder)
 13. [Mod](#mod)
 14. [Variables & Placeholders](#variables--placeholders)
+15. [Curated URL Lists (curlist)](#curated-url-lists-curlist)
+16. [Notes Management](#notes-management)
+17. [Giveaways](#giveaways)
+18. [Misc / Utility Commands](#misc--utility-commands)
 
 ---
 
@@ -653,6 +657,84 @@ View mod action history for a user.
 
 ---
 
+## Curated URL Lists (curlist)
+
+Curated lists of URLs or items that can be created, sent, and managed.
+
+**Subcommands:** `setcurlist`, `showcurlist`, `sendcurlist`, `resetcurlist`, `slist`, `enumcurlist`, `eshowcurlist`, `etotalnumcurlist`
+
+### Examples
+```
+/setcurlist name:resources add:https://example.com|Example site
+/showcurlist name:resources
+/sendcurlist name:resources channel:#resources
+/resetcurlist name:resources
+/slist name:resources   # short list view
+/enumcurlist name:resources  # enumerate items
+/eshowcurlist name:resources  # exported/show summary
+/etotalnumcurlist name:resources  # totals
+```
+
+---
+
+## Notes Management
+
+Commands to create, edit, view, and manage sticky or saved notes.
+
+**Subcommands / Files:** `note`, `noteembed`, `notepara`, `listnotes`, `editnote`, `unote`, `unallnotes`
+
+### Examples
+```
+/note create name:rules content:Be civil
+/noteembed name:rules embed:rules
+/notepara name:rules paragraph:Short intro
+/listnotes
+/editnote name:rules field:content value:Updated content
+/unote name:rules  # remove single note
+/unallnotes  # remove all notes
+```
+
+---
+
+## Giveaways
+
+Giveaway creation and management.
+
+**Subcommands:** create, end, reroll, list (implemented in giveaway.js)
+
+### Examples
+```
+/giveaway create prize:"Nitro" duration:1h winners:1
+/giveaway end id:123456789
+/giveaway reroll id:123456789
+/giveaway list
+```
+
+---
+
+## Misc / Utility Commands
+
+This repository includes a number of additional utility commands that are implemented but were not detailed earlier. Brief descriptions:
+
+- `announce` — server-wide announcement helper (announce.js)
+- `checkbr` — check/diagnose bump reminders or bump-related status (checkbr.js)
+- `test`, `testbr` — testing/debugging commands (test.js, testbr.js)
+- `commands` — legacy/utility commands index (commands.js)
+- `editor` — in-place editing utilities (editor.js)
+- `trust` — trust/permission helper commands (trust.js)
+- `roleall` — assign/remove a role to all members (roleall.js)
+- `createrolesmenu` — create a role-select menu (createrolesmenu.js)
+- `listemojis` — list server emojis (listemojis.js)
+- `listroles` — list server roles (listroles.js)
+- `send` — send a saved embed/divemb or plain message (send.js)
+- `setlink`, `setpassword` — helpers for link/password settings
+- `setboostchannel`, `setboostmessage`, `setbrchannel`, `setbumprole`, `setreviverole`, `setrevivereqrole` — bump/boost and revive related configuration commands
+- `giveaway` — giveaway management (giveaway.js)
+
+If you want, I can expand any of these into full usage examples based on the implementation.
+
+---
+
 ## Quick Setup Examples
 
 ### Create a welcome system:
@@ -678,12 +760,6 @@ View mod action history for a user.
 ```
 /reactevent add message_id:123456789 emoji:🎮 response:Gamer role added! action:add_role role:@Gamer
 /reactevent add message_id:123456789 emoji:🎨 response:Artist role added! action:add_role role:@Artist
-```
-
-### Autoresponders:
-```
-/ar add trigger:hello reply:Hey {user_mention}! match:contains cooldown:30
-/ar add trigger:rules reply:{divemb:rules-embed} match:exact
 ```
 
 ---
