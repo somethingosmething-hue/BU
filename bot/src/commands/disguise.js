@@ -13,14 +13,26 @@ module.exports = {
     )
     .addStringOption(option =>
       option
-        .setName('pfp')
-        .setDescription('Profile picture URL or file link')
+        .setName('pfp_url')
+        .setDescription('Profile picture URL')
+        .setRequired(false)
+    )
+    .addAttachmentOption(option =>
+      option
+        .setName('pfp_upload')
+        .setDescription('Profile picture image file')
         .setRequired(false)
     )
     .addStringOption(option =>
       option
-        .setName('banner')
-        .setDescription('Banner image URL or file link')
+        .setName('banner_url')
+        .setDescription('Banner image URL')
+        .setRequired(false)
+    )
+    .addAttachmentOption(option =>
+      option
+        .setName('banner_upload')
+        .setDescription('Banner image file')
         .setRequired(false)
     )
     .addStringOption(option =>
@@ -45,9 +57,33 @@ module.exports = {
 
       // Get the new values from options
       const newName = interaction.options.getString('name');
-      const newPfp = interaction.options.getString('pfp');
-      const newBanner = interaction.options.getString('banner');
+      const pfpUrl = interaction.options.getString('pfp_url');
+      const pfpUpload = interaction.options.getAttachment('pfp_upload');
+      const bannerUrl = interaction.options.getString('banner_url');
+      const bannerUpload = interaction.options.getAttachment('banner_upload');
       const newBio = interaction.options.getString('bio');
+
+      // Validate pfp - either URL or upload
+      let newPfp = null;
+      if (pfpUrl && pfpUpload) {
+        return await interaction.reply({
+          content: '❌ You can only provide either a URL or an upload for the profile picture, not both.',
+          flags: 64
+        });
+      }
+      if (pfpUrl) newPfp = pfpUrl;
+      if (pfpUpload) newPfp = pfpUpload.url;
+
+      // Validate banner - either URL or upload
+      let newBanner = null;
+      if (bannerUrl && bannerUpload) {
+        return await interaction.reply({
+          content: '❌ You can only provide either a URL or an upload for the banner, not both.',
+          flags: 64
+        });
+      }
+      if (bannerUrl) newBanner = bannerUrl;
+      if (bannerUpload) newBanner = bannerUpload.url;
 
       // Check if at least one option was provided
       if (!newName && !newPfp && !newBanner && !newBio) {
@@ -82,8 +118,8 @@ module.exports = {
       // Build confirmation message
       let confirmMessage = '✅ **Server Profile Updated**\n\n';
       if (newName) confirmMessage += `📝 **Name:** ${newName}\n`;
-      if (newPfp) confirmMessage += `🖼️ **Profile Picture:** ${newPfp}\n`;
-      if (newBanner) confirmMessage += `🎨 **Banner:** ${newBanner}\n`;
+      if (newPfp) confirmMessage += `🖼️ **Profile Picture:** Updated\n`;
+      if (newBanner) confirmMessage += `🎨 **Banner:** Updated\n`;
       if (newBio) confirmMessage += `📋 **Bio:** ${newBio}\n`;
 
       await interaction.reply({
