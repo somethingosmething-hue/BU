@@ -340,6 +340,22 @@ module.exports = {
                 return;
             }
 
+            // ── Disguise reset buttons (per-server profile panel) ────────────
+            {
+                const disguise = require('../commands/disguise');
+                if (Object.values(disguise.RESET_BUTTONS).includes(customId)) {
+                    if (!interaction.guild) return;
+                    const trusted = await isUserTrusted(interaction.guildId, interaction.user.id);
+                    const hasManage = interaction.memberPermissions?.has('ManageGuild');
+                    if (!trusted && !hasManage) {
+                        await interaction.reply({ content: '❌ You do not have permission to use this.', flags: 64 }).catch(() => {});
+                        return;
+                    }
+                    const handled = await disguise.handleResetButton(interaction);
+                    if (handled) return;
+                }
+            }
+
             // ── Level leaderboard pagination buttons ────────────────────────
             if (customId.startsWith('level_lb:')) {
                 const parts = customId.split(':');

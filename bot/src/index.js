@@ -24,6 +24,14 @@ for (const file of commandFiles) {
   const command = require(path.join(commandsPath, file));
   if (command.data && command.execute) {
     client.commands.set(command.data.name, command);
+    // Register aliases (extra command names sharing the same handler)
+    if (Array.isArray(command.aliasData)) {
+      for (const aliasData of command.aliasData) {
+        if (aliasData?.name) {
+          client.commands.set(aliasData.name, { ...command, data: aliasData });
+        }
+      }
+    }
   }
 }
 
