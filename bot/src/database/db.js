@@ -52,7 +52,8 @@ async function connectDB() {
   await db.collection('crmMenus').createIndex({ channelId: 1, messageId: 1 });
   await db.collection('revivecooldowns').createIndex({ key: 1 });
   await db.collection('revivemessages').createIndex({ messageId: 1 });
-   
+  await db.collection('botProfiles').createIndex({ guildId: 1 });
+    
   return db;
 }
 
@@ -648,6 +649,25 @@ async function removeUserFromAllGiveaways(guildId, userId) {
   return result.modifiedCount;
 }
 
+// ── Bot Profiles (per-server) ───────────────────────────────────────────
+async function getBotProfile(guildId) {
+  const doc = await getCollection('botProfiles').findOne({ guildId });
+  return doc ? {
+    displayName: doc.displayName || null,
+    avatar: doc.avatar || null,
+    banner: doc.banner || null,
+    about: doc.about || null,
+  } : null;
+}
+
+async function saveBotProfile(guildId, profile) {
+  await getCollection('botProfiles').updateOne(
+    { guildId },
+    { $set: { guildId, ...profile, updatedAt: Date.now() } },
+    { upsert: true }
+  );
+}
+
 // Legacy loadDB/saveDB shims for code not yet migrated from file-based storage
 async function loadDB(collectionName) {
   const docs = await getCollection(collectionName).find({}).toArray();
@@ -727,4 +747,5 @@ module.exports = {
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,
   saveCRMMenu, getCRMMenu, getCRMMenuByMessage, getCRMMenusByChannel, deleteCRMMenu,
   getReviveCooldown, setReviveCooldown, saveReviveMessage, getReviveMessage,
+  getBotProfile, saveBotProfile,
 };
