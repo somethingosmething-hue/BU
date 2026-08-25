@@ -93,7 +93,7 @@ module.exports = {
         });
       }
 
-      // Build profile object
+      // Build profile object for database
       const profileUpdate = {};
       if (newName) profileUpdate.displayName = newName;
       if (newPfp) profileUpdate.avatar = newPfp;
@@ -103,18 +103,21 @@ module.exports = {
       // Save to database
       await db.saveBotProfile(guildId, profileUpdate);
 
-      // Try to apply changes to guild member
+      // Apply changes to bot's guild member profile using editMe
       try {
-        const guildMember = interaction.guild?.members.cache.get(interaction.client.user.id);
-        if (guildMember) {
-          const editData = {};
-          if (newName) editData.nick = newName;
-          if (Object.keys(editData).length > 0) {
-            await guildMember.edit(editData).catch(e => console.error('Failed to update member:', e));
-          }
+        const editData = {};
+        if (newName) editData.nick = newName;
+        if (newBio) editData.bio = newBio;
+        if (newPfp) editData.avatar = newPfp;
+        if (newBanner) editData.banner = newBanner;
+
+        if (Object.keys(editData).length > 0) {
+          await interaction.guild.members.editMe(editData).catch(e => 
+            console.error('[disguise] Failed to update member:', e.message)
+          );
         }
       } catch (e) {
-        console.error('Error updating guild member:', e);
+        console.error('[disguise] Error updating guild member:', e);
       }
 
       // Build confirmation message
@@ -123,7 +126,6 @@ module.exports = {
       if (newPfp) confirmMessage += `🖼️ **Profile Picture:** Updated\n`;
       if (newBanner) confirmMessage += `🎨 **Banner:** Updated\n`;
       if (newBio) confirmMessage += `📋 **Bio:** ${newBio}\n`;
-      confirmMessage += '\n*Note: Avatar and banner changes are stored but Discord only supports per-server nicknames. Avatar/banner would need custom display in embeds.*';
 
       await interaction.reply({
         content: confirmMessage,
