@@ -40,6 +40,19 @@ module.exports = {
         .setName('bio')
         .setDescription('About me / bio text for this server')
         .setRequired(false)
+    )
+    .addStringOption(option =>
+      option
+        .setName('reset')
+        .setDescription('Reset a specific profile element')
+        .setRequired(false)
+        .addChoices(
+          { name: 'Name', value: 'name' },
+          { name: 'Profile Picture', value: 'pfp' },
+          { name: 'Banner', value: 'banner' },
+          { name: 'Bio', value: 'bio' },
+          { name: 'All', value: 'all' }
+        )
     ),
 
   async execute(interaction) {
@@ -62,6 +75,7 @@ module.exports = {
       const bannerUrl = interaction.options.getString('banner_url');
       const bannerUpload = interaction.options.getAttachment('banner_upload');
       const newBio = interaction.options.getString('bio');
+      const resetOption = interaction.options.getString('reset');
 
       // Validate pfp - either URL or upload
       let newPfp = null;
@@ -86,9 +100,9 @@ module.exports = {
       if (bannerUpload) newBanner = bannerUpload.url;
 
       // Check if at least one option was provided
-      if (!newName && !newPfp && !newBanner && !newBio) {
+      if (!newName && !newPfp && !newBanner && !newBio && !resetOption) {
         return await interaction.reply({
-          content: '❌ You must provide at least one parameter to change (name, pfp, banner, or bio).',
+          content: '❌ You must provide at least one parameter to change (name, pfp, banner, bio) or use reset.',
           flags: 64
         });
       }
@@ -99,6 +113,30 @@ module.exports = {
       if (newPfp) profileUpdate.avatar = newPfp;
       if (newBanner) profileUpdate.banner = newBanner;
       if (newBio) profileUpdate.about = newBio;
+
+      // Handle reset option
+      let resetMessage = '';
+      if (resetOption) {
+        if (resetOption === 'all') {
+          profileUpdate.displayName = null;
+          profileUpdate.avatar = null;
+          profileUpdate.banner = null;
+          profileUpdate.about = null;
+          resetMessage = '🔄 **Resetting:** Name, PFP, Banner, Bio\n';
+        } else if (resetOption === 'name') {
+          profileUpdate.displayName = null;
+          resetMessage = '🔄 **Resetting:** Name\n';
+        } else if (resetOption === 'pfp') {
+          profileUpdate.avatar = null;
+          resetMessage = '🔄 **Resetting:** Profile Picture\n';
+        } else if (resetOption === 'banner') {
+          profileUpdate.banner = null;
+          resetMessage = '🔄 **Resetting:** Banner\n';
+        } else if (resetOption === 'bio') {
+          profileUpdate.about = null;
+          resetMessage = '🔄 **Resetting:** Bio\n';
+        }
+      }
 
       // Save to database
       await db.saveBotProfile(guildId, profileUpdate);
@@ -111,17 +149,56 @@ module.exports = {
         if (newPfp) editData.avatar = newPfp;
         if (newBanner) editData.banner = newBanner;
 
+        // Handle resets
+        if (resetOption === 'all') {
+          editData.nick = null;
+          editData.bio = null;
+          editData.avatar = null;
+          editData.banner = null;
+        } else if (resetOption === 'name') {
+          editData.nick = null;
+        } else if (resetOption === 'bio') {
+          editData.bio = null;
+        } else if (resetOption === 'pfp') {
+          editData.avatar = null;
+        } else if (resetOption === 'banner') {
+          editData.banner = null;
+        }
+
         if (Object.keys(editData).length > 0) {
-          await interaction.guild.members.editMe(editData).catch(e => 
-            console.error('[disguise] Failed to update member:', e.message)
-          );
+          await interaction.guild.members.editMe(editData).catch(e => {
+            console.error('[disguise] Failed to update member:', e.message);
+            throw e;
+          });
         }
       } catch (e) {
+        // Handle Discord rate limit errors
+        if (e.code === 'BANNER_RATE_LIMIT' || e.message?.includes('banner') && e.message?.includes('too fast')) {
+          return await interaction.reply({
+            content: '⏱️ **Rate Limited:** You can only change your profile banner once every 3 hours. Please try again later.',
+            flags: 64
+          });
+        }
+        if (e.code === 'AVATAR_RATE_LIMIT' || e.message?.includes('avatar') && e.message?.includes('too fast')) {
+          return await interaction.reply({
+            content: '⏱️ **Rate Limited:** You can only change your profile picture once every 3 hours. Please try again later.',
+            flags: 64
+          });
+        }
+        if (e.message?.includes('too fast') || e.message?.includes('rate limit') || e.message?.includes('Req was rate limited')) {
+          return await interaction.reply({
+            content: '⏱️ **Rate Limited:** Discord is temporarily rate limiting profile updates. Please try again in a few moments.',
+            flags: 64
+          });
+        }
+        
         console.error('[disguise] Error updating guild member:', e);
+        throw e;
       }
 
       // Build confirmation message
       let confirmMessage = '✅ **Server Profile Updated**\n\n';
+      confirmMessage += resetMessage;
       if (newName) confirmMessage += `📝 **Name:** ${newName}\n`;
       if (newPfp) confirmMessage += `🖼️ **Profile Picture:** Updated\n`;
       if (newBanner) confirmMessage += `🎨 **Banner:** Updated\n`;
