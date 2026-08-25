@@ -93,26 +93,33 @@ module.exports = {
         });
       }
 
-      // Get existing profile or create new one
-      const profileCollection = db.getCollection('serverProfiles');
-      const existingProfile = await profileCollection.findOne({ guildId });
+      // Build profile object
+      const profileUpdate = {};
+      if (newName) profileUpdate.displayName = newName;
+      if (newPfp) profileUpdate.avatar = newPfp;
+      if (newBanner) profileUpdate.banner = newBanner;
+      if (newBio) profileUpdate.about = newBio;
 
-      const updatedProfile = {
-        guildId,
-        ...(newName && { displayName: newName }),
-        ...(newPfp && { avatar: newPfp }),
-        ...(newBanner && { banner: newBanner }),
-        ...(newBio && { about: newBio }),
-        updatedAt: Date.now()
-      };
+      // Save to database
+      await db.saveBotProfile(guildId, profileUpdate);
 
-      if (existingProfile) {
-        await profileCollection.updateOne(
-          { guildId },
-          { $set: updatedProfile }
-        );
-      } else {
-        await profileCollection.insertOne(updatedProfile);
+      // Try to apply changes to guild member
+      try {
+        const guildMember = interaction.guild?.members.cache.get(interaction.client.user.id);
+        if (guildMember) {
+          const editData = {};
+          if (newName) editData.nick = newName;
+          if (newPfp || newBanner || newBio) {
+            // Note: Discord doesn't allow setting guild-specific avatar/banner/bio via API
+            // These would need to be displayed in embeds/profile pages instead
+            // For now, we only set the nickname which is the guild-specific profile change
+          }
+          if (Object.keys(editData).length > 0) {
+            await guildMember.edit(editData).catch(e => console.error('Failed to update member:', e));
+          }
+        }
+      } catch (e) {
+        console.error('Error updating guild member:', e);
       }
 
       // Build confirmation message
@@ -121,6 +128,7 @@ module.exports = {
       if (newPfp) confirmMessage += `🖼️ **Profile Picture:** Updated\n`;
       if (newBanner) confirmMessage += `🎨 **Banner:** Updated\n`;
       if (newBio) confirmMessage += `📋 **Bio:** ${newBio}\n`;
+      confirmMessage += '\n*Note: Avatar and banner changes are stored but Discord only supports per-server nicknames. Avatar/banner would need custom display in embeds.*';
 
       await interaction.reply({
         content: confirmMessage,
