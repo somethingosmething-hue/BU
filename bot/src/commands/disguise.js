@@ -46,7 +46,7 @@ function processNewlines(text) {
 }
 
 function quoteBio(bio) {
-  if (!bio || !bio.trim()) return '*No bio set.*';
+  if (!bio || !bio.trim()) return '*No custom bio set.*';
   return bio.split('\n').map(l => (l.length ? `> ${l}` : '>')).join('\n');
 }
 
