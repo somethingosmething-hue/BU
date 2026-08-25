@@ -175,13 +175,13 @@ module.exports = {
         // Handle Discord rate limit errors
         if (e.code === 'BANNER_RATE_LIMIT' || e.message?.includes('banner') && e.message?.includes('too fast')) {
           return await interaction.reply({
-            content: '⏱️ **Rate Limited:** You can only change your profile banner once every 3 hours. Please try again later.',
+            content: '⏱️ **Rate Limited:** You can only change your profile banner once in a while. Please try again later.',
             flags: 64
           });
         }
         if (e.code === 'AVATAR_RATE_LIMIT' || e.message?.includes('avatar') && e.message?.includes('too fast')) {
           return await interaction.reply({
-            content: '⏱️ **Rate Limited:** You can only change your profile picture once every 3 hours. Please try again later.',
+            content: '⏱️ **Rate Limited:** You can only change your profile picture once in a while. Please try again later.',
             flags: 64
           });
         }
