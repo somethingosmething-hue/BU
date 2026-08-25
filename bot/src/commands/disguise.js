@@ -109,11 +109,6 @@ module.exports = {
         if (guildMember) {
           const editData = {};
           if (newName) editData.nick = newName;
-          if (newPfp || newBanner || newBio) {
-            // Note: Discord doesn't allow setting guild-specific avatar/banner/bio via API
-            // These would need to be displayed in embeds/profile pages instead
-            // For now, we only set the nickname which is the guild-specific profile change
-          }
           if (Object.keys(editData).length > 0) {
             await guildMember.edit(editData).catch(e => console.error('Failed to update member:', e));
           }
