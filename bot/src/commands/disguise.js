@@ -38,7 +38,7 @@ module.exports = {
     .addStringOption(option =>
       option
         .setName('bio')
-        .setDescription('About me / bio text for this server')
+        .setDescription('About me / bio text for this server (use \\n, {newline}, or %nl% for line breaks)')
         .setRequired(false)
     )
     .addStringOption(option =>
@@ -74,8 +74,16 @@ module.exports = {
       const pfpUpload = interaction.options.getAttachment('pfp_upload');
       const bannerUrl = interaction.options.getString('banner_url');
       const bannerUpload = interaction.options.getAttachment('banner_upload');
-      const newBio = interaction.options.getString('bio');
+      let newBio = interaction.options.getString('bio');
       const resetOption = interaction.options.getString('reset');
+
+      // Process newline markers in bio
+      if (newBio) {
+        newBio = newBio
+          .replace(/\\n/g, '\n')           // Handle \n
+          .replace(/{newline}/g, '\n')     // Handle {newline}
+          .replace(/%nl%/g, '\n');         // Handle %nl%
+      }
 
       // Validate pfp - either URL or upload
       let newPfp = null;
