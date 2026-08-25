@@ -1,8 +1,10 @@
 const { SlashCommandBuilder, Routes } = require('discord.js');
 
 const WRITING_EMOJI = '<:writing:1526779827611500604>';
-const DIVIDER1 = '<:divider1:1536178165972607038>';
-const DIVIDER2 = '<:divider2:1536178189762826240>';
+const BLUE1 = '<:blue1:1536481862954786856>';
+const BLUE2 = '<:blue2:1536481890331000963>';
+const BLUE3 = '<:blue3:1536481918739030036>';
+const BLUE4 = '<:blue4:1536481957008121916>';
 const CHECKOUT_EMOJI = '<:checkout:1536178354384928868>';
 
 const RESET_BUTTONS = {
@@ -58,8 +60,8 @@ async function getCurrentProfile(guild, memberOverride = null) {
     if (raw && typeof raw.bio === 'string') bio = raw.bio;
   } catch {}
 
-  const pfpUrl = member.displayAvatarURL({ extension: 'png', size: 1024 });
-  const bannerUrl = member.displayBannerURL({ extension: 'png', size: 1024 }) || pfpUrl;
+  const pfpUrl = member.displayAvatarURL({ size: 1024 });
+  const bannerUrl = member.displayBannerURL({ size: 1024 }) || pfpUrl;
 
   return { name: member.displayName, pfpUrl, bannerUrl, bio };
 }
@@ -75,20 +77,16 @@ function buildSuccessPayload(profile) {
             type: 10,
             content: `## ${WRITING_EMOJI} Server Profile Updated`,
           },
-          {
-            type: 14,
-            spacing: 2,
-            divider: true,
-          },
-          {
-            type: 14,
-            spacing: 2,
-            divider: false,
-          },
-          {
-            type: 10,
-            content: `### ${DIVIDER1} Current name: \`${profile.name}\``,
-          },
+        ],
+      },
+      {
+        type: 14,
+        spacing: 1,
+        divider: false,
+      },
+      {
+        type: 17,
+        components: [
           {
             type: 14,
             spacing: 2,
@@ -96,47 +94,63 @@ function buildSuccessPayload(profile) {
           },
           {
             type: 10,
-            content: `### ${DIVIDER1} Current PFP:`,
+            content: `### ${BLUE1} __Current name__: \`${profile.name}\`\n\n\n`,
           },
           {
-            type: 12,
-            items: [
+            type: 14,
+            spacing: 2,
+            divider: false,
+          },
+          {
+            type: 14,
+            spacing: 2,
+            divider: false,
+          },
+          {
+            type: 9,
+            components: [
               {
-                media: {
-                  url: profile.pfpUrl,
-                },
+                type: 10,
+                content: `### ${BLUE2} __Current PFP__:`,
               },
             ],
+            accessory: {
+              type: 11,
+              media: {
+                url: profile.pfpUrl,
+              },
+            },
           },
           {
-            type: 14,
-            spacing: 2,
-            divider: false,
-          },
-          {
-            type: 10,
-            content: `### ${DIVIDER1} Current banner:`,
-          },
-          {
-            type: 12,
-            items: [
+            type: 9,
+            components: [
               {
-                media: {
-                  url: profile.bannerUrl,
-                },
+                type: 10,
+                content: `### ${BLUE3} __Current banner__:`,
               },
             ],
+            accessory: {
+              type: 11,
+              media: {
+                url: profile.bannerUrl,
+              },
+            },
+          },
+          {
+            type: 10,
+            content: `### ${BLUE4} __Current bio__:\n${quoteBio(profile.bio)}`,
           },
           {
             type: 14,
             spacing: 2,
             divider: false,
-          },
-          {
-            type: 10,
-            content: `### ${DIVIDER2} Current bio:\n${quoteBio(profile.bio)}`,
           },
         ],
+      },
+      {
+        type: 14,
+        spacing: 1,
+        divider: false,
       },
       {
         type: 1,
