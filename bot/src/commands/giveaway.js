@@ -28,7 +28,9 @@ module.exports = {
             .addStringOption(o => o.setName('duration').setDescription('Duration (e.g. 20h, 2d, 1m30s)').setRequired(true))
             .addChannelOption(o => o.setName('channel').setDescription('Channel to send in (defaults to current)'))
             .addIntegerOption(o => o.setName('winners').setDescription('Number of winners (default: 1)').setMinValue(1).setMaxValue(9))
-            .addUserOption(o => o.setName('sponsor').setDescription('User sponsoring the giveaway payouts')))
+            .addUserOption(o => o.setName('sponsor').setDescription('User sponsoring the giveaway payouts'))
+            .addIntegerOption(o => o.setName('requiredmessages').setDescription('Min messages sent in server to enter').setMinValue(1))
+            .addStringOption(o => o.setName('requiredroles').setDescription('Role IDs needed to enter (comma-separated, e.g. 1249,5678)')))
         .addSubcommand(s => s.setName('delete')
             .setDescription('Delete a giveaway template')
             .addStringOption(o => o.setName('id').setDescription('ID of the giveaway to delete').setRequired(true).setMaxLength(50).setAutocomplete(true)))
@@ -103,6 +105,22 @@ module.exports = {
             const channel = interaction.options.getChannel('channel') || interaction.channel;
             const winners = interaction.options.getInteger('winners') || 1;
             const sponsor = interaction.options.getUser('sponsor');
+            const requiredMessages = interaction.options.getInteger('requiredmessages') || null;
+            const requiredRolesRaw = interaction.options.getString('requiredroles') || null;
+
+            let requiredRoles = null;
+            if (requiredRolesRaw) {
+                requiredRoles = requiredRolesRaw.split(',').map(s => s.trim()).filter(Boolean);
+                for (const roleId of requiredRoles) {
+                    if (!/^\d{17,20}$/.test(roleId)) {
+                        return interaction.editReply({ content: `❌ Invalid role ID: \`${roleId}\`. Role IDs must be 17-20 digit numbers.` });
+                    }
+                    const role = interaction.guild.roles.cache.get(roleId);
+                    if (!role) {
+                        return interaction.editReply({ content: `❌ Role not found on this server: \`${roleId}\`.` });
+                    }
+                }
+            }
 
             const template = await db.getGiveawayById(guildId, id);
             if (!template) {
@@ -132,6 +150,8 @@ module.exports = {
                 endAt,
                 durationMs,
                 entrantCount: 0,
+                requiredMessages,
+                requiredRoles,
             });
 
             let sentMessage;
@@ -158,6 +178,8 @@ module.exports = {
                 durationMs,
                 durationRaw: durationStr,
                 originalPayload: payload,
+                requiredMessages,
+                requiredRoles,
             });
 
             setTimeout(() => {

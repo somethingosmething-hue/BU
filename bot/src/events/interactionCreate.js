@@ -275,6 +275,24 @@ module.exports = {
                         return;
                     }
 
+                    // ── Entry requirements check ───────────────────────────
+                    if (gw.requiredMessages) {
+                        const levelData = await db.getLevelUser(guildId, interaction.user.id);
+                        const msgCount = levelData?.messages || 0;
+                        if (msgCount < gw.requiredMessages) {
+                            await interaction.editReply({ content: `❌ You need at least **${gw.requiredMessages}** messages sent in this server to enter. You currently have **${msgCount}**.` });
+                            return;
+                        }
+                    }
+                    if (gw.requiredRoles?.length) {
+                        const missing = gw.requiredRoles.filter(rId => !interaction.member.roles.cache.has(rId));
+                        if (missing.length) {
+                            const missingList = missing.map(rId => `<@&${rId}>`).join(', ');
+                            await interaction.editReply({ content: `❌ You are missing the required role(s): ${missingList}` });
+                            return;
+                        }
+                    }
+
                     const added = await db.addGiveawayEntrant(guildId, messageId, interaction.user.id);
                     if (!added) {
                         await interaction.editReply({ content: '❌ You have already entered this giveaway.' });

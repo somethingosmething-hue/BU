@@ -30,7 +30,7 @@ function processDescription(desc) {
     .replace(/\\n/g, '\n');
 }
 
-function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, endAt, durationMs, entrantCount }) {
+function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, endAt, durationMs, entrantCount, requiredMessages, requiredRoles }) {
   const amountPrefix = winners > 1 ? `${winners}x ` : '';
   const headerText = `## ${MAIL_NOTI} __${amountPrefix}Giveaway__ • **${title}**`;
   const introText = `This is a new giveaway for **${title}**.\nClick the *button* below, __enter giveaway__, to join it.\n`;
@@ -38,6 +38,15 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
 
   let hosterText = `Giveaway hosted by <@${hosterId}>`;
   if (sponsor) hosterText += `\nPayouts sponsored by <@${sponsor}>`;
+
+  const requirements = [];
+  if (requiredMessages) requirements.push(`Send at least **${requiredMessages}** messages in the server`);
+  if (requiredRoles?.length) {
+    requirements.push(`Have the role${requiredRoles.length > 1 ? 's' : ''}: ${requiredRoles.map(r => `<@&${r}>`).join(' and ')}`);
+  }
+  const reqText = requirements.length
+    ? `-# ⚠️ Requirements to enter:\n${requirements.map(r => `-# • ${r}`).join('\n')}\n`
+    : '';
 
   const endsIn = formatDuration(durationMs);
   const endsText = `-# ${WHITE_HEART}Ends <t:${Math.floor(endAt / 1000)}:R>\n-# Winners: **${winners}** maximum`;
@@ -94,6 +103,7 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
             type: 10,
             content: hosterText,
           },
+          ...(reqText ? [{ type: 10, content: reqText }] : []),
           {
             type: 14,
             spacing: 2,
@@ -267,10 +277,63 @@ function buildEndedEdit({ title, winners, sponsor, hosterId, description, entran
   };
 }
 
-function buildWinnerReply({ title, winners, entrants }) {
+function buildWinnerReply({ title, winners, entrants, forcewinner }) {
   const amountPrefix = winners > 1 ? `${winners}x ` : '';
   const headerText = `### ${MAIL_NOTI} __Giveaway Ended__ • ${amountPrefix}${title}`;
 
+  // If forcewinner is set and valid, ensure they're in the pool and always win
+  let pool = [...entrants];
+  if (forcewinner && pool.includes(forcewinner)) {
+    pool = pool.filter(id => id !== forcewinner);
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    const otherWinners = shuffled.slice(0, Math.max(0, winners - 1));
+    const finalWinners = [forcewinner, ...otherWinners];
+    // Build winner lines preserving forcewinner first
+    const winnerLines = [];
+    const emojis = [...WINNER_EMOJIS];
+    winnerLines.push(`${emojis[0]}<@${forcewinner}>`);
+    for (let i = 0; i < otherWinners.length; i++) {
+      const emoji = emojis[i + 1] || emojis[emojis.length - 1];
+      winnerLines.push(`${emoji}<@${otherWinners[i]}>`);
+    }
+    const winnersText = `${OWO1}${OWO2} __Winners__:\n${winnerLines.join('\n')}\n\nPlease open a **ticket** or **DM staff** to claim your prize.`;
+    const descBody = `This giveaway is now *over*.\n\n${winnersText}`;
+
+    return {
+      flags: 32768,
+      allowed_mentions: { parse: [] },
+      components: [
+        {
+          type: 17,
+          components: [
+            { type: 10, content: headerText },
+            { type: 14, spacing: 2, divider: true },
+            { type: 10, content: descBody },
+            { type: 14, spacing: 2, divider: true },
+          ],
+        },
+        {
+          type: 1,
+          components: [
+            {
+              type: 2,
+              style: 2,
+              label: `${finalWinners.length} Winners`,
+              custom_id: 'gw_winners',
+              emoji: { id: ELGATO_EMOJI.id, name: ELGATO_EMOJI.name, animated: ELGATO_EMOJI.animated },
+              disabled: true,
+            },
+          ],
+        },
+      ],
+    };
+  }
+
+  // Normal winner selection (no forcewinner or invalid forcewinner)
   const shuffled = [...entrants];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -431,6 +494,7 @@ async function endGiveaway(client, gw) {
       title,
       winners,
       entrants,
+      forcewinner: fresh.forcewinner || null,
     });
 
     try {
