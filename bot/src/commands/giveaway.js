@@ -110,10 +110,15 @@ module.exports = {
 
             let requiredRoles = null;
             if (requiredRolesRaw) {
-                requiredRoles = requiredRolesRaw.split(',').map(s => s.trim()).filter(Boolean);
+                requiredRoles = requiredRolesRaw.split(',').map(s => {
+                    const trimmed = s.trim();
+                    const mentionMatch = trimmed.match(/^<@&(\d{17,20})>$/);
+                    if (mentionMatch) return mentionMatch[1];
+                    return trimmed;
+                }).filter(Boolean);
                 for (const roleId of requiredRoles) {
                     if (!/^\d{17,20}$/.test(roleId)) {
-                        return interaction.editReply({ content: `❌ Invalid role ID: \`${roleId}\`. Role IDs must be 17-20 digit numbers.` });
+                        return interaction.editReply({ content: `❌ Invalid role ID: \`${roleId}\`. Role IDs must be 17-20 digit numbers, a role mention, or a raw ID.` });
                     }
                     const role = interaction.guild.roles.cache.get(roleId);
                     if (!role) {
