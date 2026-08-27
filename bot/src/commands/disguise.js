@@ -68,7 +68,7 @@ async function getCurrentProfile(guild, memberOverride = null) {
 
 function buildSuccessPayload(profile) {
   return {
-    flags: 32768,
+    flags: 32832,
     components: [
       {
         type: 17,
@@ -207,7 +207,7 @@ function buildSuccessPayload(profile) {
 
 function buildErrorPayload(reason) {
   return {
-    flags: 32768,
+    flags: 32832,
     components: [
       {
         type: 17,
@@ -263,7 +263,7 @@ async function validateImageUrl(raw, label) {
 
 async function execute(interaction) {
   try {
-    await interaction.deferReply({ flags: 32768 });
+    await interaction.deferReply({ flags: 32832 });
   } catch {}
 
   try {
