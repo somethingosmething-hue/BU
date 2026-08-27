@@ -36,17 +36,16 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
   const introText = `This is a new giveaway for **${title}**.\nClick the *button* below, __enter giveaway__, to join it.\n`;
   const descText = `‎${processDescription(description)}`;
 
-  let hosterText = `Giveaway hosted by <@${hosterId}>`;
-  if (sponsor) hosterText += `\nPayouts sponsored by <@${sponsor}>`;
-
   const requirements = [];
   if (requiredMessages) requirements.push(`Send at least **${requiredMessages}** messages in the server`);
   if (requiredRoles?.length) {
     requirements.push(`Have the role${requiredRoles.length > 1 ? 's' : ''}: ${requiredRoles.map(r => `<@&${r}>`).join(' and ')}`);
   }
   const reqText = requirements.length
-    ? `-# ⚠️ Requirements to enter:\n${requirements.map(r => `-# • ${r}`).join('\n')}\n`
+    ? `-# <a:reddot:1536173364274798695> Requirements to enter:\n${requirements.map(r => `-# • ${r}`).join('\n')}\n`
     : '';
+
+  let hosterText = `Giveaway hosted by <@${hosterId}>`;
 
   const endsIn = formatDuration(durationMs);
   const endsText = `-# ${WHITE_HEART}Ends <t:${Math.floor(endAt / 1000)}:R>\n-# Winners: **${winners}** maximum`;
@@ -99,11 +98,11 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
             type: 10,
             content: descText,
           },
+          ...(reqText ? [{ type: 10, content: reqText }] : []),
           {
             type: 10,
             content: hosterText,
           },
-          ...(reqText ? [{ type: 10, content: reqText }] : []),
           {
             type: 14,
             spacing: 2,
