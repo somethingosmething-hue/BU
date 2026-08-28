@@ -42,7 +42,7 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
     requirements.push(`Have the role${requiredRoles.length > 1 ? 's' : ''}: ${requiredRoles.map(r => `<@&${r}>`).join(' and ')}`);
   }
   const reqText = requirements.length
-    ? `-# <a:reddot:1536173364274798695> Requirements to enter:\n${requirements.map(r => `-# • ${r}`).join('\n')}\n`
+    ? `-# <:divider2:1536178189762826240> Requirements to enter:\n${requirements.map(r => `-# • ${r}`).join('\n')}\n`
     : '';
 
   let hosterText = `Giveaway hosted by <@${hosterId}>`;
