@@ -621,6 +621,15 @@ async function deleteActiveGiveaway(guildId, messageId) {
   await getCollection('active_giveaways').deleteOne({ guildId, messageId });
 }
 
+async function claimGiveawayEnd(guildId, messageId) {
+  const result = await getCollection('active_giveaways').findOneAndUpdate(
+    { guildId, messageId, ended: { $ne: true } },
+    { $set: { ended: true } },
+    { returnDocument: 'before' }
+  );
+  return result;
+}
+
 async function addGiveawayEntrant(guildId, messageId, userId) {
   const existing = await getCollection('active_giveaways').findOne(
     { guildId, messageId, entrants: userId }
@@ -739,7 +748,7 @@ module.exports = {
   setBumpLink, deleteBumpLink, getBumpLink, getAllBumpLinks,
   saveNote, getNote, getAllNotes, deleteNote,
   getGiveaway, getGiveawayById, saveGiveaway, deleteGiveaway, getAllGiveaways,
-  saveActiveGiveaway, getActiveGiveaway, getAllActiveGiveaways, getActiveGiveawaysByGuild, deleteActiveGiveaway,
+  saveActiveGiveaway, getActiveGiveaway, getAllActiveGiveaways, getActiveGiveawaysByGuild, deleteActiveGiveaway, claimGiveawayEnd,
   addGiveawayEntrant, removeGiveawayEntrant, removeUserFromAllGiveaways,
   getChannels, loadDB, saveDB,
   getCollection,

@@ -444,9 +444,10 @@ async function updateGiveawayParticipantCount(client, gw, newCount) {
 
 async function endGiveaway(client, gw) {
   try {
-    const fresh = await db.getActiveGiveaway(gw.guildId, gw.messageId);
+    // Atomically claim this giveaway end — only one caller wins
+    const fresh = await db.claimGiveawayEnd(gw.guildId, gw.messageId);
     if (!fresh) {
-      console.log(`[Giveaway] Giveaway "${gw.title}" no longer active (already deleted or ended)`);
+      console.log(`[Giveaway] Giveaway "${gw.title}" already ended or deleted`);
       return;
     }
 
