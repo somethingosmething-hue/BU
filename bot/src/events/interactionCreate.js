@@ -319,7 +319,13 @@ module.exports = {
                                             }
                                         }
                                     }
-                                    await msg.edit(updatedPayload);
+                                    try {
+                                        const { withCroppedGif } = require('../events/giveawayHandler');
+                                        const { payload: croppedPayload, files } = await withCroppedGif(updatedPayload);
+                                        await msg.edit(files ? { ...croppedPayload, files } : croppedPayload);
+                                    } catch {
+                                        await msg.edit(updatedPayload);
+                                    }
                                 }
                             }
                         } catch (e) {

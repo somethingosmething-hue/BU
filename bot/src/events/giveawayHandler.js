@@ -22,6 +22,74 @@ const ELGATO_EMOJI = { id: '1524865297587109930', name: 'elgato', animated: fals
 const OWO1 = '<a:OwO1:1524863682599977071>';
 const OWO2 = '<a:OwO2:1524863704682860836>';
 
+let sharp;
+try { sharp = require('sharp'); } catch {}
+const CROP_CACHE = new Map();
+
+function estimateTargetWidth(texts) {
+  const all = texts.join('\n');
+  const lines = all.split('\n');
+  let maxLen = 20;
+  for (const line of lines) {
+    const cleaned = line.replace(/<a?:\w+:\d+>/g, '').replace(/<@&?\d+>/g, '1234567890').replace(/<t:\d+:\w+>/g, '12h').replace(/[#*_`~]/g, '').trim();
+    maxLen = Math.max(maxLen, cleaned.length);
+  }
+  const px = Math.round(maxLen * 7.5 + 48);
+  return Math.max(280, Math.min(600, px));
+}
+
+async function getCroppedGifBuffer(targetWidth) {
+  if (!sharp) return null;
+  if (CROP_CACHE.has(targetWidth)) return CROP_CACHE.get(targetWidth);
+  try {
+    const res = await fetch(MEDIA_URL);
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const meta = await sharp(buf, { animated: true }).metadata();
+    const origW = meta.width || 600;
+    const origH = meta.height || 337;
+    if (targetWidth >= origW) return null;
+    const left = Math.floor((origW - targetWidth) / 2);
+    const out = await sharp(buf, { animated: true }).extract({ left, top: 0, width: targetWidth, height: origH }).gif().toBuffer();
+    CROP_CACHE.set(targetWidth, out);
+    return out;
+  } catch (e) {
+    console.error('[Giveaway] crop failed:', e.message);
+    return null;
+  }
+}
+
+function extractTextsFromPayload(payload) {
+  const texts = [];
+  function walk(comps) {
+    if (!Array.isArray(comps)) return;
+    for (const c of comps) {
+      if (typeof c.content === 'string') texts.push(c.content);
+      if (Array.isArray(c.components)) walk(c.components);
+      if (Array.isArray(c.items)) {
+        for (const it of c.items) if (it.media?.url) texts.push('');
+      }
+    }
+  }
+  if (payload.components) walk(payload.components);
+  return texts;
+}
+
+async function withCroppedGif(payload, texts = null) {
+  const effectiveTexts = texts || extractTextsFromPayload(payload);
+  const targetWidth = estimateTargetWidth(effectiveTexts);
+  const buf = await getCroppedGifBuffer(targetWidth);
+  if (!buf) return { payload, files: undefined };
+  const cropped = JSON.parse(JSON.stringify(payload));
+  for (const comp of cropped.components) {
+    if (comp.type === 12 && comp.items?.[0]?.media?.url === MEDIA_URL) {
+      comp.items[0].media.url = 'attachment://giveaway.gif';
+      break;
+    }
+  }
+  return { payload: cropped, files: [{ attachment: buf, name: 'giveaway.gif' }] };
+}
+
 function processDescription(desc) {
   if (!desc) return '';
   return desc
@@ -149,6 +217,11 @@ function buildGiveawayPayload({ title, description, winners, sponsor, hosterId, 
       },
     ],
   };
+}
+
+async function buildGiveawayPayloadCropped(args) {
+  const base = buildGiveawayPayload(args);
+  return withCroppedGif(base);
 }
 
 function buildEnterConfirmationPayload() {
@@ -434,12 +507,18 @@ async function updateGiveawayParticipantCount(client, gw, newCount) {
     newCount,
   });
   try {
-    await message.edit(updatedPayload);
+    const { payload: croppedPayload, files } = await withCroppedGif(updatedPayload);
+    await message.edit(files ? { ...croppedPayload, files } : croppedPayload);
     return true;
   } catch (e) {
     console.error('[Giveaway] Failed to update participant count:', e.message);
     return false;
   }
+}
+
+async function buildEndedEditCropped(args) {
+  const base = buildEndedEdit(args);
+  return withCroppedGif(base);
 }
 
 async function endGiveaway(client, gw) {
@@ -475,7 +554,7 @@ async function endGiveaway(client, gw) {
     const title = fresh.title || gw.title;
     const description = fresh.description || gw.description || '';
 
-    const editPayload = buildEndedEdit({
+    const { payload: editPayload, files: editFiles } = await buildEndedEditCropped({
       title,
       winners,
       sponsor,
@@ -485,7 +564,7 @@ async function endGiveaway(client, gw) {
     });
 
     try {
-      await message.edit(editPayload);
+      await message.edit(editFiles ? { ...editPayload, files: editFiles } : editPayload);
     } catch (e) {
       console.error(`[Giveaway] Failed to edit message:`, e.message);
     }
@@ -512,11 +591,17 @@ async function endGiveaway(client, gw) {
 
 module.exports = {
   buildGiveawayPayload,
+  buildGiveawayPayloadCropped,
   buildEnterConfirmationPayload,
   buildEndedEdit,
+  buildEndedEditCropped,
   buildWinnerReply,
   buildUpdatedParticipantCount,
   updateGiveawayParticipantCount,
   endGiveaway,
+  withCroppedGif,
+  estimateTargetWidth,
+  getCroppedGifBuffer,
   WINNER_EMOJIS,
+  MEDIA_URL,
 };

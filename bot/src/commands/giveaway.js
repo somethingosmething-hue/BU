@@ -1,7 +1,7 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, ComponentType, MessageFlags } = require('discord.js');
 const db = require('../database/db');
 const { parseDuration } = require('../utils/duration');
-const { buildGiveawayPayload, endGiveaway } = require('../events/giveawayHandler');
+const { buildGiveawayPayload, buildGiveawayPayloadCropped, withCroppedGif, endGiveaway } = require('../events/giveawayHandler');
 
 const PARTICIPANTS_PER_PAGE = 20;
 const MAX_DESC = 4096;
@@ -146,7 +146,7 @@ module.exports = {
             const title = template.title;
             const description = template.description || '';
 
-            const payload = buildGiveawayPayload({
+            const basePayload = buildGiveawayPayload({
                 title,
                 description,
                 winners,
@@ -158,10 +158,11 @@ module.exports = {
                 requiredMessages,
                 requiredRoles,
             });
+            const { payload, files } = await withCroppedGif(basePayload);
 
             let sentMessage;
             try {
-                sentMessage = await channel.send(payload);
+                sentMessage = await channel.send(files ? { ...payload, files } : payload);
             } catch (e) {
                 console.error('[Giveaway] Failed to send giveaway message:', e);
                 return interaction.editReply({ content: `❌ Failed to send the giveaway message: ${e.message}` });
@@ -182,7 +183,7 @@ module.exports = {
                 ended: false,
                 durationMs,
                 durationRaw: durationStr,
-                originalPayload: payload,
+                originalPayload: basePayload,
                 requiredMessages,
                 requiredRoles,
             });
