@@ -255,23 +255,38 @@ module.exports = {
 
                     await interaction.deferReply({ flags: 64 }).catch(() => {});
 
+                    // helper that will reply or edit depending on whether the interaction was deferred/replied
+                    const replyOrEdit = async (payload) => {
+                        try {
+                            if (interaction.deferred || interaction.replied) {
+                                await interaction.editReply(payload).catch(() => {});
+                            } else {
+                                // ensure ephemeral by default when replying directly
+                                const replyPayload = Object.assign({ flags: 64 }, payload);
+                                await interaction.reply(replyPayload).catch(() => {});
+                            }
+                        } catch (e) {
+                            console.error('[Giveaway] replyOrEdit failed:', e);
+                        }
+                    };
+
                     const gw = await db.getActiveGiveaway(guildId, messageId);
                     if (!gw) {
-                        await interaction.editReply({ content: '❌ This giveaway no longer exists.' });
+                        await replyOrEdit({ content: '❌ This giveaway no longer exists.' });
                         return;
                     }
                     if (gw.ended) {
-                        await interaction.editReply({ content: '❌ This giveaway has already ended.' });
+                        await replyOrEdit({ content: '❌ This giveaway has already ended.' });
                         return;
                     }
                     if (Date.now() >= gw.endAt) {
-                        await interaction.editReply({ content: '❌ This giveaway has ended.' });
+                        await replyOrEdit({ content: '❌ This giveaway has ended.' });
                         return;
                     }
 
                     const entrants = gw.entrants || [];
                     if (entrants.includes(interaction.user.id)) {
-                        await interaction.editReply({ content: '❌ You have already entered this giveaway.' });
+                        await replyOrEdit({ content: '❌ You have already entered this giveaway.' });
                         return;
                     }
 
@@ -280,7 +295,7 @@ module.exports = {
                         const levelData = await db.getLevelUser(guildId, interaction.user.id);
                         const msgCount = levelData?.messages || 0;
                         if (msgCount < gw.requiredMessages) {
-                            await interaction.editReply({ content: `❌ You need at least **${gw.requiredMessages}** messages sent in this server to enter. You currently have **${msgCount}**.` });
+                            await replyOrEdit({ content: `❌ You need at least **${gw.requiredMessages}** messages sent in this server to enter. You currently have **${msgCount}**.` });
                             return;
                         }
                     }
@@ -288,14 +303,14 @@ module.exports = {
                         const missing = gw.requiredRoles.filter(rId => !interaction.member.roles.cache.has(rId));
                         if (missing.length) {
                             const missingList = missing.map(rId => `<@&${rId}>`).join(', ');
-                            await interaction.editReply({ content: `❌ You are missing the required role(s): ${missingList}` });
+                            await replyOrEdit({ content: `❌ You are missing the required role(s): ${missingList}` });
                             return;
                         }
                     }
 
                     const added = await db.addGiveawayEntrant(guildId, messageId, interaction.user.id);
                     if (!added) {
-                        await interaction.editReply({ content: '❌ You have already entered this giveaway.' });
+                        await replyOrEdit({ content: '❌ You have already entered this giveaway.' });
                         return;
                     }
 
@@ -334,7 +349,7 @@ module.exports = {
                     }
 
                     try {
-                        await interaction.editReply({
+                        await replyOrEdit({
                             allowed_mentions: { parse: [] },
                             components: [
                                 {
@@ -349,10 +364,10 @@ module.exports = {
                             ]
                         });
                     } catch (e) {
-                        console.error('[Giveaway] editReply with components failed, falling back:', e.message);
-                        await interaction.editReply({
+                        console.error('[Giveaway] replyOrEdit with components failed, falling back:', e.message);
+                        await replyOrEdit({
                             content: '<a:pinkarrow:1524863871976734740> You have successfully entered this giveaway.\nIf you win, you will be notified.'
-                        }).catch(() => {});
+                        });
                     }
                 } catch (e) {
                     console.error('[Giveaway] gw_enter error:', e);
@@ -395,7 +410,7 @@ module.exports = {
                 try {
                     await interaction.deferUpdate();
                     const payload = await leveling.buildLeaderboardPayload({ guildId: interaction.guild.id, requesterId, type, page: newPage });
-                    await client.rest.patch(Routes.channelMessage(interaction.channelId, interaction.message.id), { body: payload }).catch(e => console.error('[levels] pagination error:', e.message));
+                    await client.rest.patch(Routes.channelMessage(interaction.channelId, interaction.message.id), { body: payload }).catch(e => console.error('[levels] pagination error:', e.messa
                 } catch (e) {
                     console.error('[levels] leaderboard pagination error:', e.message);
                 }
@@ -494,7 +509,7 @@ module.exports = {
                 return;
             }
 
-            // ── Edit Note Text ─────────────────────────────────────────────────────────
+            // ── Edit Note Text ────────────────────────────────────────────────────
             if (customId === 'editnotetext:submit') {
                 const content = interaction.fields.getTextInputValue('content');
                 const guildId = interaction.guildId;
@@ -681,11 +696,11 @@ module.exports = {
                             if (specs.requires.type === 'booster') {
                                 if (!interaction.member.premiumSince) { failReason = '<a:mailnoti:1524863742888644770> You need to be a server booster to use this menu.'; return false; }
                             } else if (specs.requires.type === 'administrator') {
-                                if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; return false; }
+                                if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; re
                             } else if (specs.requires.type === 'role' || specs.requires.type === 'all-roles') {
-                                if (!specs.requires.roleIds.every(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; }
+                                if (!specs.requires.roleIds.every(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; 
                             } else if (specs.requires.type === 'any-roles') {
-                                if (!specs.requires.roleIds.some(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; }
+                                if (!specs.requires.roleIds.some(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; 
                             }
                             return true;
                         } catch (e) {
