@@ -410,7 +410,7 @@ module.exports = {
                 try {
                     await interaction.deferUpdate();
                     const payload = await leveling.buildLeaderboardPayload({ guildId: interaction.guild.id, requesterId, type, page: newPage });
-                    await client.rest.patch(Routes.channelMessage(interaction.channelId, interaction.message.id), { body: payload }).catch(e => console.error('[levels] pagination error:', e.messa
+                    await client.rest.patch(Routes.channelMessage(interaction.channelId, interaction.message.id), { body: payload }).catch(e => console.error('[levels] pagination error:', e.message));
                 } catch (e) {
                     console.error('[levels] leaderboard pagination error:', e.message);
                 }
