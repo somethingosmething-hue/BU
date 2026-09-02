@@ -403,6 +403,7 @@ module.exports = {
                 const dir = parts[3];
                 const requesterId = parts[4] || interaction.user.id;
                 const leveling = require('../utils/leveling');
+                const { Routes } = require('discord.js');
 
                 let newPage = dir === 'left' ? page - 1 : dir === 'right' ? page + 1 : page;
                 newPage = Math.max(1, Math.min(newPage, leveling.MAX_PAGES));
@@ -696,11 +697,11 @@ module.exports = {
                             if (specs.requires.type === 'booster') {
                                 if (!interaction.member.premiumSince) { failReason = '<a:mailnoti:1524863742888644770> You need to be a server booster to use this menu.'; return false; }
                             } else if (specs.requires.type === 'administrator') {
-                                if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; re
+                                if (!interaction.member.permissions.has('Administrator')) { failReason = '<a:mailnoti:1524863742888644770> You need Administrator permission to use this menu.'; return false; }
                             } else if (specs.requires.type === 'role' || specs.requires.type === 'all-roles') {
-                                if (!specs.requires.roleIds.every(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; 
+                                if (!specs.requires.roleIds.every(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You are missing one or more required roles.'; return false; }
                             } else if (specs.requires.type === 'any-roles') {
-                                if (!specs.requires.roleIds.some(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; 
+                                if (!specs.requires.roleIds.some(id => hasRole(id))) { failReason = '<a:mailnoti:1524863742888644770> You need at least one of the required roles.'; return false; }
                             }
                             return true;
                         } catch (e) {
