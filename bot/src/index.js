@@ -311,6 +311,22 @@ client.once('clientReady', async () => {
     console.log('Recovered sticky notes after restart');
   } catch (e) { console.error('Note recovery error:', e.message); }
 
+  // Autobumper — separate user-token session, auto-resumes if enabled
+  try {
+    const { manager: autoBumper, getConfig: getABConfig } = require('./autobumper/manager');
+    const abCfg = await getABConfig();
+    const hasToken = !!((process.env.USER_TOKEN || '').trim() || (abCfg.userToken || '').trim());
+    if (abCfg.enabled && hasToken) {
+      await autoBumper.start();
+    } else if (abCfg.enabled) {
+      console.log('[autobumper] enabled but no user token — idle.');
+    }
+    const _abStop = autoBumper.stop.bind(autoBumper);
+    autoBumper.stop = async () => { await _abStop(); };
+    process.once('SIGINT', () => autoBumper.stop().catch(() => {}));
+    process.once('SIGTERM', () => autoBumper.stop().catch(() => {}));
+  } catch (e) { console.error('[autobumper] autostart error:', e.message); }
+
   // Mark this instance as running
   await db.getCollection('botstatus').updateOne(
     { key: 'heartbeat' },
