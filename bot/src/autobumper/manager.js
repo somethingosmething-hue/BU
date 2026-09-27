@@ -306,7 +306,7 @@ class AutoBumper {
   // Discover the live command id + version for an app (handles renames/redeploys).
   // Tries guild commands first, falls back to global commands.
   // 403/404 on both usually means the app isn't installed in that guild.
-  async discover(entry, guildId) {
+  async discover(entry, guildId, channelId) {
     const key = entry.applicationId;
     if (this.cmdCache.has(key)) return this.cmdCache.get(key);
     const want = entry.command.toLowerCase();
@@ -342,14 +342,39 @@ class AutoBumper {
       return info;
     } catch (e) {
       if (e.message.startsWith('command discovery') || e.message.startsWith('/')) throw e;
-      throw new Error(`command discovery failed for ${entry.label} (guild HTTP ${guildStatus}, global unreachable)`);
+      console.log(`[autobumper] global command list for ${entry.label} unreachable — trying channel command index…`);
+    }
+
+    // 3) channel application-command index — the same endpoint the real
+    // client uses to populate the slash picker. Respects per-channel
+    // permissions, so a missing entry here means the alt can't use it there.
+    try {
+      const res = await api(this.token, this.superProps, 'GET', `/channels/${channelId}/application-command-index`);
+      if (!res.ok) throw new Error(`command discovery failed for ${entry.label}: guild ${guildStatus}, global refused, channel index HTTP ${res.status}`);
+      const index = await res.json();
+      const apps = Array.isArray(index) ? index : index.applications || index.application_commands || [];
+      for (const app of apps) {
+        if (String(app.id || app.application_id) !== String(key)) continue;
+        const cmds = app.application_commands || app.commands || app.children || [];
+        const cmd = match(cmds);
+        if (cmd) {
+          const info = { id: cmd.id, version: cmd.version, name: cmd.name };
+          this.cmdCache.set(key, info);
+          return info;
+        }
+        throw new Error(`/${entry.command} not listed for **${entry.label}** in this channel — can the alt hand-run /${entry.command} there?`);
+      }
+      throw new Error(`**${entry.label}** not present in the channel command index — is it still in this server and usable in <#${channelId}>?`);
+    } catch (e) {
+      if (e.message.startsWith('command discovery') || e.message.startsWith('/') || e.message.startsWith('**')) throw e;
+      throw new Error(`command discovery failed for ${entry.label} (guild HTTP ${guildStatus}, all fallbacks exhausted)`);
     }
   }
 
   async fire(entry, cfg) {
     await this.waitReady();
     const { guildId, channelId } = cfg;
-    const cmd = await this.discover(entry, guildId);
+    const cmd = await this.discover(entry, guildId, channelId);
 
     // human-ish prelude: sometimes typing, always a small uneven pause
     if (Math.random() < 0.6) {
