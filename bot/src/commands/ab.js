@@ -179,6 +179,19 @@ module.exports = {
       if (dbTok && envTok && dbTok !== envTok) {
         lines.push('⚠️ DB and ENV differ — DB wins. If ENV holds the good one, clear it or re-run `/ab action:token`.');
       }
+      // channel command index: what the alt can actually see/use here
+      if (manager.running && manager.sessionId) {
+        try {
+          const apps = await manager.indexApps(cfg.channelId);
+          const interesting = apps.filter((a) =>
+            (cfg.entries || []).some((e) => e.applicationId === a.id));
+          const idxLines = interesting.map((a) =>
+            `• **${a.name}** \`${a.id}\`: ${a.commands.map((c) => `/${c.name}`).join(', ') || '_no commands_'}`);
+          lines.push(`**Channel index (${apps.length} apps total):**\n${idxLines.length ? idxLines.join('\n') : '_none of the entries visible — alt cannot reach them in this channel_'}`);
+        } catch (e) {
+          lines.push(`**Channel index:** unreadable (${e.message})`);
+        }
+      }
       return interaction.reply({ content: lines.join('\n'), flags: 64 });
     }
     if (action === 'bumpnow') {

@@ -11,14 +11,13 @@ const GATEWAY = 'wss://gateway.discord.gg/?v=10&encoding=json';
 // Known bump apps. applicationId -> defaults. commandId/version auto-discovered.
 const KNOWN_APPS = {
   '302050872383242240':  { label: 'Disboard',  command: 'bump', cooldownMs: 2 * 3600e3 },
+  '341738423134060544':  { label: 'DiscordServers.io', command: 'bump', cooldownMs: 2 * 3600e3 },
   '826100334534328340':  { label: 'DH Bump',   command: 'bump', cooldownMs: 2 * 3600e3 },
   '1159147139960676422': { label: 'Discordus', command: 'bump', cooldownMs: 2 * 3600e3 },
   '1379527568671113226': { label: 'GuildSeek', command: 'bump', cooldownMs: 2 * 3600e3 },
   '315926021457051650':  { label: 'ServerMon', command: 'bump', cooldownMs: 4 * 3600e3 },
   '476259371912003597':  { label: 'DiscordMe', command: 'bump', cooldownMs: 6 * 3600e3 },
   '813077581749288990':  { label: 'Disurl',    command: 'bump', cooldownMs: 30 * 60e3 },
-  '341738423134060544':  { label: 'BumpCentral', command: 'bump', cooldownMs: 2 * 3600e3 },
-  '1208555826340565074': { label: 'Listcord',  command: 'vote', cooldownMs: 12 * 3600e3 },
 };
 
 function parseMs(str) {
@@ -123,7 +122,6 @@ async function getConfig() {
     entries: [
       { label: 'Disboard', applicationId: '302050872383242240', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
       { label: 'DH Bump', applicationId: '826100334534328340', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
-      { label: 'BumpCentral', applicationId: '341738423134060544', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
     ],
     state: {},
     stats: {},
@@ -131,26 +129,19 @@ async function getConfig() {
   };
   const doc = await db.getCollection('autobumper').findOne({ _id: 'config' });
   if (!doc) return { _id: 'config', ...defaults };
-  const entries = Array.isArray(doc.entries) ? [...doc.entries] : [];
-  const state = { ...(doc.state || {}) };
-  let changed = false;
-  const now = Date.now();
-  // seed when empty + merge new defaults into existing configs
-  for (const e of defaults.entries) {
-    if (!entries.some((x) => x.label.toLowerCase() === e.label.toLowerCase())) {
-      entries.push(e);
-      state[e.label] = now + Math.round(Math.random() * 60e3);
-      changed = true;
-    }
-  }
-  if (changed) {
+  // backfill: docs created before defaults (or with wiped entries) get seeds
+  if (!Array.isArray(doc.entries) || doc.entries.length === 0) {
+    const now = Date.now();
+    const state = {};
+    for (const e of defaults.entries) state[e.label] = now + Math.round(Math.random() * 60e3);
     await db.getCollection('autobumper').updateOne(
       { _id: 'config' },
-      { $set: { entries, state } },
+      { $set: { entries: defaults.entries, state } },
       { upsert: true }
     );
+    return { ...doc, entries: defaults.entries, state };
   }
-  return { ...doc, entries, state };
+  return doc;
 }
 
 async function saveConfig(patch) {
@@ -359,25 +350,17 @@ class AutoBumper {
     // client uses to populate the slash picker. Respects per-channel
     // permissions, so a missing entry here means the alt can't use it there.
     try {
-      const res = await api(this.token, this.superProps, 'GET', `/channels/${channelId}/application-command-index`);
-      if (!res.ok) throw new Error(`command discovery failed for ${entry.label}: guild ${guildStatus}, global refused, channel index HTTP ${res.status}`);
-      const index = await res.json();
-      const apps = Array.isArray(index) ? index : index.applications || index.application_commands || [];
-      for (const app of apps) {
-        if (String(app.id || app.application_id) !== String(key)) continue;
-        const cmds = app.application_commands || app.commands || app.children || [];
-        const cmd = match(cmds);
-        if (cmd) {
-          const info = { id: cmd.id, version: cmd.version, name: cmd.name };
-          this.cmdCache.set(key, info);
-          return info;
-        }
-        throw new Error(`/${entry.command} not listed for **${entry.label}** in this channel — can the alt hand-run /${entry.command} there?`);
-      }
-      throw new Error(`**${entry.label}** not present in the channel command index — is it still in this server and usable in <#${channelId}>?`);
+      const apps = await this.indexApps(channelId);
+      const app = apps.find((a) => a.id === String(key));
+      if (!app) throw new Error(`**${entry.label}** not present in the channel command index — is it still in this server and usable in <#${channelId}>?`);
+      const cmd = match(app.commands);
+      if (!cmd) throw new Error(`/${entry.command} not listed for **${entry.label}** in this channel — can the alt hand-run /${entry.command} there?`);
+      const info = { id: cmd.id, version: cmd.version, name: cmd.name };
+      this.cmdCache.set(key, info);
+      return info;
     } catch (e) {
       if (e.message.startsWith('command discovery') || e.message.startsWith('/') || e.message.startsWith('**')) throw e;
-      throw new Error(`command discovery failed for ${entry.label} (guild HTTP ${guildStatus}, all fallbacks exhausted)`);
+      throw new Error(`command discovery failed for ${entry.label} (guild HTTP ${guildStatus}, all fallbacks exhausted: ${e.message})`);
     }
   }
 
@@ -422,7 +405,25 @@ class AutoBumper {
     return true;
   }
 
-  // ── Reminder sync: pull timing from the bump-reminder system ──────────
+  // Channel command index — same data the real client uses for the / picker.
+  // Normalized to [{ id, name, commands: [{ name, id, version }] }].
+  async indexApps(channelId) {
+    const res = await api(this.token, this.superProps, 'GET', `/channels/${channelId}/application-command-index`);
+    if (!res.ok) throw new Error(`channel index HTTP ${res.status}`);
+    const index = await res.json();
+    const apps = Array.isArray(index) ? index : index.applications || index.application_commands || [];
+    return apps.map((app) => ({
+      id: String(app.id || app.application_id || ''),
+      name: app.name || '(unnamed)',
+      commands: (app.application_commands || app.commands || app.children || []).map((c) => ({
+        name: c.name || '?',
+        id: c.id || '',
+        version: c.version || '',
+      })),
+    }));
+  }
+
+
   // Ground truth lives in `bumpreminders` (remindAt) and `bumpcooldowns`
   // (last-bump timestamp). Manual bumps, /checkbr, and restarts all flow
   // through those — so the autobumper follows them instead of its own clock.
