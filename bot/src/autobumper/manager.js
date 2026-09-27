@@ -19,6 +19,21 @@ const KNOWN_APPS = {
   '813077581749288990':  { label: 'Disurl',    command: 'bump', cooldownMs: 30 * 60e3 },
 };
 
+function parseMs(str) {
+  if (typeof str === 'number') return str;
+  const m = String(str || '').match(/^(\d+)\s*(hour|hours|minute|minutes|h|m)?$/i);
+  if (!m) return 7200000;
+  const n = parseInt(m[1], 10);
+  const u = (m[2] || 'h').toLowerCase();
+  if (u === 'h' || u === 'hour' || u === 'hours') return n * 3600000;
+  if (u === 'm' || u === 'minute' || u === 'minutes') return n * 60000;
+  return n * 3600000;
+}
+
+function serviceKeyOf(entry) {
+  const cmd = entry.command.startsWith('/') ? entry.command : '/' + entry.command;
+  return `${entry.applicationId}:${cmd}`;
+}
 const rand = (min, max) => min + Math.random() * (max - min);
 const randInt = (min, max) => Math.floor(rand(min, max + 1));
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
@@ -148,6 +163,11 @@ class AutoBumper {
     this.running = true;
     this.superProps = randomSuperProps(); // fresh fingerprint per (re)start
     this.connect();
+    // anchor schedule to reminder/cooldown truth immediately
+    try {
+      const cfg0 = await getConfig();
+      await this.syncFromReminders(cfg0);
+    } catch (e) { console.error('[autobumper] initial sync:', e.message); }
     this.loopTimer = setInterval(() => this.tick().catch((e) => console.error('[autobumper] tick:', e.message)), 15000);
     console.log('[autobumper] started.');
     return true;
@@ -305,12 +325,71 @@ class AutoBumper {
     return true;
   }
 
+  // ── Reminder sync: pull timing from the bump-reminder system ──────────
+  // Ground truth lives in `bumpreminders` (remindAt) and `bumpcooldowns`
+  // (last-bump timestamp). Manual bumps, /checkbr, and restarts all flow
+  // through those — so the autobumper follows them instead of its own clock.
+  async syncFromReminders(cfg) {
+    const guildId = cfg.guildId;
+    const state = { ...(cfg.state || {}) };
+    const sources = {};
+    let changed = false;
+
+    for (const entry of cfg.entries || []) {
+      const key = serviceKeyOf(entry);
+      const jitter = rand(entry.jitterMinMs ?? 3e5, entry.jitterMaxMs ?? 9e5);
+
+      // 1) live reminder doc wins — it has the exact remindAt
+      let reminder = null;
+      try {
+        reminder = await db.getCollection('bumpreminders').findOne({ guildId, serviceKey: key });
+      } catch {}
+      if (reminder?.remindAt) {
+        const target = reminder.remindAt <= Date.now()
+          ? Date.now() + rand(30e3, 120e3) // overdue → fire soon, small human delay
+          : reminder.remindAt + jitter;    // future → jitter past it, never exact
+        if (!state[entry.label] || Math.abs(state[entry.label] - target) > 60e3) {
+          state[entry.label] = target;
+          changed = true;
+        }
+        sources[entry.label] = 'reminder';
+        continue;
+      }
+
+      // 2) fall back to last-bump cooldown timestamp
+      let ts = null;
+      try { ts = await db.getBumpCooldown(guildId, key); } catch {}
+      if (ts) {
+        const cdMs = parseMs(entry.cooldownMs);
+        const base = ts + cdMs;
+        const target = base <= Date.now()
+          ? Date.now() + rand(30e3, 120e3)
+          : base + jitter;
+        if (!state[entry.label] || Math.abs(state[entry.label] - target) > 60e3) {
+          state[entry.label] = target;
+          changed = true;
+        }
+        sources[entry.label] = 'cooldown';
+        continue;
+      }
+
+      // 3) no signal at all — leave existing schedule (or mark unscheduled)
+      sources[entry.label] = state[entry.label] ? 'scheduled' : 'unscheduled';
+    }
+
+    if (changed) await saveConfig({ state });
+    return { state, sources };
+  }
+
   async tick() {
     if (!this.running || !this.token) return;
     const cfg = await getConfig();
     if (!cfg.enabled) return;
+    // re-anchor to reminder/cooldown truth every cycle (cheap reads, few entries)
+    const { state, sources } = await this.syncFromReminders(cfg).catch(() => ({ state: cfg.state || {}, sources: {} }));
+    this.lastSources = sources;
     const now = Date.now();
-    const due = (cfg.entries || []).filter((e) => (cfg.state?.[e.label] ?? 0) <= now);
+    const due = (cfg.entries || []).filter((e) => (state[e.label] ?? 0) <= now);
     if (!due.length) return;
 
     // random order every cycle so the sequence isn't fingerprintable
@@ -336,6 +415,10 @@ class AutoBumper {
         await this.fire(entry, fresh);
         console.log(`[autobumper] fired /${entry.command} → ${entry.label}`);
         const next = Date.now() + entry.cooldownMs + rand(entry.jitterMinMs ?? 3e5, entry.jitterMaxMs ?? 9e5);
+        // write back to the shared cooldown store so /checkbr stays accurate
+        // and future syncs have signal. No bumpremember doc — that would ping
+        // humans for something the autobumper already handled.
+        try { await db.setBumpCooldown(fresh.guildId, serviceKeyOf(entry), Date.now()); } catch {}
         await saveConfig({
           state: { ...(fresh.state || {}), [entry.label]: next },
           stats: { ...(fresh.stats || {}), [entry.label]: { lastRun: Date.now(), lastOk: true, fails: 0 } },

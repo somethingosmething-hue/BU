@@ -46,11 +46,13 @@ module.exports = {
 
     if (action === 'status') {
       const tokenSet = !!resolveToken(cfg);
+      const sources = manager.lastSources || {};
       const lines = (cfg.entries || []).map((e) => {
         const next = cfg.state?.[e.label] ?? 0;
         const st = cfg.stats?.[e.label];
         const dot = st ? (st.lastOk ? '🟢' : '🔴') : '⚪';
-        return `${dot} **${e.label}** \`/${e.command}\` — next in ${fmtMs(next - now)}`;
+        const src = sources[e.label] ? ` _(via ${sources[e.label]})_` : '';
+        return `${dot} **${e.label}** \`/${e.command}\` — next in ${fmtMs(next - now)}${src}`;
       });
       const embed = new EmbedBuilder().setColor('#BE74E3').setTitle('📣 Autobumper').setDescription(
         [
