@@ -182,7 +182,7 @@ module.exports = {
       // channel command index: what the alt can actually see/use here
       if (manager.running && manager.sessionId) {
         try {
-          const apps = await manager.indexApps(cfg.channelId);
+          const apps = await manager.indexApps(cfg.guildId);
           const interesting = apps.filter((a) =>
             (cfg.entries || []).some((e) => e.applicationId === a.id));
           const idxLines = interesting.map((a) =>

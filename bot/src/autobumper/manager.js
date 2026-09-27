@@ -346,11 +346,11 @@ class AutoBumper {
       console.log(`[autobumper] global command list for ${entry.label} unreachable — trying channel command index…`);
     }
 
-    // 3) channel application-command index — the same endpoint the real
-    // client uses to populate the slash picker. Respects per-channel
-    // permissions, so a missing entry here means the alt can't use it there.
+    // 3) guild application-command index — the data behind the real
+    // client's / picker. Respects per-user permissions: a missing entry
+    // here means the alt can't use it in this guild.
     try {
-      const apps = await this.indexApps(channelId);
+      const apps = await this.indexApps(guildId);
       const app = apps.find((a) => a.id === String(key));
       if (!app) throw new Error(`**${entry.label}** not present in the channel command index — is it still in this server and usable in <#${channelId}>?`);
       const cmd = match(app.commands);
@@ -405,21 +405,22 @@ class AutoBumper {
     return true;
   }
 
-  // Channel command index — same data the real client uses for the / picker.
+  // Guild command index — the data behind the real client's / picker:
+  // GET /guilds/{id}/application-command-index → { applications, application_commands, version }.
+  // (The channel variant only works for private channels — 404s on guild channels.)
   // Normalized to [{ id, name, commands: [{ name, id, version }] }].
-  async indexApps(channelId) {
-    const res = await api(this.token, this.superProps, 'GET', `/channels/${channelId}/application-command-index`);
-    if (!res.ok) throw new Error(`channel index HTTP ${res.status}`);
+  async indexApps(guildId) {
+    const res = await api(this.token, this.superProps, 'GET', `/guilds/${guildId}/application-command-index`);
+    if (!res.ok) throw new Error(`guild index HTTP ${res.status}`);
     const index = await res.json();
-    const apps = Array.isArray(index) ? index : index.applications || index.application_commands || [];
+    const apps = index.applications || [];
+    const allCmds = index.application_commands || [];
     return apps.map((app) => ({
-      id: String(app.id || app.application_id || ''),
+      id: String(app.id || ''),
       name: app.name || '(unnamed)',
-      commands: (app.application_commands || app.commands || app.children || []).map((c) => ({
-        name: c.name || '?',
-        id: c.id || '',
-        version: c.version || '',
-      })),
+      commands: allCmds
+        .filter((c) => String(c.application_id || '') === String(app.id || ''))
+        .map((c) => ({ name: c.name || c.name_default || '?', id: c.id || '', version: c.version || '' })),
     }));
   }
 
