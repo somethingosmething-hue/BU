@@ -316,6 +316,7 @@ class AutoBumper {
       || cmds.find((c) => (c.name || '').toLowerCase().includes('bump'));
 
     let guildStatus = null;
+    let globalStatus = null;
     try {
       const res = await api(this.token, this.superProps, 'GET', `/applications/${key}/guilds/${guildId}/commands`);
       guildStatus = res.status;
@@ -326,24 +327,29 @@ class AutoBumper {
           this.cmdCache.set(key, info);
           return info;
         }
+        // list worked but no match — definitive, don't fall through
         throw new Error(`/${entry.command} not found on app ${key} (guild list OK, no match)`);
       }
+      console.log(`[autobumper] guild command list for ${entry.label}: HTTP ${guildStatus} — trying global…`);
     } catch (e) {
       if (e.message.startsWith('/')) throw e; // no-match error above
-      console.log(`[autobumper] guild command list for ${entry.label}: HTTP ${guildStatus ?? 'network-fail'} — trying global…`);
+      console.log(`[autobumper] guild command list for ${entry.label} unreachable — trying global…`);
     }
 
     try {
       const res = await api(this.token, this.superProps, 'GET', `/applications/${key}/commands`);
-      if (!res.ok) throw new Error(`command discovery failed: guild HTTP ${guildStatus}, global HTTP ${res.status} — is **${entry.label}** still in this server?`);
-      const cmd = match(await res.json());
-      if (!cmd) throw new Error(`/${entry.command} not found on app ${key} (global list OK, no match)`);
-      const info = { id: cmd.id, version: cmd.version, name: cmd.name };
-      this.cmdCache.set(key, info);
-      return info;
+      globalStatus = res.status;
+      if (res.ok) {
+        const cmd = match(await res.json());
+        if (!cmd) throw new Error(`/${entry.command} not found on app ${key} (global list OK, no match)`);
+        const info = { id: cmd.id, version: cmd.version, name: cmd.name };
+        this.cmdCache.set(key, info);
+        return info;
+      }
+      console.log(`[autobumper] global command list for ${entry.label}: HTTP ${globalStatus} — trying guild index…`);
     } catch (e) {
-      if (e.message.startsWith('command discovery') || e.message.startsWith('/')) throw e;
-      console.log(`[autobumper] global command list for ${entry.label} unreachable — trying channel command index…`);
+      if (e.message.startsWith('/')) throw e; // no-match error above
+      console.log(`[autobumper] global command list for ${entry.label} unreachable — trying guild index…`);
     }
 
     // 3) guild application-command index — the data behind the real
