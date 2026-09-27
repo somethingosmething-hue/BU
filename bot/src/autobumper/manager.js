@@ -304,18 +304,46 @@ class AutoBumper {
   }
 
   // Discover the live command id + version for an app (handles renames/redeploys).
+  // Tries guild commands first, falls back to global commands.
+  // 403/404 on both usually means the app isn't installed in that guild.
   async discover(entry, guildId) {
     const key = entry.applicationId;
     if (this.cmdCache.has(key)) return this.cmdCache.get(key);
-    const res = await api(this.token, this.superProps, 'GET', `/applications/${key}/guilds/${guildId}/commands`);
-    if (!res.ok) throw new Error(`command discovery failed: HTTP ${res.status}`);
-    const cmds = await res.json();
-    const cmd = cmds.find((c) => (c.name || '').toLowerCase() === entry.command.toLowerCase())
+    const want = entry.command.toLowerCase();
+    const match = (cmds) =>
+      cmds.find((c) => (c.name || '').toLowerCase() === want)
       || cmds.find((c) => (c.name || '').toLowerCase().includes('bump'));
-    if (!cmd) throw new Error(`/${entry.command} not found on app ${key}`);
-    const info = { id: cmd.id, version: cmd.version, name: cmd.name };
-    this.cmdCache.set(key, info);
-    return info;
+
+    let guildStatus = null;
+    try {
+      const res = await api(this.token, this.superProps, 'GET', `/applications/${key}/guilds/${guildId}/commands`);
+      guildStatus = res.status;
+      if (res.ok) {
+        const cmd = match(await res.json());
+        if (cmd) {
+          const info = { id: cmd.id, version: cmd.version, name: cmd.name };
+          this.cmdCache.set(key, info);
+          return info;
+        }
+        throw new Error(`/${entry.command} not found on app ${key} (guild list OK, no match)`);
+      }
+    } catch (e) {
+      if (e.message.startsWith('/')) throw e; // no-match error above
+      console.log(`[autobumper] guild command list for ${entry.label}: HTTP ${guildStatus ?? 'network-fail'} — trying global…`);
+    }
+
+    try {
+      const res = await api(this.token, this.superProps, 'GET', `/applications/${key}/commands`);
+      if (!res.ok) throw new Error(`command discovery failed: guild HTTP ${guildStatus}, global HTTP ${res.status} — is **${entry.label}** still in this server?`);
+      const cmd = match(await res.json());
+      if (!cmd) throw new Error(`/${entry.command} not found on app ${key} (global list OK, no match)`);
+      const info = { id: cmd.id, version: cmd.version, name: cmd.name };
+      this.cmdCache.set(key, info);
+      return info;
+    } catch (e) {
+      if (e.message.startsWith('command discovery') || e.message.startsWith('/')) throw e;
+      throw new Error(`command discovery failed for ${entry.label} (guild HTTP ${guildStatus}, global unreachable)`);
+    }
   }
 
   async fire(entry, cfg) {
