@@ -1,7 +1,7 @@
 // /ab — autobumper control. Trusted users only (interactionCreate grants
 // trusted users almighty perms, so ManageGuild here blocks everyone else).
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { manager, getConfig, saveConfig, resolveToken, KNOWN_APPS } = require('../autobumper/manager');
+const { manager, getConfig, saveConfig, resolveToken, KNOWN_APPS, DEFAULT_ENTRIES, defaultEntry } = require('../autobumper/manager');
 
 function fmtMs(ms) {
   if (ms == null) return '—';
@@ -31,6 +31,7 @@ module.exports = {
           { name: 'remove', value: 'remove' },
           { name: 'list', value: 'list' },
           { name: 'bumpnow', value: 'bumpnow' },
+          { name: 'seed', value: 'seed' },
           { name: 'debug', value: 'debug' },
         ))
     .addStringOption((o) => o.setName('value').setDescription('Token (for token) · label (for remove/bumpnow)').setRequired(false))
@@ -140,6 +141,27 @@ module.exports = {
     if (action === 'list') {
       const lines = (cfg.entries || []).map((e) => `• **${e.label}** — app \`${e.applicationId}\` \`/${e.command}\` every ${Math.round(e.cooldownMs / 60000)}m +${Math.round((e.jitterMinMs || 0) / 60000)}–${Math.round((e.jitterMaxMs || 0) / 60000)}m jitter`);
       return interaction.reply({ content: lines.length ? lines.join('\n') : '_no entries_', flags: 64 });
+    }
+
+    if (action === 'seed') {
+      // adds the standard seven, skipping anything already present (by app+command)
+      const have = new Set((cfg.entries || []).map((e) => `${e.applicationId}:/${e.command}`));
+      const now = Date.now();
+      const entries = [...(cfg.entries || [])];
+      const state = { ...(cfg.state || {}) };
+      let added = 0;
+      DEFAULT_ENTRIES.forEach((d, i) => {
+        if (have.has(`${d.appId}:/${d.command}`)) return;
+        const entry = defaultEntry(d.appId, d.command);
+        entries.push(entry);
+        // stagger initial runs so a fresh seed doesn't burst all seven at once;
+        // reminder sync will correct these on the next tick anyway
+        state[entry.label] = now + i * 45000 + Math.round(Math.random() * 60000);
+        added++;
+      });
+      manager.cmdCache.clear();
+      await saveConfig({ entries, state });
+      return interaction.reply({ content: added ? `✅ Seeded **${added}** missing entries (standard seven).` : '✅ All seven already present — nothing to add.', flags: 64 });
     }
 
     if (action === 'debug') {

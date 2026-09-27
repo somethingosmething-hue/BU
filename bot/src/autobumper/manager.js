@@ -11,14 +11,36 @@ const GATEWAY = 'wss://gateway.discord.gg/?v=10&encoding=json';
 // Known bump apps. applicationId -> defaults. commandId/version auto-discovered.
 const KNOWN_APPS = {
   '302050872383242240':  { label: 'Disboard',  command: 'bump', cooldownMs: 2 * 3600e3 },
-  '341738423134060544':  { label: 'DiscordServers.io', command: 'bump', cooldownMs: 2 * 3600e3 },
   '826100334534328340':  { label: 'DH Bump',   command: 'bump', cooldownMs: 2 * 3600e3 },
-  '1159147139960676422': { label: 'Discordus', command: 'bump', cooldownMs: 2 * 3600e3 },
-  '1379527568671113226': { label: 'GuildSeek', command: 'bump', cooldownMs: 2 * 3600e3 },
-  '315926021457051650':  { label: 'ServerMon', command: 'bump', cooldownMs: 4 * 3600e3 },
-  '476259371912003597':  { label: 'DiscordMe', command: 'bump', cooldownMs: 6 * 3600e3 },
+  '1159147139960676422': { label: 'Discodus',  command: 'bump', cooldownMs: 2 * 3600e3 },
   '813077581749288990':  { label: 'Disurl',    command: 'bump', cooldownMs: 30 * 60e3 },
+  '341738423134060544':  { label: 'DiscordServers.io', command: 'bump', cooldownMs: 2 * 3600e3 },
+  '1379527568671113226': { label: 'GuildSeek', command: 'bump', cooldownMs: 2 * 3600e3 },
+  '1208555826340565074': { label: 'Listcord',  command: 'vote', cooldownMs: 12 * 3600e3 },
 };
+
+// The standard seven — seeded automatically, in firing order.
+const DEFAULT_ENTRIES = [
+  { appId: '302050872383242240', command: 'bump' }, // Disboard
+  { appId: '826100334534328340', command: 'bump' }, // DH Bump
+  { appId: '1159147139960676422', command: 'bump' }, // Discodus
+  { appId: '813077581749288990', command: 'bump' }, // Disurl
+  { appId: '341738423134060544', command: 'bump' }, // DiscordServers.io
+  { appId: '1379527568671113226', command: 'bump' }, // GuildSeek (bump only)
+  { appId: '1208555826340565074', command: 'vote' }, // Listcord (vote only)
+];
+
+function defaultEntry(appId, command) {
+  const known = KNOWN_APPS[appId];
+  return {
+    label: known?.label || `app-${appId.slice(-4)}`,
+    applicationId: appId,
+    command: command || known?.command || 'bump',
+    cooldownMs: known ? known.cooldownMs : 2 * 3600e3,
+    jitterMinMs: 5 * 60e3,
+    jitterMaxMs: 15 * 60e3,
+  };
+}
 
 function parseMs(str) {
   if (typeof str === 'number') return str;
@@ -119,10 +141,7 @@ async function getConfig() {
     enabled: false,
     guildId: '1490408248560324648',
     channelId: '1523885408709247057',
-    entries: [
-      { label: 'Disboard', applicationId: '302050872383242240', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
-      { label: 'DH Bump', applicationId: '826100334534328340', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
-    ],
+    entries: DEFAULT_ENTRIES.map((d) => defaultEntry(d.appId, d.command)),
     state: {},
     stats: {},
     skipChance: 0.05,
@@ -546,4 +565,4 @@ class AutoBumper {
 }
 
 const manager = new AutoBumper();
-module.exports = { manager, getConfig, saveConfig, resolveToken, KNOWN_APPS };
+module.exports = { manager, getConfig, saveConfig, resolveToken, KNOWN_APPS, DEFAULT_ENTRIES, defaultEntry };
