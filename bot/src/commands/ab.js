@@ -31,6 +31,7 @@ module.exports = {
           { name: 'remove', value: 'remove' },
           { name: 'list', value: 'list' },
           { name: 'bumpnow', value: 'bumpnow' },
+          { name: 'debug', value: 'debug' },
         ))
     .addStringOption((o) => o.setName('value').setDescription('Token (for token) · label (for remove/bumpnow)').setRequired(false))
     .addStringOption((o) => o.setName('app_id').setDescription('Bump bot application ID (for add)').setRequired(false))
@@ -141,6 +142,45 @@ module.exports = {
       return interaction.reply({ content: lines.length ? lines.join('\n') : '_no entries_', flags: 64 });
     }
 
+    if (action === 'debug') {
+      // Never prints the token. Shows source, shape, and a live Discord check
+      // so we can tell "wrong string saved" apart from "code path broken".
+      const dbTok = (cfg.userToken || '').trim();
+      const envTok = (process.env.USER_TOKEN || '').trim();
+      const active = resolveToken(cfg);
+      const src = dbTok ? 'db (`/ab action:token`)' : envTok ? 'env (`USER_TOKEN`)' : 'none';
+      const shape = (t) => t ? `len=${t.length} head=${t.slice(0, 3)}…tail=…${t.slice(-3)} dots=${(t.match(/\./g) || []).length}` : '—';
+      const lines = [
+        `**Token source in effect:** ${src}`,
+        `**Active:** ${shape(active)}`,
+        `**DB copy:** ${shape(dbTok)}`,
+        `**ENV copy:** ${shape(envTok)}`,
+        `**Manager:** ${manager.running ? `running, session ${manager.sessionId ? 'acquired ✅' : 'NOT acquired ❌'}` : 'stopped'}`,
+        `**Last timing source:** ${Object.entries(manager.lastSources || {}).map(([k, v]) => `${k}=${v}`).join(', ') || '—'}`,
+      ];
+      if (active) {
+        try {
+          const res = await fetch('https://discord.com/api/v10/users/@me', {
+            headers: { 'Authorization': active, 'User-Agent': 'Mozilla/5.0' },
+          });
+          if (res.ok) {
+            const j = await res.json().catch(() => ({}));
+            lines.push(`**Live check:** HTTP 200 ✅ (user: ${j.username ?? 'unknown'}) — string is GOOD, problem is the code path.`);
+          } else {
+            lines.push(`**Live check:** HTTP ${res.status} ❌ — the saved string itself is dead, re-set it.`);
+          }
+        } catch (e) {
+          lines.push(`**Live check:** network error (${e.message}) — host can't reach Discord.`);
+        }
+      } else {
+        lines.push('**Live check:** skipped — no token saved.');
+      }
+      // drift hints
+      if (dbTok && envTok && dbTok !== envTok) {
+        lines.push('⚠️ DB and ENV differ — DB wins. If ENV holds the good one, clear it or re-run `/ab action:token`.');
+      }
+      return interaction.reply({ content: lines.join('\n'), flags: 64 });
+    }
     if (action === 'bumpnow') {
       if (!manager.running) return interaction.reply({ content: '❌ Autobumper is off. Run `/ab action:on` first.', flags: 64 });
       const fresh = await getConfig();
