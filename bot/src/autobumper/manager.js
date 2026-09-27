@@ -148,7 +148,9 @@ async function saveConfig(patch) {
 }
 
 function resolveToken(cfg) {
-  return (process.env.USER_TOKEN || '').trim() || (cfg.userToken || '').trim() || '';
+  // DB (explicit `/ab action:token`) wins over env (deploy default) —
+  // otherwise a token set via Discord can never override a stale .env value.
+  return (cfg.userToken || '').trim() || (process.env.USER_TOKEN || '').trim() || '';
 }
 
 class AutoBumper {
@@ -164,7 +166,7 @@ class AutoBumper {
     this.cmdCache = new Map(); // applicationId -> { id, version, name }
   }
 
-  get token() { return (process.env.USER_TOKEN || '').trim() || (this.cachedToken || ''); }
+  get token() { return (this.cachedToken || ''); }
 
   async start() {
     const cfg = await getConfig();
