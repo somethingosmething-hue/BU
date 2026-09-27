@@ -173,6 +173,24 @@ class AutoBumper {
     if (!cfg.enabled) { console.log('[autobumper] disabled — idle. Use /ab on.'); return false; }
     if (this.running) return true;
     this.cachedToken = token;
+    // validate the token with a cheap REST call before opening the gateway —
+    // a dead/expired token otherwise looks like endless connect/close flapping
+    try {
+      const me = await api(token, this.superProps, 'GET', '/users/@me');
+      if (me.status === 401 || me.status === 403) {
+        console.log('[autobumper] user token rejected (HTTP ' + me.status + ') — check USER_TOKEN, re-set via /ab action:token.');
+        this.running = false;
+        return false;
+      }
+      if (!me.ok) {
+        console.log('[autobumper] token check returned HTTP ' + me.status + ' — proceeding anyway.');
+      } else {
+        const j = await me.json().catch(() => ({}));
+        console.log(`[autobumper] token OK (user: ${j.username ?? 'unknown'}).`);
+      }
+    } catch (e) {
+      console.log('[autobumper] token check failed (network?): ' + e.message + ' — proceeding anyway.');
+    }
     this.running = true;
     this.superProps = randomSuperProps(); // fresh fingerprint per (re)start
     this.connect();
@@ -214,8 +232,11 @@ class AutoBumper {
     this.ws = ws;
 
     ws.onopen = () => console.log('[autobumper] gateway connected.');
-    ws.onerror = () => {};
-    ws.onclose = async () => {
+    ws.onerror = (e) => console.log('[autobumper] gateway socket error:', e?.message || e?.type || 'unknown');
+    ws.onclose = async (ev) => {
+      // log the actual close code so rejects are diagnosable:
+      // 4004 = bad token, 4010/4011/4012 = invalid shard/op, 4014 = disallowed intents, 429 = rate limited
+      console.log(`[autobumper] gateway closed (code ${ev?.code ?? '?'}: ${ev?.reason || 'no reason'})`);
       this.cleanupWs();
       if (!this.running) return;
       const backoff = rand(15000, 45000); // jittered reconnect, never exact
@@ -242,7 +263,6 @@ class AutoBumper {
             op: 2,
             d: {
               token: this.token,
-              capabilities: 30717,
               properties: randomIdentifyProps(),
               presence: {
                 status: pick(['online', 'online', 'online', 'idle']), // mostly online, sometimes idle
@@ -251,7 +271,6 @@ class AutoBumper {
                 afk: false,
               },
               compress: false,
-              client_state: { guild_versions: {}, highest_last_message_id: '0', read_state_version: 0, user_guild_settings_version: -1, private_channels_version: '0', api_code_version: 0 },
             },
           }));
           break;
@@ -265,7 +284,7 @@ class AutoBumper {
           }
           break;
         case 9: // invalid session — wait with jitter, then retry
-          console.log('[autobumper] invalid session, re-identifying soon.');
+          console.log('[autobumper] invalid session (op 9, resumable: ' + !!msg.d + '), re-identifying soon.');
           setTimeout(() => { if (this.running) { try { ws.close(); } catch {} } }, rand(4000, 9000));
           break;
       }
