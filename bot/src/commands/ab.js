@@ -17,7 +17,7 @@ module.exports = {
   permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('ab')
-    .setDescription('​')
+    .setDescription('.')
     .addStringOption((o) =>
       o.setName('action')
         .setDescription('What to do')
