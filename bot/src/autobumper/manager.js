@@ -114,9 +114,7 @@ async function api(token, superProps, method, path, body) {
 
 // ── Config store (Mongo collection `autobumper`, single doc `_id: 'config'`) ──
 async function getConfig() {
-  const doc = await db.getCollection('autobumper').findOne({ _id: 'config' });
-  return doc || {
-    _id: 'config',
+  const defaults = {
     enabled: false,
     guildId: '1490408248560324648',
     channelId: '1523885408709247057',
@@ -124,10 +122,25 @@ async function getConfig() {
       { label: 'Disboard', applicationId: '302050872383242240', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
       { label: 'DH Bump', applicationId: '826100334534328340', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
     ],
-    state: {},       // label -> nextRun timestamp
-    stats: {},       // label -> { lastRun, lastOk, fails }
+    state: {},
+    stats: {},
     skipChance: 0.05,
   };
+  const doc = await db.getCollection('autobumper').findOne({ _id: 'config' });
+  if (!doc) return { _id: 'config', ...defaults };
+  // backfill: docs created before defaults (or with wiped entries) get seeds
+  if (!Array.isArray(doc.entries) || doc.entries.length === 0) {
+    const now = Date.now();
+    const state = {};
+    for (const e of defaults.entries) state[e.label] = now + Math.round(Math.random() * 60e3);
+    await db.getCollection('autobumper').updateOne(
+      { _id: 'config' },
+      { $set: { entries: defaults.entries, state } },
+      { upsert: true }
+    );
+    return { ...doc, entries: defaults.entries, state };
+  }
+  return doc;
 }
 
 async function saveConfig(patch) {
