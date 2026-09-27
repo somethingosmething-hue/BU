@@ -17,6 +17,8 @@ const KNOWN_APPS = {
   '315926021457051650':  { label: 'ServerMon', command: 'bump', cooldownMs: 4 * 3600e3 },
   '476259371912003597':  { label: 'DiscordMe', command: 'bump', cooldownMs: 6 * 3600e3 },
   '813077581749288990':  { label: 'Disurl',    command: 'bump', cooldownMs: 30 * 60e3 },
+  '341738423134060544':  { label: 'BumpCentral', command: 'bump', cooldownMs: 2 * 3600e3 },
+  '1208555826340565074': { label: 'Listcord',  command: 'vote', cooldownMs: 12 * 3600e3 },
 };
 
 function parseMs(str) {
@@ -121,6 +123,7 @@ async function getConfig() {
     entries: [
       { label: 'Disboard', applicationId: '302050872383242240', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
       { label: 'DH Bump', applicationId: '826100334534328340', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
+      { label: 'BumpCentral', applicationId: '341738423134060544', command: 'bump', cooldownMs: 2 * 3600e3, jitterMinMs: 5 * 60e3, jitterMaxMs: 15 * 60e3 },
     ],
     state: {},
     stats: {},
@@ -128,19 +131,26 @@ async function getConfig() {
   };
   const doc = await db.getCollection('autobumper').findOne({ _id: 'config' });
   if (!doc) return { _id: 'config', ...defaults };
-  // backfill: docs created before defaults (or with wiped entries) get seeds
-  if (!Array.isArray(doc.entries) || doc.entries.length === 0) {
-    const now = Date.now();
-    const state = {};
-    for (const e of defaults.entries) state[e.label] = now + Math.round(Math.random() * 60e3);
+  const entries = Array.isArray(doc.entries) ? [...doc.entries] : [];
+  const state = { ...(doc.state || {}) };
+  let changed = false;
+  const now = Date.now();
+  // seed when empty + merge new defaults into existing configs
+  for (const e of defaults.entries) {
+    if (!entries.some((x) => x.label.toLowerCase() === e.label.toLowerCase())) {
+      entries.push(e);
+      state[e.label] = now + Math.round(Math.random() * 60e3);
+      changed = true;
+    }
+  }
+  if (changed) {
     await db.getCollection('autobumper').updateOne(
       { _id: 'config' },
-      { $set: { entries: defaults.entries, state } },
+      { $set: { entries, state } },
       { upsert: true }
     );
-    return { ...doc, entries: defaults.entries, state };
   }
-  return doc;
+  return { ...doc, entries, state };
 }
 
 async function saveConfig(patch) {
