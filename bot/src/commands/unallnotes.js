@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const db = require('../database/db');
+const noteSticky = require('../events/noteSticky');
 
 module.exports = {
   permissions: ['ManageGuild'],
@@ -37,17 +38,25 @@ module.exports = {
       return collected?.update({ content: '❌ Cancelled.', embeds: [], components: [] }).catch(() => {});
     }
 
+    await collected.deferUpdate().catch(() => {});
+
+    let removed = 0;
     for (const n of notes) {
       try {
-        const chan = interaction.guild.channels.cache.get(n.channelId);
-        if (chan && n.messageId) {
-          const msg = await chan.messages.fetch(n.messageId).catch(() => null);
-          if (msg) await msg.delete().catch(() => {});
+        const chan = interaction.guild.channels.cache.get(n.channelId)
+          || await interaction.guild.channels.fetch(n.channelId).catch(() => null);
+        if (chan) {
+          await noteSticky.clearNote(guildId, chan, interaction.client);
+        } else {
+          await db.deleteNote(guildId, n.channelId).catch(() => {});
         }
-      } catch {}
-      await db.deleteNote(guildId, n.channelId);
+        removed++;
+      } catch (e) {
+        console.error('[unallnotes] clear failed:', n.channelId, e.message);
+        await db.deleteNote(guildId, n.channelId).catch(() => {});
+      }
     }
 
-    await collected.update({ content: `✅ Removed ${notes.length} note(s).`, embeds: [], components: [] });
+    await collected.editReply({ content: `✅ Removed ${removed} note(s).`, embeds: [], components: [] }).catch(() => {});
   },
 };

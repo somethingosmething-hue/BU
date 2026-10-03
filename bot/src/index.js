@@ -300,12 +300,17 @@ client.once('clientReady', async () => {
     for (const guild of guilds) {
       const notes = await db.getAllNotes(guild.id);
       for (const note of notes) {
-        const channel = client.channels.cache.get(note.channelId);
-        if (!channel) continue;
-        const msg = await channel.messages.fetch(note.messageId).catch(() => null);
+        const channel = client.channels.cache.get(note.channelId)
+          || await client.channels.fetch(note.channelId).catch(() => null);
+        if (!channel || !channel.messages) continue;
+        const msg = note.messageId
+          ? await channel.messages.fetch(note.messageId).catch(() => null)
+          : null;
         if (!msg) {
           await noteSticky.refreshNote(guild.id, channel, note);
         }
+        // Small delay to avoid hammering the API on boot with many notes
+        await new Promise(r => setTimeout(r, 500));
       }
     }
     console.log('Recovered sticky notes after restart');

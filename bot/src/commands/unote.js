@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, ChannelType } = require('discord.js');
 const db = require('../database/db');
+const noteSticky = require('../events/noteSticky');
 
 module.exports = {
   permissions: ['ManageGuild'],
@@ -23,14 +24,17 @@ module.exports = {
       return interaction.reply({ content: '❌ No note set in that channel.', flags: 64 });
     }
 
-    if (note.messageId) {
-      try {
-        const msg = await channel.messages.fetch(note.messageId).catch(() => null);
-        if (msg) await msg.delete().catch(() => {});
-      } catch {}
+    try {
+      // Atomic: cancels any pending sticky repost, deletes message(s), clears DB.
+      const target = channel.id === interaction.channelId
+        ? interaction.channel
+        : channel;
+      await noteSticky.clearNote(guildId, target, interaction.client);
+    } catch (e) {
+      console.error('[unote] clear failed:', e.message);
+      // Fall back to DB-only cleanup so a missing channel can't leave ghosts.
+      await db.deleteNote(guildId, channelId).catch(() => {});
     }
-
-    await db.deleteNote(guildId, channelId);
 
     const name = channel.id === interaction.channelId ? 'this channel' : channel.toString();
     await interaction.reply({ content: `✅ Note removed from ${name}.`, flags: 64 });

@@ -433,32 +433,19 @@ module.exports = {
                 const suppressText = interaction.fields.getTextInputValue('suppress')?.toLowerCase();
                 const suppress = suppressText === 'yes';
                 const guildId = interaction.guildId;
-                const channelId = interaction.channelId;
 
-                const existing = await db.getNote(guildId, channelId);
-                if (existing?.messageId) {
-                    try {
-                        const old = await interaction.channel.messages.fetch(existing.messageId).catch(() => null);
-                        if (old) await old.delete().catch(() => {});
-                    } catch {}
+                try {
+                    await noteSticky.setNote(guildId, interaction.channel, {
+                        type: 'text',
+                        content,
+                        suppress,
+                        gluedBy: interaction.user.id,
+                    });
+                    await interaction.reply({ content: '✅ Note set.', flags: 64 });
+                } catch (e) {
+                    console.error('[notepara] set failed:', e.message);
+                    await interaction.reply({ content: '❌ Failed to set note.', flags: 64 }).catch(() => {});
                 }
-
-                noteSticky.guardChannel(guildId, channelId);
-                const msg = await interaction.channel.send({
-                    content,
-                    flags: (suppress ? 1 << 2 : 0) | (1 << 12),
-                });
-
-                await db.saveNote(guildId, channelId, {
-                    type: 'text',
-                    content,
-                    messageId: msg.id,
-                    suppress,
-                    gluedBy: interaction.user.id,
-                    gluedAt: Date.now(),
-                });
-
-                await interaction.reply({ content: '✅ Note set.', flags: 64 });
                 return;
             }
 
@@ -475,38 +462,22 @@ module.exports = {
                 }
 
                 const guildId = interaction.guildId;
-                const channelId = interaction.channelId;
 
-                const existing = await db.getNote(guildId, channelId);
-                if (existing?.messageId) {
-                    try {
-                        const old = await interaction.channel.messages.fetch(existing.messageId).catch(() => null);
-                        if (old) await old.delete().catch(() => {});
-                    } catch {}
+                try {
+                    await noteSticky.setNote(guildId, interaction.channel, {
+                        type: 'embed',
+                        title,
+                        description,
+                        color,
+                        thumbnail,
+                        image,
+                        gluedBy: interaction.user.id,
+                    });
+                    await interaction.reply({ content: '✅ Embed note set.', flags: 64 });
+                } catch (e) {
+                    console.error('[noteembed] set failed:', e.message);
+                    await interaction.reply({ content: '❌ Failed to set embed note.', flags: 64 }).catch(() => {});
                 }
-
-                const embed = new EmbedBuilder().setColor(color);
-                if (title) embed.setTitle(title);
-                if (description) embed.setDescription(description);
-                if (thumbnail) embed.setThumbnail(thumbnail);
-                if (image) embed.setImage(image);
-
-                noteSticky.guardChannel(guildId, channelId);
-                const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
-
-                await db.saveNote(guildId, channelId, {
-                    type: 'embed',
-                    title,
-                    description,
-                    color,
-                    thumbnail,
-                    image,
-                    messageId: msg.id,
-                    gluedBy: interaction.user.id,
-                    gluedAt: Date.now(),
-                });
-
-                await interaction.reply({ content: '✅ Embed note set.', flags: 64 });
                 return;
             }
 
@@ -520,22 +491,17 @@ module.exports = {
                 if (!note) return interaction.reply({ content: '❌ Note not found.', flags: 64 });
 
                 try {
-                    const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
-                    if (old) await old.delete().catch(() => {});
-                } catch {}
-
-                noteSticky.guardChannel(guildId, channelId);
-                const msg = await interaction.channel.send({
-                    content,
-                    flags: (note.suppress ? 1 << 2 : 0) | (1 << 12),
-                });
-
-                note.content = content;
-                note.messageId = msg.id;
-                note.gluedAt = Date.now();
-                await db.saveNote(guildId, channelId, note);
-
-                await interaction.reply({ content: '✅ Note updated.', flags: 64 });
+                    await noteSticky.setNote(guildId, interaction.channel, {
+                        type: 'text',
+                        content,
+                        suppress: !!note.suppress,
+                        gluedBy: interaction.user.id,
+                    });
+                    await interaction.reply({ content: '✅ Note updated.', flags: 64 });
+                } catch (e) {
+                    console.error('[editnote] update failed:', e.message);
+                    await interaction.reply({ content: '❌ Failed to update note.', flags: 64 }).catch(() => {});
+                }
                 return;
             }
 
@@ -554,31 +520,20 @@ module.exports = {
                 if (!note) return interaction.reply({ content: '❌ Note not found.', flags: 64 });
 
                 try {
-                    const old = await interaction.channel.messages.fetch(note.messageId).catch(() => null);
-                    if (old) await old.delete().catch(() => {});
-                } catch {}
-
-                const embed = new EmbedBuilder().setColor(color);
-                if (title) embed.setTitle(title);
-                if (description) embed.setDescription(description);
-                const useThumbnail = thumbnail || note.thumbnail;
-                const useImage = image || note.image;
-                if (useThumbnail) embed.setThumbnail(useThumbnail);
-                if (useImage) embed.setImage(useImage);
-
-                noteSticky.guardChannel(guildId, channelId);
-                const msg = await interaction.channel.send({ embeds: [embed], flags: 1 << 12 });
-
-                note.title = title;
-                note.description = description;
-                note.color = color;
-                note.thumbnail = useThumbnail;
-                note.image = useImage;
-                note.messageId = msg.id;
-                note.gluedAt = Date.now();
-                await db.saveNote(guildId, channelId, note);
-
-                await interaction.reply({ content: '✅ Embed note updated.', flags: 64 });
+                    await noteSticky.setNote(guildId, interaction.channel, {
+                        type: 'embed',
+                        title,
+                        description,
+                        color,
+                        thumbnail: thumbnail || note.thumbnail || null,
+                        image: image || note.image || null,
+                        gluedBy: interaction.user.id,
+                    });
+                    await interaction.reply({ content: '✅ Embed note updated.', flags: 64 });
+                } catch (e) {
+                    console.error('[editnote] embed update failed:', e.message);
+                    await interaction.reply({ content: '❌ Failed to update embed note.', flags: 64 }).catch(() => {});
+                }
                 return;
             }
 

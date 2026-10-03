@@ -537,9 +537,12 @@ async function getReviveMessage(messageId) {
 
 // Notes (sticky message system)
 async function saveNote(guildId, channelId, data) {
+  // Strip Mongo's immutable _id (findOne results carry it; $set on _id throws
+  // and silently broke every sticky repost, leaving DB pointed at old ids).
+  const { _id, ...rest } = data || {};
   await getCollection('notes').updateOne(
     { guildId, channelId },
-    { $set: { ...data, guildId, channelId } },
+    { $set: { ...rest, guildId, channelId } },
     { upsert: true }
   );
 }

@@ -1,5 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const db = require('../database/db');
+const { SlashCommandBuilder } = require('discord.js');
 const noteSticky = require('../events/noteSticky');
 
 module.exports = {
@@ -21,31 +20,26 @@ module.exports = {
 
   async execute(interaction) {
     const guildId = interaction.guildId;
+    const channel = interaction.channel;
     const channelId = interaction.channelId;
     const content = interaction.options.getString('content');
     const suppress = interaction.options.getBoolean('suppress_embeds') || false;
 
-    const existing = await db.getNote(guildId, channelId);
-    if (existing?.messageId) {
-      try {
-        const old = await interaction.channel.messages.fetch(existing.messageId).catch(() => null);
-        if (old) await old.delete().catch(() => {});
-      } catch {}
+    try {
+      await noteSticky.setNote(guildId, channel, {
+        type: 'text',
+        content,
+        suppress,
+        gluedBy: interaction.user.id,
+      });
+      await interaction.reply({ content: '✅ Note set.', flags: 64 });
+    } catch (e) {
+      console.error('[note] set failed:', e.message);
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp({ content: '❌ Failed to set note.', flags: 64 }).catch(() => {});
+      } else {
+        await interaction.reply({ content: '❌ Failed to set note.', flags: 64 }).catch(() => {});
+      }
     }
-
-    const flags = (suppress ? 1 << 2 : 0) | (1 << 12);
-    noteSticky.guardChannel(guildId, channelId);
-    const msg = await interaction.channel.send({ content, flags });
-
-    await db.saveNote(guildId, channelId, {
-      type: 'text',
-      content,
-      messageId: msg.id,
-      suppress,
-      gluedBy: interaction.user.id,
-      gluedAt: Date.now(),
-    });
-
-    await interaction.reply({ content: '✅ Note set.', flags: 64 });
   },
 };
