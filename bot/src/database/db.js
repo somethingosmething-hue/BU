@@ -53,6 +53,7 @@ async function connectDB() {
   await db.collection('revivecooldowns').createIndex({ key: 1 });
   await db.collection('revivemessages').createIndex({ messageId: 1 });
   await db.collection('botProfiles').createIndex({ guildId: 1 });
+  await db.collection('autothreads').createIndex({ guildId: 1, channelId: 1 }, { unique: true });
     
   return db;
 }
@@ -661,6 +662,43 @@ async function removeUserFromAllGiveaways(guildId, userId) {
   return result.modifiedCount;
 }
 
+// ── AutoThread (auto-create threads per channel) ────────────────────────
+async function getAutoThreadChannels(guildId) {
+  const docs = await getCollection('autothreads').find({ guildId }).toArray();
+  return docs.map(d => d.channelId);
+}
+
+async function isAutoThreadChannel(guildId, channelId) {
+  const doc = await getCollection('autothreads').findOne({ guildId, channelId });
+  return !!doc;
+}
+
+async function addAutoThreadChannel(guildId, channelId) {
+  await getCollection('autothreads').updateOne(
+    { guildId, channelId },
+    { $set: { guildId, channelId, enabledAt: Date.now() } },
+    { upsert: true }
+  );
+}
+
+async function removeAutoThreadChannel(guildId, channelId) {
+  await getCollection('autothreads').deleteOne({ guildId, channelId });
+}
+
+async function toggleAutoThreadChannel(guildId, channelId) {
+  const existing = await getCollection('autothreads').findOne({ guildId, channelId });
+  if (existing) {
+    await getCollection('autothreads').deleteOne({ guildId, channelId });
+    return false;
+  }
+  await getCollection('autothreads').updateOne(
+    { guildId, channelId },
+    { $set: { guildId, channelId, enabledAt: Date.now() } },
+    { upsert: true }
+  );
+  return true;
+}
+
 // ── Bot Profiles (per-server) ───────────────────────────────────────────
 async function getBotProfile(guildId) {
   const doc = await getCollection('botProfiles').findOne({ guildId });
@@ -759,5 +797,6 @@ module.exports = {
   isGloballyTrusted, getGlobalCurList, saveGlobalCurList, addGlobalCurListElements, getAllGlobalCurLists,
   saveCRMMenu, getCRMMenu, getCRMMenuByMessage, getCRMMenusByChannel, deleteCRMMenu,
   getReviveCooldown, setReviveCooldown, saveReviveMessage, getReviveMessage,
+  getAutoThreadChannels, isAutoThreadChannel, addAutoThreadChannel, removeAutoThreadChannel, toggleAutoThreadChannel,
   getBotProfile, saveBotProfile,
 };
