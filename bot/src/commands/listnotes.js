@@ -30,7 +30,8 @@ module.exports = {
         const chan = interaction.guild.channels.cache.get(n.channelId);
         const channelName = chan ? chan.toString() : `#deleted-channel`;
         const preview = n.type === 'embed' ? (n.title || '(embed)') : (n.content || '').slice(0, 80);
-        let line = `📌 ${channelName}: ${preview}`;
+        const extraMark = n.extra ? ' [+extra]' : '';
+        let line = `📌 ${channelName}: ${preview}${extraMark}`;
         if (canShowUsers) {
           line += `\n<@${n.gluedBy}>`;
         }

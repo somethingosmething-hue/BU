@@ -25,9 +25,17 @@ module.exports = {
       .setRequired(false)
       .setMaxLength(3);
 
+    const extra = new TextInputBuilder()
+      .setCustomId('extra')
+      .setLabel('Extra: {button:name} {server_name} ...')
+      .setStyle(TextInputStyle.Paragraph)
+      .setRequired(false)
+      .setMaxLength(1000);
+
     modal.addComponents(
       new ActionRowBuilder().addComponents(content),
-      new ActionRowBuilder().addComponents(suppress)
+      new ActionRowBuilder().addComponents(suppress),
+      new ActionRowBuilder().addComponents(extra)
     );
 
     await interaction.showModal(modal);

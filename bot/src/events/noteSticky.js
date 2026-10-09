@@ -37,7 +37,7 @@ function cancelPending(key) {
   }
 }
 
-function buildPayload(note) {
+function buildBasePayload(note) {
   if (note.type === 'embed') {
     const embed = new EmbedBuilder().setColor(note.color || '#66C2FF');
     if (note.title) embed.setTitle(note.title);
@@ -54,6 +54,51 @@ function buildPayload(note) {
     content: note.content || '',
     flags: (note.suppress ? 1 << 2 : 0) | (1 << 12),
   };
+}
+
+// `extra` holds variables/placeholders evaluated when the sticky posts —
+// e.g. "{button:verify} {addselect:colors}" attaches components,
+// "{server_name}" / "{member_count}" / "{date}" render server-side values.
+// User-specific placeholders ({user_mention}, ...) resolve to 'unknown'
+// because stickies post as the bot with no triggering member.
+async function buildPayload(note, guild) {
+  const base = buildBasePayload(note);
+  const extra = (note.extra || '').trim();
+  if (!extra) return base;
+
+  let parsed = null;
+  try {
+    const { parseReply } = require('../utils/parser');
+    parsed = await parseReply(extra, {
+      member: null,
+      guild: guild || null,
+      guildId: note.guildId || guild?.id || null,
+      message: null,
+      user: null,
+    });
+  } catch (e) {
+    console.error('[notes] extra parse failed:', e.message);
+    return base;
+  }
+  if (!parsed) return base;
+
+  if (parsed.rows && parsed.rows.length) {
+    base.components = [...(base.components || []), ...parsed.rows].slice(0, 5);
+  }
+  if (parsed.embed) {
+    base.embeds = [...(base.embeds || []), parsed.embed].slice(0, 10);
+  }
+  if (parsed.text) {
+    if (note.type === 'embed' && base.embeds && base.embeds[0]) {
+      try {
+        const current = base.embeds[0].data?.description || '';
+        base.embeds[0].setDescription([current, parsed.text].filter(Boolean).join('\n').slice(0, 4096));
+      } catch {}
+    } else {
+      base.content = [base.content, parsed.text].filter(Boolean).join('\n').slice(0, 2000);
+    }
+  }
+  return base;
 }
 
 function looksLikeNoteMessage(msg, note) {
@@ -116,7 +161,7 @@ async function postFreshLocked(guildId, channel, noteData) {
       await safeDeleteById(channel, prev.messageId);
     }
 
-    const payload = buildPayload(noteData);
+    const payload = await buildPayload(noteData, channel.guild || null);
     let msg;
     try {
       msg = await channel.send(payload);
@@ -134,6 +179,7 @@ async function postFreshLocked(guildId, channel, noteData) {
       thumbnail: noteData.thumbnail || null,
       image: noteData.image || null,
       suppress: !!noteData.suppress,
+      extra: noteData.extra || null,
       messageId: msg.id,
       gluedBy: noteData.gluedBy || prev?.gluedBy || null,
       gluedAt: Date.now(),
@@ -201,7 +247,7 @@ async function doRefresh(guildId, channel) {
 
     let msg;
     try {
-      msg = await channel.send(buildPayload(note));
+      msg = await channel.send(await buildPayload(note, channel.guild || null));
     } catch (e) {
       console.error('[notes] refresh send failed:', e.message);
       return;
@@ -233,6 +279,34 @@ function scheduleRefresh(guildId, channel) {
       doRefresh(guildId, channel).catch(() => {});
     }, DEBOUNCE_MS)
   );
+}
+
+// ── Pending `extra` staging ─────────────────────────────────────────────
+// /noteembed and embed-/editnote flows use modals. Discord caps modals at 5
+// inputs and the embed forms already use all 5, so the `extra` slash option
+// is staged here (10-min TTL) and consumed when the modal submits.
+const _pendingExtras = new Map(); // key -> { value, timer }
+
+function pendingKey(guildId, channelId, userId) {
+  return `${guildId}:${channelId}:${userId}`;
+}
+
+function stagePendingExtra(guildId, channelId, userId, value) {
+  const key = pendingKey(guildId, channelId, userId);
+  const prev = _pendingExtras.get(key);
+  if (prev && prev.timer) clearTimeout(prev.timer);
+  const timer = setTimeout(() => _pendingExtras.delete(key), 10 * 60 * 1000);
+  try { timer.unref?.(); } catch {}
+  _pendingExtras.set(key, { value, timer });
+}
+
+function takePendingExtra(guildId, channelId, userId) {
+  const key = pendingKey(guildId, channelId, userId);
+  const entry = _pendingExtras.get(key);
+  if (!entry) return null;
+  if (entry.timer) clearTimeout(entry.timer);
+  _pendingExtras.delete(key);
+  return entry.value;
 }
 
 // Kept for backwards-compat with call sites; now just marks the channel as
@@ -303,4 +377,6 @@ module.exports = {
   },
   guardChannel,
   buildPayload,
+  stagePendingExtra,
+  takePendingExtra,
 };

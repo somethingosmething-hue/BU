@@ -16,20 +16,27 @@ module.exports = {
       o.setName('suppress_embeds')
         .setDescription('Prevent link embeds')
         .setRequired(false)
+    )
+    .addStringOption(o =>
+      o.setName('extra')
+        .setDescription('Extra variables, e.g. {button:name} {addselect:name} {server_name}')
+        .setRequired(false)
+        .setMaxLength(1000)
     ),
 
   async execute(interaction) {
     const guildId = interaction.guildId;
     const channel = interaction.channel;
-    const channelId = interaction.channelId;
     const content = interaction.options.getString('content');
     const suppress = interaction.options.getBoolean('suppress_embeds') || false;
+    const extra = interaction.options.getString('extra') || null;
 
     try {
       await noteSticky.setNote(guildId, channel, {
         type: 'text',
         content,
         suppress,
+        extra,
         gluedBy: interaction.user.id,
       });
       await interaction.reply({ content: '✅ Note set.', flags: 64 });

@@ -1,6 +1,7 @@
 const { parseReply, resolveRole } = require('../utils/parser');
 const db = require('../database/db');
 const { buildEmbedFromData } = require('../utils/parser');
+const { buildInteractionPayload: buildPayload, normalizeButtonName, handleComponentClick } = require('../utils/buttons');
 
 const SPECIAL_USERS = ['1439442692269408306', '1486469966332170392'];
 
@@ -23,19 +24,6 @@ async function isUserTrusted(guildId, userId) {
         console.error('[trust] db.isTrusted threw:', e);
         return false;
     }
-}
-
-function buildPayload(parsed) {
-    const payload = {};
-    if (parsed.hasSeparators) {
-        payload.flags = 1 << 15;
-        payload.components = parsed.componentRows;
-    } else {
-        if (parsed.text)        payload.content    = parsed.text;
-        if (parsed.embed)       payload.embeds     = [parsed.embed];
-        if (parsed.rows.length) payload.components = parsed.rows;
-    }
-    return payload;
 }
 
 const EDIT_FIELDS = [
@@ -197,54 +185,10 @@ module.exports = {
             }
 
             if (customId.startsWith('br:')) {
-                const btnName = customId.slice(3);
-                const guildId = interaction.guild?.id;
-                if (!guildId) return;
-
-                const btnData = await db.getButtonResponder(guildId, btnName);
-                if (!btnData) {
-                    await interaction.reply({ content: 'This button no longer exists.' });
-                    return;
-                }
-
-                if (btnData.cooldown) {
-                    const last = await db.getCooldown(guildId, interaction.user.id, 'btn:' + btnName);
-                    if (last && Date.now() - last < btnData.cooldown * 1000) {
-                        const remaining = Math.ceil((btnData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                        await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
-                        return;
-                    }
-                    await db.setCooldown(guildId, interaction.user.id, 'btn:' + btnName, Date.now());
-                }
-
-                const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user, message: interaction.message };
-                const parsed = await parseReply(btnData.reply, context);
-
-                if (parsed.requireRole) {
-                    const role = resolveRole(interaction.guild, parsed.requireRole);
-                    if (role && !interaction.member.roles.cache.has(role.id)) {
-                        await interaction.reply({ content: `❌ You need the **${role.name}** role!` });
-                        return;
-                    }
-                }
-
-                for (const action of parsed.actions) {
-                    const role = resolveRole(interaction.guild, action.value);
-                    if (!role) continue;
-                    try {
-                        if (action.type === 'addrole')    await interaction.member.roles.add(role);
-                        if (action.type === 'removerole') await interaction.member.roles.remove(role);
-                    } catch (e) { console.error('Role action failed:', e.message); }
-                }
-
-                const payload = buildPayload(parsed);
-
-                if (Object.keys(payload).length > 0) {
-                    if (btnData.ephemeral) payload.flags = 64;
-                    await interaction.reply(payload).catch(console.error);
-                } else {
-                    await interaction.reply({ content: '✅ Done!' });
-                }
+                const btnName = normalizeButtonName(customId.slice(3));
+                if (!btnName) return;
+                await handleComponentClick(interaction, { kind: 'button', key: btnName });
+                return;
             }
 
             if (customId === 'gw_enter') {
@@ -432,6 +376,8 @@ module.exports = {
                 const content = interaction.fields.getTextInputValue('content');
                 const suppressText = interaction.fields.getTextInputValue('suppress')?.toLowerCase();
                 const suppress = suppressText === 'yes';
+                let extra = null;
+                try { extra = interaction.fields.getTextInputValue('extra') || null; } catch {}
                 const guildId = interaction.guildId;
 
                 try {
@@ -439,6 +385,7 @@ module.exports = {
                         type: 'text',
                         content,
                         suppress,
+                        extra,
                         gluedBy: interaction.user.id,
                     });
                     await interaction.reply({ content: '✅ Note set.', flags: 64 });
@@ -463,6 +410,8 @@ module.exports = {
 
                 const guildId = interaction.guildId;
 
+                const extra = noteSticky.takePendingExtra(guildId, interaction.channelId, interaction.user.id);
+
                 try {
                     await noteSticky.setNote(guildId, interaction.channel, {
                         type: 'embed',
@@ -471,6 +420,7 @@ module.exports = {
                         color,
                         thumbnail,
                         image,
+                        extra,
                         gluedBy: interaction.user.id,
                     });
                     await interaction.reply({ content: '✅ Embed note set.', flags: 64 });
@@ -484,6 +434,8 @@ module.exports = {
             // ── Edit Note Text ────────────────────────────────────────────────────
             if (customId === 'editnotetext:submit') {
                 const content = interaction.fields.getTextInputValue('content');
+                let extra = null;
+                try { extra = interaction.fields.getTextInputValue('extra') || null; } catch {}
                 const guildId = interaction.guildId;
                 const channelId = interaction.channelId;
 
@@ -495,6 +447,7 @@ module.exports = {
                         type: 'text',
                         content,
                         suppress: !!note.suppress,
+                        extra,
                         gluedBy: interaction.user.id,
                     });
                     await interaction.reply({ content: '✅ Note updated.', flags: 64 });
@@ -519,6 +472,11 @@ module.exports = {
                 const note = await db.getNote(guildId, channelId);
                 if (!note) return interaction.reply({ content: '❌ Note not found.', flags: 64 });
 
+                // Staged via /editnote's `extra` option (embed modals are at the
+                // 5-input cap); otherwise keep the existing value.
+                const staged = noteSticky.takePendingExtra(guildId, channelId, interaction.user.id);
+                const extra = staged !== null ? staged : (note.extra || null);
+
                 try {
                     await noteSticky.setNote(guildId, interaction.channel, {
                         type: 'embed',
@@ -527,6 +485,7 @@ module.exports = {
                         color,
                         thumbnail: thumbnail || note.thumbnail || null,
                         image: image || note.image || null,
+                        extra,
                         gluedBy: interaction.user.id,
                     });
                     await interaction.reply({ content: '✅ Embed note updated.', flags: 64 });
@@ -783,50 +742,9 @@ module.exports = {
 
             if (!customId.startsWith('sel:')) return;
 
-            const selName = customId.slice(4);
-            const guildId = interaction.guild?.id;
-            if (!guildId) return;
-
-            const selData = await db.getButtonResponder(guildId, selName);
-            if (!selData) {
-                await interaction.reply({ content: 'This select menu no longer exists.' });
-                return;
-            }
-
-            const selectedValue = interaction.values[0];
-
-            if (selData.cooldown) {
-                const last = await db.getCooldown(guildId, interaction.user.id, 'sel:' + selName);
-                if (last && Date.now() - last < selData.cooldown * 1000) {
-                    const remaining = Math.ceil((selData.cooldown * 1000 - (Date.now() - last)) / 1000);
-                    await interaction.reply({ content: `⏳ Cooldown! Try again in **${remaining}s**.` });
-                    return;
-                }
-                await db.setCooldown(guildId, interaction.user.id, 'sel:' + selName, Date.now());
-            }
-
-            const replyText = selData.reply.replace(/\{value\}/gi, selectedValue);
-            const context = { member: interaction.member, guild: interaction.guild, guildId, user: interaction.user, message: interaction.message };
-            const parsed = await parseReply(replyText, context);
-
-            if (parsed.requireRole) {
-                const role = resolveRole(interaction.guild, parsed.requireRole);
-                if (role && !interaction.member.roles.cache.has(role.id)) {
-                    await interaction.reply({ content: `❌ You need the **${role.name}** role!` });
-                    return;
-                }
-            }
-
-            for (const action of parsed.actions) {
-                const role = resolveRole(interaction.guild, action.value);
-                if (!role) continue;
-                try {
-                    if (action.type === 'addrole')    await interaction.member.roles.add(role);
-                    if (action.type === 'removerole') await interaction.member.roles.remove(role);
-                } catch (e) { console.error('Role action failed:', e.message); }
-            }
-
-            await interaction.reply(buildPayload(parsed)).catch(console.error);
+            const selName = normalizeButtonName(customId.slice(4));
+            if (!selName) return;
+            await handleComponentClick(interaction, { kind: 'select', key: selName });
         }
     },
 };

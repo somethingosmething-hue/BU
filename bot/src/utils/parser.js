@@ -1,5 +1,6 @@
 const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 const db = require('../database/db');
+const { normalizeButtonName, buildButtonComponent, buildSelectComponent } = require('./buttons');
 
 const BUTTON_COLORS = {
   blue: ButtonStyle.Primary,
@@ -146,6 +147,7 @@ async function parseReply(replyStr, context) {
   let reactReplyEmoji = null;
   let dmMode = false;
   let sendToChannel = null;
+  let ephemeralReply = false;
 
   // ── Sync placeholder extraction (no db calls) ──────────────────────────────
   text = text.replace(/\{divemb:\s*([^}]+)\}/gi, (_, name) => { divembName = name.trim(); return ''; });
@@ -157,6 +159,7 @@ async function parseReply(replyStr, context) {
   text = text.replace(/\{setnick:\s*([^}]+)\}/gi, (_, nick) => { setNick = nick.trim(); actions.push({ type: 'setnick', value: setNick }); return ''; });
   text = text.replace(/\{reactreply:\s*([^}]+)\}/gi, (_, emoji) => { reactReplyEmoji = emoji.trim(); return ''; });
   text = text.replace(/\{dm\}/gi, () => { dmMode = true; return ''; });
+  text = text.replace(/\{ephemeral\}/gi, () => { ephemeralReply = true; return ''; });
   text = text.replace(/\{sendto:\s*([^}]+)\}/gi, (_, chan) => { sendToChannel = chan.trim(); return ''; });
   text = text.replace(/\{cooldown:\s*(\d+)\}/gi, (_, secs) => { cooldownSeconds = parseInt(secs); return ''; });
 
@@ -169,8 +172,8 @@ async function parseReply(replyStr, context) {
 
   text = text.replace(/\{addrole:\s*([^}]+)\}/gi, (_, role) => { actions.push({ type: 'addrole', value: role.trim() }); return ''; });
   text = text.replace(/\{removerole:\s*([^}]+)\}/gi, (_, role) => { actions.push({ type: 'removerole', value: role.trim() }); return ''; });
-  text = text.replace(/\{addbutton:\s*([^}]+)\}/gi, (_, name) => { buttons.push(name.trim()); return ''; });
-  text = text.replace(/\{addselect:\s*([^}]+)\}/gi, (_, name) => { selectMenus.push(name.trim()); return ''; });
+  text = text.replace(/\{(?:addbutton|button)\s*:\s*([^}]+)\}/gi, (_, name) => { buttons.push(normalizeButtonName(name)); return ''; });
+  text = text.replace(/\{addselect:\s*([^}]+)\}/gi, (_, name) => { selectMenus.push(normalizeButtonName(name)); return ''; });
   text = text.replace(/\{addlinkbutton:\s*([^|]+)\|\s*([^}]+)\}/gi, (_, label, url) => { linkButtons.push({ label: label.trim(), url: url.trim() }); return ''; });
   text = text.replace(/\{react:\s*([^}]+)\}/gi, (_, emoji) => { reactEmojis.push(emoji.trim()); return ''; });
   text = text.replace(/\{random:([^}]+)\}/gi, (_, choices) => { const opts = choices.split('|').map(s => s.trim()).filter(s => s); return opts.length ? opts[Math.floor(Math.random() * opts.length)] : ''; });
@@ -270,14 +273,13 @@ async function parseReply(replyStr, context) {
   const allButtons = [];
 
   for (const btnName of buttons) {
-    const btnData = await db.getButtonResponder(guildId, btnName).catch(() => null);
-    if (btnData) {
-      const btn = new ButtonBuilder()
-        .setCustomId(`br:${btnName}`)
-        .setStyle(BUTTON_COLORS[btnData.color] || ButtonStyle.Primary);
-      if (btnData.label) btn.setLabel(btnData.label);
-      if (btnData.emoji) btn.setEmoji(btnData.emoji);
-      allButtons.push(btn);
+    const key = normalizeButtonName(btnName);
+    if (!key) continue;
+    const btnData = await db.getButtonResponder(guildId, key).catch(() => null);
+    if (btnData && btnData.type !== 'select') {
+      try {
+        allButtons.push(buildButtonComponent(btnData, key));
+      } catch {}
     }
   }
 
@@ -295,19 +297,14 @@ async function parseReply(replyStr, context) {
 
   // ── Build select menus ─────────────────────────────────────────────────────
   for (const selName of selectMenus) {
-    const selData = await db.getButtonResponder(guildId, selName).catch(() => null);
-    if (selData && selData.selectOptions) {
-      const menu = new StringSelectMenuBuilder()
-        .setCustomId(`sel:${selName}`)
-        .setPlaceholder(selData.placeholder || 'Select an option');
-      for (const opt of selData.selectOptions) {
-        menu.addOptions(new StringSelectMenuOptionBuilder()
-          .setLabel(opt.label)
-          .setValue(opt.value)
-          .setDescription(opt.description || null)
-          .setEmoji(opt.emoji || null));
-      }
-      rows.push(new ActionRowBuilder().addComponents(menu));
+    const key = normalizeButtonName(selName);
+    if (!key) continue;
+    const selData = await db.getButtonResponder(guildId, key).catch(() => null);
+    if (selData && selData.selectOptions && selData.selectOptions.length) {
+      try {
+        const menu = buildSelectComponent(selData, key);
+        rows.push(new ActionRowBuilder().addComponents(menu));
+      } catch {}
     }
   }
 
@@ -342,6 +339,7 @@ async function parseReply(replyStr, context) {
     reactReplyEmoji,
     dmMode,
     sendToChannel,
+    ephemeralReply,
   };
 }
 

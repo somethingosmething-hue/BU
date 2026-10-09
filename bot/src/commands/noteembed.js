@@ -4,9 +4,23 @@ module.exports = {
   permissions: ['ManageGuild'],
   data: new SlashCommandBuilder()
     .setName('noteembed')
-    .setDescription('Glue a rich embed to the bottom of this channel'),
+    .setDescription('Glue a rich embed to the bottom of this channel')
+    .addStringOption(o =>
+      o.setName('extra')
+        .setDescription('Extra variables, e.g. {button:name} {addselect:name} {server_name}')
+        .setRequired(false)
+        .setMaxLength(1000)
+    ),
 
   async execute(interaction) {
+    // The embed modal already uses all 5 allowed inputs, so `extra` travels
+    // via short-lived staged storage and is consumed on modal submit.
+    const extra = interaction.options.getString('extra') || null;
+    if (extra) {
+      const noteSticky = require('../events/noteSticky');
+      noteSticky.stagePendingExtra(interaction.guildId, interaction.channelId, interaction.user.id, extra);
+    }
+
     const modal = new ModalBuilder()
       .setCustomId('noteembed:submit')
       .setTitle('Glue an embed note');

@@ -180,7 +180,12 @@ Get detailed info about a specific autoresponder.
 
 Create interactive buttons and select menus.
 
-**Subcommands:** `add`, `addselect`, `remove`, `list`, `panel`
+**Subcommands:** `add`, `addselect`, `edit`, `remove`, `list`, `panel`
+
+Ephemeral (private) replies work two ways: set `ephemeral:true` when creating
+the button/select, or put `{ephemeral}` anywhere in its reply. Either makes
+the click reply visible only to the clicker. `{button:name}` is an alias of
+`{addbutton:name}`. Names are case-insensitive (`My Button` → `my-button`).
 
 ### `/button add` (buttons)
 | Option | Description |
@@ -210,13 +215,22 @@ Create interactive buttons and select menus.
 | `options` | `label\|value\|desc` (comma separated) |
 | `reply` | Reply (use `{value}` for selected option) |
 | `cooldown` | Cooldown in seconds |
+| `ephemeral` | Reply visible only to clicker? (`true`/`false`) |
 
 **Examples:**
 ```
 /button addselect name:color-select placeholder:Choose a color options:Red|red|Blood red,Blue|blue|Cool blue,Green|green|Forest green reply:You chose {value}!
 
-/button addselect name:role-select placeholder:Pick your role options:Gamer|gamer|Gaming enthusiast,Artist|artist|Creative person,Developer|dev|Code wizard reply:{addrole:{value}} Role added!
+/button addselect name:role-select placeholder:Pick your role options:Gamer|gamer|Gaming enthusiast,Artist|artist|Creative person,Developer|dev|Code wizard reply:{addrole:{value}} Role added! ephemeral:true
 ```
+
+### `/button edit`
+```
+/button edit name:verify reply:New reply here ephemeral:true
+/button edit name:color-select cooldown:10
+```
+Update the reply, label/color/emoji (buttons), placeholder/options (selects),
+cooldown, or ephemeral flag on an existing responder. Only provided fields change.
 
 ### `/button panel`
 ```
@@ -683,12 +697,20 @@ Commands to create, edit, view, and manage sticky or saved notes.
 
 **Subcommands / Files:** `note`, `noteembed`, `notepara`, `listnotes`, `editnote`, `unote`, `unallnotes`
 
+All note commands accept an optional `extra` field for variables and
+components. It is evaluated when the sticky posts, so you can attach buttons
+(`{button:verify}`, `{addselect:colors}`, `{addlinkbutton:Rules|https://…}`)
+and render server values (`{server_name}`, `{member_count}`, `{date}`).
+User-specific placeholders (e.g. `{user_mention}`) can't resolve on a sticky
+and render as `unknown`.
+
 ### Examples
 ```
-/note create name:rules content:Be civil
-/noteembed name:rules embed:rules
-/notepara name:rules paragraph:Short intro
-/listnotes
+/note content:Be civil extra:{button:verify}
+/noteembed extra:{button:verify} {addlinkbutton:Rules|https://example.com}
+/notepara  (modal now has an extra field for the same syntax)
+/editnote extra:{button:verify}   # blank clears, omit keeps
+/listnotes   # entries with extras show [+extra]
 /editnote name:rules field:content value:Updated content
 /unote name:rules  # remove single note
 /unallnotes  # remove all notes
