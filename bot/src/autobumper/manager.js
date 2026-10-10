@@ -513,7 +513,11 @@ class AutoBumper {
     const { state, sources } = await this.syncFromReminders(cfg).catch(() => ({ state: cfg.state || {}, sources: {} }));
     this.lastSources = sources;
     const now = Date.now();
-    const due = (cfg.entries || []).filter((e) => (state[e.label] ?? 0) <= now);
+    // Reminder-owned entries fire via bumpHandler.sendReminder (jittered slot +
+    // human prelude) — tick must NOT fire them or every bump goes out twice.
+    // Tick stays as fallback for cooldown-only / unscheduled entries that have
+    // no live reminder doc (e.g. services bumpHandler doesn't track).
+    const due = (cfg.entries || []).filter((e) => (state[e.label] ?? 0) <= now && sources[e.label] !== 'reminder');
     if (!due.length) return;
 
     // random order every cycle so the sequence isn't fingerprintable

@@ -85,7 +85,116 @@ function actionWord(type) {
   return type;
 }
 
-async function sendReminder(client, data) {
+// In-flight autobump fires keyed by serviceKey — prevents the per-bump
+// setTimeout + the 30s checker in index.js from double-firing the same due reminder.
+const autobumpInflight = new Set();
+
+function getAutoBumper() {
+  try {
+    return require('../autobumper/manager');
+  } catch {
+    return null;
+  }
+}
+
+function autobumpServiceKey(entry) {
+  const cmd = entry.command.startsWith('/') ? entry.command : '/' + entry.command;
+  return `${entry.applicationId}:${cmd}`;
+}
+
+// Reminder is due. If the autobumper owns this service, either postpone until
+// its jittered slot (syncFromReminders: remindAt + jitter) or fire now.
+// Returns true when handled (postponed / fired / firing) — caller should NOT
+// send the human ping. Returns false to fall through to the human ping.
+async function tryAutobumpForReminder(client, data) {
+  const mod = getAutoBumper();
+  if (!mod) return false;
+  const { manager, getConfig, saveConfig } = mod;
+  let abCfg;
+  try { abCfg = await getConfig(); } catch { return false; }
+  if (!abCfg?.enabled) return false;
+  const token = ((abCfg.userToken || '').trim() || (process.env.USER_TOKEN || '').trim());
+  if (!token) return false;
+  // Autobumper targets a single guild — never cross-fire into another guild's reminders.
+  if (abCfg.guildId && data.guildId && abCfg.guildId !== data.guildId) return false;
+  const entry = (abCfg.entries || []).find((e) => autobumpServiceKey(e) === data.serviceKey);
+  if (!entry) return false; // website-only service — human ping stays
+  if (!manager.running || !manager.sessionId) {
+    // Gateway not up — let the human ping cover this cycle, retry autostart in background.
+    if (!manager.running) manager.start().catch(() => {});
+    return false;
+  }
+  if (autobumpInflight.has(data.serviceKey)) return true;
+
+  const now = Date.now();
+  const state = (abCfg.state || {})[entry.label] ?? 0;
+
+  // Jitter slot hasn't elapsed yet (state = remindAt + 5–15m jitter from sync).
+  // Postpone BOTH the reminder doc and the human ping to the jittered slot —
+  // this is the "delays and stuff": the fire lands jittered, never exact.
+  if (state > now) {
+    try { await db.saveBumpReminder({ ...data, remindAt: state }); } catch {}
+    console.log(`[BumpHandler] ${entry.label} reminder due — holding for autobump slot in ${Math.round((state - now) / 60000)}m.`);
+    return true;
+  }
+
+  // Slot reached — claim it so concurrent callers / tick don't double-fire.
+  autobumpInflight.add(data.serviceKey);
+  try {
+    // Human-like skip: miss this cycle, let the human ping cover it.
+    const skipChance = abCfg.skipChance ?? 0.05;
+    if (Math.random() < skipChance) {
+      const jmin = entry.jitterMinMs ?? 5 * 60e3;
+      const jmax = entry.jitterMaxMs ?? 15 * 60e3;
+      const next = now + (entry.cooldownMs || 7200000) + jmin + Math.random() * (jmax - jmin);
+      try {
+        const st = await getConfig();
+        await saveConfig({ state: { ...(st.state || {}), [entry.label]: next } });
+      } catch {}
+      console.log(`[BumpHandler] ${entry.label} skipped this cycle (human-like miss) — human ping covers it.`);
+      return false;
+    }
+
+    const fresh = await getConfig();
+    const freshEntry = (fresh.entries || []).find((e) => e.label === entry.label) || entry;
+    // manager.fire has its own human prelude (typing + 0.8–4.5s uneven pause,
+    // jittered heartbeats/session, 429 backoff) — no extra sleep needed here.
+    await manager.fire(freshEntry, fresh);
+    console.log(`[BumpHandler] autobump fired /${freshEntry.command} → ${freshEntry.label} (via reminder)`);
+    const njmin = freshEntry.jitterMinMs ?? 5 * 60e3;
+    const njmax = freshEntry.jitterMaxMs ?? 15 * 60e3;
+    const next = Date.now() + (freshEntry.cooldownMs || 7200000) + njmin + Math.random() * (njmax - njmin);
+    try { await db.setBumpCooldown(data.guildId, data.serviceKey, Date.now()); } catch {}
+    try {
+      const st2 = await getConfig();
+      await saveConfig({
+        state: { ...(st2.state || {}), [entry.label]: next },
+        stats: { ...(st2.stats || {}), [entry.label]: { lastRun: Date.now(), lastOk: true, fails: 0 } },
+      });
+    } catch {}
+    // No human ping — the bump already went out. The ack + next reminder
+    // get created when the bump bot responds (messageCreate).
+    try { await db.deleteBumpReminder(data.guildId, data.serviceKey); } catch {}
+    try { await db.deleteBumpUser(data.guildId, data.serviceKey); } catch {}
+    return true;
+  } catch (e) {
+    console.error(`[BumpHandler] autobump via reminder failed for ${entry.label}:`, e.message);
+    try {
+      const st = await getConfig();
+      const fails = (st.stats?.[entry.label]?.fails ?? 0) + 1;
+      const retryIn = Math.min(entry.cooldownMs || 7200000, 10 * 60e3 * fails) + 30e3 + Math.random() * 150e3;
+      await saveConfig({
+        state: { ...(st.state || {}), [entry.label]: Date.now() + retryIn },
+        stats: { ...(st.stats || {}), [entry.label]: { lastRun: Date.now(), lastOk: false, fails } },
+      });
+    } catch {}
+    return false; // fall through to human ping so the bump isn't missed
+  } finally {
+    autobumpInflight.delete(data.serviceKey);
+  }
+}
+
+async function sendHumanReminder(client, data) {
   const guild = client.guilds.cache.get(data.guildId);
   if (!guild) return;
   const channel = client.channels.cache.get(data.channelId);
@@ -128,6 +237,18 @@ async function sendReminder(client, data) {
 
   await db.deleteBumpReminder(data.guildId, data.serviceKey);
   await db.deleteBumpUser(data.guildId, data.serviceKey);
+}
+
+// Single entry point for everything that fires reminders (per-bump setTimeout,
+// 30s checker + restart recovery in index.js). Autobump gets first shot with
+// its human delays; humans only get pinged on skip/failure/website services.
+async function sendReminder(client, data) {
+  try {
+    if (await tryAutobumpForReminder(client, data)) return;
+  } catch (e) {
+    console.error('[BumpHandler] autobump dispatch:', e.message);
+  }
+  return sendHumanReminder(client, data);
 }
 
 function getMessageText(message) {
