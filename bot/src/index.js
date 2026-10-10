@@ -46,6 +46,9 @@ for (const file of eventFiles) {
     client.on(event.name, (...args) => event.execute(...args, client));
   }
 }
+// Sanity: interactionCreate must have exactly 1 listener. More means this
+// file was evaluated twice in one process (double-handling every click).
+console.log(`Events loaded: ${eventFiles.length} files, interactionCreate listeners: ${client.listenerCount('interactionCreate')}`);
 
 
 

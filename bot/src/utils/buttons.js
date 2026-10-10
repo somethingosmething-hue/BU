@@ -148,6 +148,28 @@ async function replyEphemeral(interaction, content) {
   } catch {}
 }
 
+// Discord API 40060, or discord.js's local throw when deferred/replied is set.
+function isAlreadyAcked(e) {
+  return e?.code === 40060 || /already been acknowledged/i.test(e?.message || '');
+}
+
+// Ack-aware responder: if this interaction was already acknowledged (e.g. a
+// duplicate delivery raced us), reply() would throw "already acknowledged"
+// and the user would see NOTHING. Route to followUp / editReply instead so
+// the click always produces a visible message.
+async function safeRespond(interaction, payload) {
+  if (interaction.replied) {
+    await interaction.followUp(payload).catch(() => {});
+    return 'followUp';
+  }
+  if (interaction.deferred) {
+    await interaction.editReply(payload).catch(() => {});
+    return 'editReply';
+  }
+  await interaction.reply(payload);
+  return 'reply';
+}
+
 // Shared click handler for `br:<name>` buttons and `sel:<name>` select menus.
 // Handles: cooldowns, {value} substitution (selects), {requirerole:},
 // {addrole:}/{removerole:}, {react:}, stored `ephemeral` flag and the
@@ -157,6 +179,15 @@ async function handleComponentClick(interaction, { kind, key }) {
   const guildId = interaction.guild?.id;
   if (!guildId) return;
 
+  // Diagnostic: proves duplicate deliveries. If you see this line TWICE per
+  // click (same interaction id, different pid OR same pid twice), another
+  // process/session holds this bot token or the handler is double-registered.
+  // That twin is what eats the reply ("already acknowledged").
+  try {
+    console.log(`[buttons] click pid=${process.pid} id=${interaction.id} ${kind}:${key} user=${interaction.user?.id} acked=${!!(interaction.replied || interaction.deferred)}`);
+  } catch {}
+
+  try {
   const data = await db.getButtonResponder(guildId, key).catch(() => null);
   if (!data) {
     await replyEphemeral(interaction, '❌ This component no longer exists.');
@@ -229,17 +260,20 @@ async function handleComponentClick(interaction, { kind, key }) {
   if (ephemeral) withEphemeral(payload);
 
   try {
-    await interaction.reply(payload);
+    await safeRespond(interaction, payload);
   } catch (e) {
     console.error('[buttons] reply failed:', e.message);
     // Fall back to a plain (ephemeral if requested) text ack.
+    // Crucially: if we lost an ack race (40060), local flags are still false
+    // so safeRespond would just throw again — go straight to followUp, which
+    // succeeds on an acked interaction's webhook and stays visible.
     try {
       const fallback = { content: parsed.text || '✅ Done!' };
       if (ephemeral) fallback.flags = 64;
-      if (interaction.replied || interaction.deferred) {
+      if (isAlreadyAcked(e)) {
         await interaction.followUp(fallback).catch(() => {});
       } else {
-        await interaction.reply(fallback).catch(() => {});
+        await safeRespond(interaction, fallback);
       }
     } catch {}
     return;
@@ -248,6 +282,14 @@ async function handleComponentClick(interaction, { kind, key }) {
   for (const emoji of parsed.reactEmojis || []) {
     try {
       await interaction.message.react(emoji);
+    } catch {}
+  }
+  } catch (e) {
+    // Nothing above may leave the click silently dead ("interaction failed"
+    // with no message). Last-resort visible ack.
+    console.error('[buttons] click failed:', e?.message || e);
+    try {
+      await safeRespond(interaction, { content: '❌ Something went wrong.' });
     } catch {}
   }
 }
@@ -265,5 +307,7 @@ module.exports = {
   buildInteractionPayload,
   withEphemeral,
   replyEphemeral,
+  safeRespond,
+  isAlreadyAcked,
   handleComponentClick,
 };
