@@ -1,12 +1,7 @@
 const db = require('../database/db');
 
-function buildThreadName(message) {
-  const raw = (message.content || '').replace(/\s+/g, ' ').trim();
-  const author = message.author?.username || 'Discussion';
-  let base = raw ? raw.slice(0, 80) : `Discussion with ${author}`;
-  // Discord thread names: 1-100 chars, cannot be empty
-  if (!base) base = `Thread - ${author}`;
-  return base.slice(0, 100);
+function buildThreadName() {
+  return 'Thread';
 }
 
 module.exports = {
@@ -37,7 +32,7 @@ module.exports = {
         if (perms && !perms.has('CreatePublicThreads')) return;
       } catch {}
 
-      const name = buildThreadName(message);
+      const name = buildThreadName();
 
       try {
         await message.startThread({

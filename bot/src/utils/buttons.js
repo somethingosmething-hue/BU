@@ -159,11 +159,11 @@ function isAlreadyAcked(e) {
 // the click always produces a visible message.
 async function safeRespond(interaction, payload) {
   if (interaction.replied) {
-    await interaction.followUp(payload).catch(() => {});
+    await interaction.followUp(payload).catch((e) => console.error('[buttons] followUp failed:', e?.code, e?.message));
     return 'followUp';
   }
   if (interaction.deferred) {
-    await interaction.editReply(payload).catch(() => {});
+    await interaction.editReply(payload).catch((e) => console.error('[buttons] editReply failed:', e?.code, e?.message));
     return 'editReply';
   }
   await interaction.reply(payload);
@@ -262,7 +262,7 @@ async function handleComponentClick(interaction, { kind, key }) {
   try {
     await safeRespond(interaction, payload);
   } catch (e) {
-    console.error('[buttons] reply failed:', e.message);
+    console.error(`[buttons] reply failed: code=${e?.code} msg=${e?.message} payload={text:${JSON.stringify((parsed.text || '').slice(0, 80))} embed:${!!parsed.embed} rows:${parsed.rows?.length || 0} v2:${!!parsed.hasSeparators} flags:${payload.flags || 0}}`);
     // Fall back to a plain (ephemeral if requested) text ack.
     // Crucially: if we lost an ack race (40060), local flags are still false
     // so safeRespond would just throw again — go straight to followUp, which
@@ -271,7 +271,7 @@ async function handleComponentClick(interaction, { kind, key }) {
       const fallback = { content: parsed.text || '✅ Done!' };
       if (ephemeral) fallback.flags = 64;
       if (isAlreadyAcked(e)) {
-        await interaction.followUp(fallback).catch(() => {});
+        await interaction.followUp(fallback).catch((e2) => console.error('[buttons] race-fallback followUp failed:', e2?.code, e2?.message));
       } else {
         await safeRespond(interaction, fallback);
       }
